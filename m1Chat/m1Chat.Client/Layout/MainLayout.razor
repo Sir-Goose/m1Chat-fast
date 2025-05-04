@@ -8,10 +8,22 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+<!-- Prism.js CSS (choose a theme you like) -->
+<link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-okaidia.css" rel="stylesheet" />
+
+
+<!-- Prism.js core -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
+<!-- Add language support as needed -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-csharp.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-python.min.js"></script>
+
 <script>
     window.setInnerHtmlAndRenderMath = (element, html) => {
         if (element) {
             element.innerHTML = html;
+            // Render math (KaTeX)
             if (window.renderMathInElement) {
                 window.renderMathInElement(element, {
                     delimiters: [
@@ -20,9 +32,14 @@
                     ]
                 });
             }
+            // Highlight code (Prism)
+            if (window.Prism) {
+                window.Prism.highlightAllUnder(element);
+            }
         }
     };
 </script>
+
 
 
 @Body
