@@ -14,10 +14,15 @@
 
 <!-- Prism.js core -->
 <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
-<!-- Add language support as needed -->
-<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-csharp.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-javascript.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-python.min.js"></script>
+<!-- Prism.js Autoloader Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
+<!-- Configure Autoloader path -->
+<script>
+  // Tell Autoloader where to fetch language components from the CDN
+  Prism.plugins.autoloader.languages_path =
+    "https://cdn.jsdelivr.net/npm/prismjs/components/";
+</script>
+
 
 <script>
     window.setInnerHtmlAndRenderMath = (element, html) => {
