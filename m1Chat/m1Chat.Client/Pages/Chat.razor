@@ -2,6 +2,7 @@
 @using MudBlazor
 @using Microsoft.AspNetCore.Components.Web
 @using Markdig
+@using m1Chat.Client.Components
 @inject NavigationManager NavigationManager
 
 <style>
@@ -250,10 +251,7 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1" Class="ai-message">
-                            @((MarkupString)Markdown.ToHtml(
-                                m.Text, _markdownPipeline))
-                        </MudText>
+                        <AiMarkdown Markdown="@m.Text" />
                     }
                 }
             </MudStack>
