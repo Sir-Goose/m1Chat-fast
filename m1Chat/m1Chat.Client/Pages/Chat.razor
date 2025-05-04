@@ -258,68 +258,71 @@
         </MudPaper>
 
         <!-- input area -->
-        <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
-            <MudContainer Class="pa-0">
-                <MudStack Spacing="1">
-                    <div style="display:flex;align-items:center;">
-                        <MudTextField
-                            @bind-Value="MessageText"
-                            Label="Enter your message"
-                            Variant="Variant.Outlined"
-                            Lines="2"
-                            AutoGrow="true"
-                            MaxLines="10"
-                            Class="flex-grow-1 mr-2"
-                            Immediate="true"
-                            @onkeyup="HandleKeyUp"
-                        />
-                        <MudIconButton
-                            Icon="@Icons.Material.Filled.AttachFile"
-                            Color="Color.Primary"
-                            OnClick="AttachFile"
-                            aria-label="Attach file"
-                            Class="mr-2"
-                        />
-                        <MudButton
-                            Variant="Variant.Filled"
-                            Color="Color.Primary"
-                            EndIcon="@Icons.Material.Filled.Send"
-                            OnClick="SendMessage"
-                            aria-label="Send message"
-                        >
-                            Send
-                        </MudButton>
-                    </div>
-                    <div style="display:flex;align-items:center;">
-                        <MudSelect
-                            @bind-Value="ChatSelectedOption"
-                            Label="Select a model"
-                            Variant="Variant.Outlined"
-                            Margin="Margin.Dense"
-                            FitContent="true"
-                            Class="mr-2"
-                        >
-                            @foreach (var opt in ChatOptions)
-                            {
-                                <MudSelectItem Value="@opt">
-                                    @opt
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudToggleIconButton
-                            @bind-Toggled="_searchEnabled"
-                            Icon="@Icons.Material.Filled.Public"
-                            ToggledIcon="@Icons.Material.Filled.PublicOff"
-                            Color="Color.Primary"
-                            ToggledColor="Color.Secondary"
-                            aria-label="Toggle search"
-                            Class="ml-2"
-                        />
-                        <MudText Typo="Typo.body1">Search</MudText>
-                    </div>
-                </MudStack>
-            </MudContainer>
-        </MudPaper>
+       <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
+    <MudContainer Class="pa-0">
+        <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center;">
+                <MudTextField
+                    @bind-Value="MessageText"
+                    Label="Enter your message"
+                    Variant="Variant.Outlined"
+                    Lines="2"
+                    AutoGrow="true"
+                    MaxLines="10"
+                    Class="flex-grow-1"
+                    Immediate="true"
+                    @onkeyup="HandleKeyUp"
+                />
+            </div>
+            <div style="display: flex; align-items: center; margin-top: 8px;">
+                <MudSelect
+                    @bind-Value="ChatSelectedOption"
+                    Label="Select a model"
+                    Variant="Variant.Outlined"
+                    Margin="Margin.Dense"
+                    FitContent="true"
+                    Class="mr-2"
+                >
+                    @foreach (var opt in ChatOptions)
+                    {
+                        <MudSelectItem Value="@opt">
+                            @opt
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                <MudToggleIconButton
+                    @bind-Toggled="_searchEnabled"
+                    Icon="@Icons.Material.Filled.Public"
+                    ToggledIcon="@Icons.Material.Filled.PublicOff"
+                    Color="Color.Primary"
+                    ToggledColor="Color.Secondary"
+                    aria-label="Toggle search"
+                    Class="ml-2"
+                />
+                <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
+                <div style="margin-left: auto; display: flex; align-items: center;">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.AttachFile"
+                        Color="Color.Primary"
+                        OnClick="AttachFile"
+                        aria-label="Attach file"
+                        Class="mr-2"
+                    />
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        EndIcon="@Icons.Material.Filled.Send"
+                        OnClick="SendMessage"
+                        aria-label="Send message"
+                    >
+                        Send
+                    </MudButton>
+                </div>
+            </div>
+        </div>
+    </MudContainer>
+</MudPaper>
+
     </MudMainContent>
 </MudLayout>
 
