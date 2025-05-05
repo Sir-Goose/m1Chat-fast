@@ -1,0 +1,30 @@
+@* UserMarkdown.razor *@
+@using Markdig
+@inject IJSRuntime JS
+
+@* Render the content inside a simple div. The parent MudChatBubble will handle the bubble styling and alignment. *@
+<div @ref="userDiv"></div>
+
+@code {
+    [Parameter] public string Markdown { get; set; }
+
+    private ElementReference userDiv;
+    private string _lastMarkdown;
+
+    // Use the same pipeline configuration as AiMarkdown for consistency
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Check if the markdown content has actually changed to avoid unnecessary JS calls
+        if (Markdown != _lastMarkdown)
+        {
+            _lastMarkdown = Markdown;
+            var html = Markdig.Markdown.ToHtml(Markdown ?? "", _pipeline);
+            // Use the same JS interop function as AiMarkdown
+            await JS.InvokeVoidAsync("setInnerHtmlAndRenderMath", userDiv, html);
+        }
+    }
+}
