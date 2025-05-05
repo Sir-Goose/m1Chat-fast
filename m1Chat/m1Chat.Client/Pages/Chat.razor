@@ -46,8 +46,9 @@
         padding: 1rem;
     }
 
-    /* Style the horizontal rule within .ai-message */
-    .ai-message hr {
+    /* Style the horizontal rule within .ai-message AND .user-message */
+    .ai-message hr,
+    .user-message hr {
         border: none;
         height: 1px;
         background-color: var(--mud-palette-primary);
@@ -56,42 +57,54 @@
     }
 
     /* Heading styles with padding */
-    .ai-message h1 {
+    .ai-message h1,
+    .user-message h1 {
         padding: 1.5rem 0 1.5rem 0;
         margin: 0;
     }
-    .ai-message h2 {
+    .ai-message h2,
+    .user-message h2 {
         padding: 1.25rem 0 1.25rem 0;
         margin: 0;
     }
-    .ai-message h3 {
+    .ai-message h3,
+    .user-message h3 {
         padding: 1rem 0 1rem 0;
         margin: 0;
     }
     .ai-message h4,
     .ai-message h5,
-    .ai-message h6 {
+    .ai-message h6,
+    .user-message h4,
+    .user-message h5,
+    .user-message h6 {
         padding: 0.75rem 0 0.75rem 0;
         margin: 0;
     }
 
-    /* restore list styling inside .ai-message */
+    /* restore list styling inside .ai-message AND .user-message */
     .ai-message ul,
-    .ai-message ol {
+    .ai-message ol,
+    .user-message ul,
+    .user-message ol {
         padding: 0.75rem;
         list-style-position: inside;
     }
     .ai-message ul li::marker,
-    .ai-message ol li::marker {
+    .ai-message ol li::marker,
+    .user-message ul li::marker,
+    .user-message ol li::marker {
         color: var(--mud-palette-primary);
     }
 
-    .ai-message li {
+    .ai-message li,
+    .user-message li {
         margin: 1rem 0;
     }
 
-    /* Style blockquotes within .ai-message */
-    .ai-message blockquote {
+    /* Style blockquotes within .ai-message AND .user-message */
+    .ai-message blockquote,
+    .user-message blockquote {
         border-left: 4px solid var(--mud-palette-primary-lighten);
         padding: 0rem 0rem;
         margin: 1rem 0;
@@ -101,19 +114,24 @@
     }
 
     /* Ensure paragraphs inside blockquotes don't add extra margin */
-    .ai-message blockquote p {
+    .ai-message blockquote p,
+    .user-message blockquote p {
         margin-bottom: 0;
         padding: 0.75rem;
     }
 
-    /* style links so they look "linky" again */
-    .ai-message a {
-        color: var("red");
+    /* style links so they are primary color and bold */
+    .ai-message a,
+    .user-message a {
+        color: var(--mud-palette-primary); /* Use MudBlazor primary color */
         text-decoration: underline;
+        font-weight: bold; /* Make the text bold */
     }
 
+
     /* Customized code-block styling */
-    .ai-message pre {
+    .ai-message pre,
+    .user-message pre {
         background: var(--mud-palette-background);
         border: 1px solid var(--mud-palette-divider);
         border-left: 3px solid var(--mud-palette-primary);
@@ -124,17 +142,21 @@
         font-size: 0.875rem;
         line-height: 1.4;
         overflow-x: auto;
+        /* Ensure code block respects user bubble max-width */
+        max-width: 100%;
     }
 
-    .ai-message pre code {
+    .ai-message pre code,
+    .user-message pre code {
         display: block;
         color: var(--mud-palette-text-primary);
         background: transparent;
         white-space: pre;
     }
 
-    /* Table styling inside .ai-message */
-    .ai-message table {
+    /* Table styling inside .ai-message AND .user-message */
+    .ai-message table,
+    .user-message table {
         width: 100%;
         border-collapse: collapse;
         margin: 1rem 0;
@@ -142,10 +164,14 @@
         overflow-x: auto;
         display: block;
         border: none; /* Remove outer border */
+        /* Ensure table respects user bubble max-width */
+        max-width: 100%;
     }
 
     .ai-message th,
-    .ai-message td {
+    .ai-message td,
+    .user-message th,
+    .user-message td {
         border: none; /* Remove all borders */
         border-bottom: 1px solid var(--mud-palette-divider); /* Only horizontal dividers */
         padding: 0.75rem 1rem;
@@ -153,18 +179,21 @@
         vertical-align: top;
     }
 
-    .ai-message th {
+    .ai-message th,
+    .user-message th {
         font-weight: 600;
         border-bottom: 1px solid var(--mud-palette-drawer-text); /* Distinct divider below headers */
     }
 
     /* Make the first row after the header have a distinct border if needed */
-    .ai-message tr:first-of-type td {
+    .ai-message tr:first-of-type td,
+    .user-message tr:first-of-type td {
         border-bottom: 1px solid var(--mud-palette-divider);
     }
 
 
-    .ai-message caption {
+    .ai-message caption,
+    .user-message caption {
         caption-side: bottom;
         padding: 0.5rem;
         color: var(--mud-palette-text-secondary);
@@ -242,10 +271,8 @@
                     {
                         <MudStack JustifyContent="FlexEnd">
                             <MudChatBubble
-                                Variant="Variant.Text"
-                                Class="user-message"
-                            >
-                                @m.Text
+                                Variant="Variant.Text" Class="user-message">
+                                <UserMarkdown Markdown="@m.Text" />
                             </MudChatBubble>
                         </MudStack>
                     }
@@ -259,69 +286,69 @@
 
         <!-- input area -->
        <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
-    <MudContainer Class="pa-0">
-        <div style="display: flex; flex-direction: column;">
-            <div style="display: flex; align-items: center;">
-                <MudTextField
-                    @bind-Value="MessageText"
-                    Label="Enter your message"
-                    Variant="Variant.Outlined"
-                    Lines="2"
-                    AutoGrow="true"
-                    MaxLines="10"
-                    Class="flex-grow-1"
-                    Immediate="true"
-                    @onkeyup="HandleKeyUp"
-                />
-            </div>
-            <div style="display: flex; align-items: center; margin-top: 8px;">
-                <MudSelect
-                    @bind-Value="ChatSelectedOption"
-                    Label="Select a model"
-                    Variant="Variant.Outlined"
-                    Margin="Margin.Dense"
-                    FitContent="true"
-                    Class="mr-2"
-                >
-                    @foreach (var opt in ChatOptions)
-                    {
-                        <MudSelectItem Value="@opt">
-                            @opt
-                        </MudSelectItem>
-                    }
-                </MudSelect>
-                <MudToggleIconButton
-                    @bind-Toggled="_searchEnabled"
-                    Icon="@Icons.Material.Filled.Public"
-                    ToggledIcon="@Icons.Material.Filled.PublicOff"
-                    Color="Color.Primary"
-                    ToggledColor="Color.Secondary"
-                    aria-label="Toggle search"
-                    Class="ml-2"
-                />
-                <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
-                <div style="margin-left: auto; display: flex; align-items: center;">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.AttachFile"
-                        Color="Color.Primary"
-                        OnClick="AttachFile"
-                        aria-label="Attach file"
-                        Class="mr-2"
-                    />
-                    <MudButton
-                        Variant="Variant.Filled"
-                        Color="Color.Primary"
-                        EndIcon="@Icons.Material.Filled.Send"
-                        OnClick="SendMessage"
-                        aria-label="Send message"
-                    >
-                        Send
-                    </MudButton>
+            <MudContainer Class="pa-0">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; align-items: center;">
+                        <MudTextField
+                            @bind-Value="MessageText"
+                            Label="Enter your message"
+                            Variant="Variant.Outlined"
+                            Lines="2"
+                            AutoGrow="true"
+                            MaxLines="10"
+                            Class="flex-grow-1"
+                            Immediate="true"
+                            @onkeyup="HandleKeyUp"
+                        />
+                    </div>
+                    <div style="display: flex; align-items: center; margin-top: 8px;">
+                        <MudSelect
+                            @bind-Value="ChatSelectedOption"
+                            Label="Select a model"
+                            Variant="Variant.Outlined"
+                            Margin="Margin.Dense"
+                            FitContent="true"
+                            Class="mr-2"
+                        >
+                            @foreach (var opt in ChatOptions)
+                            {
+                                <MudSelectItem Value="@opt">
+                                    @opt
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudToggleIconButton
+                            @bind-Toggled="_searchEnabled"
+                            Icon="@Icons.Material.Filled.Public"
+                            ToggledIcon="@Icons.Material.Filled.PublicOff"
+                            Color="Color.Primary"
+                            ToggledColor="Color.Secondary"
+                            aria-label="Toggle search"
+                            Class="ml-2"
+                        />
+                        <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
+                        <div style="margin-left: auto; display: flex; align-items: center;">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.AttachFile"
+                                Color="Color.Primary"
+                                OnClick="AttachFile"
+                                aria-label="Attach file"
+                                Class="mr-2"
+                            />
+                            <MudButton
+                                Variant="Variant.Filled"
+                                Color="Color.Primary"
+                                EndIcon="@Icons.Material.Filled.Send"
+                                OnClick="SendMessage"
+                                aria-label="Send message"
+                            >
+                                Send
+                            </MudButton>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </MudContainer>
-</MudPaper>
+            </MudContainer>
+        </MudPaper>
 
     </MudMainContent>
 </MudLayout>
@@ -329,12 +356,6 @@
 @code {
     private bool _drawerOpen = true;
     private bool _searchEnabled = false;
-
-    // your Markdig pipeline
-    private static readonly MarkdownPipeline _markdownPipeline =
-        new MarkdownPipelineBuilder()
-            .UseAdvancedExtensions()
-            .Build();
 
     // Placeholder for the logged‐in user's email
     private string UserEmail { get; set; } = "user@example.com";
@@ -355,7 +376,7 @@
         new ChatMessage
         {
             IsUser = false,
-            Text = "Hello! I am your assistant. How can I help today?"
+            Text = "Hello! I am your assistant. How can I help today?\n\nYou can use **Markdown** in your messages too!"
         }
     };
 
@@ -365,13 +386,20 @@
     {
         if (args.Key == "Enter" && !args.ShiftKey)
         {
+            // Prevent default behavior (like adding a newline in some cases)
+            // and ensure message sends immediately without waiting for blur.
             await SendMessage();
+            // Optionally clear the text field faster here if needed,
+            // but SendMessage already does it.
+            MessageText = "";
+            await InvokeAsync(StateHasChanged); // Ensure UI updates if HandleKeyUp is faster than SendMessage render
         }
     }
 
     private async Task SendMessage()
     {
-        if (string.IsNullOrWhiteSpace(MessageText))
+        var textToSend = MessageText.Trim(); // Capture before clearing
+        if (string.IsNullOrWhiteSpace(textToSend))
         {
             return;
         }
@@ -379,17 +407,16 @@
         ChatHistory.Add(new ChatMessage
         {
             IsUser = true,
-            Text = MessageText.Trim()
+            Text = textToSend // Use the captured, trimmed text
         });
 
-        var prompt = MessageText.Trim();
-        MessageText = "";
+        MessageText = ""; // Clear the input field
         StateHasChanged(); // Update UI to show user message immediately
 
         // simulate AI call
         await Task.Delay(500);
         // Example Markdown response for testing
-        var aiReply = $"{prompt}";
+        var aiReply = $"{textToSend}";
         ChatHistory.Add(new ChatMessage
         {
             IsUser = false,
