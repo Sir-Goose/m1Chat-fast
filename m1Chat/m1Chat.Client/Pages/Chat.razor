@@ -48,6 +48,12 @@
         padding: 1rem;
     }
 
+    /* Input area width matches AI message */
+    .input-area-container {
+        width: 70%;
+        margin: 0 auto;
+    }
+
     /* Style the horizontal rule within .ai-message AND .user-message */
     .ai-message hr,
     .user-message hr {
@@ -258,7 +264,7 @@
                 @foreach (var chat in SidebarChats)
                 {
                     <div class="sidebar-chat-row">
-                        <MudListItem Text="@chat.Name" />
+                        <MudListItem Text="@chat.Name"/>
                         <span class="chat-actions">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.PushPin"
@@ -324,70 +330,72 @@
             </MudStack>
         </MudPaper>
 
-        <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
-            <MudContainer Class="pa-0">
-                <div style="display: flex; flex-direction: column;">
-                    <div style="display: flex; align-items: center;">
-                        <MudTextField
-                            @bind-Value="MessageText"
-                            Label="Enter your message"
-                            Variant="Variant.Outlined"
-                            Lines="2"
-                            AutoGrow="true"
-                            MaxLines="10"
-                            Class="flex-grow-1"
-                            Immediate="true"
-                            @onkeyup="HandleKeyUp"
-                        />
-                    </div>
-                    <div style="display: flex; align-items: center; margin-top: 8px;">
-                        <MudSelect
-                            @bind-Value="ChatSelectedOption"
-                            Label="Select a model"
-                            Variant="Variant.Outlined"
-                            Margin="Margin.Dense"
-                            FitContent="true"
-                            Class="mr-2"
-                        >
-                            @foreach (var opt in ChatOptions)
-                            {
-                                <MudSelectItem Value="@opt">
-                                    @opt
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudToggleIconButton
-                            @bind-Toggled="_searchEnabled"
-                            Icon="@Icons.Material.Filled.Public"
-                            ToggledIcon="@Icons.Material.Filled.PublicOff"
-                            Color="Color.Primary"
-                            ToggledColor="Color.Secondary"
-                            aria-label="Toggle search"
-                            Class="ml-2"
-                        />
-                        <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
-                        <div style="margin-left: auto; display: flex; align-items: center;">
-                            <MudIconButton
-                                Icon="@Icons.Material.Filled.AttachFile"
-                                Color="Color.Primary"
-                                OnClick="AttachFile"
-                                aria-label="Attach file"
-                                Class="mr-2"
+        <div class="input-area-container">
+            <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
+                <MudContainer Class="pa-0">
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="display: flex; align-items: center;">
+                            <MudTextField
+                                @bind-Value="MessageText"
+                                Label="Enter your message"
+                                Variant="Variant.Outlined"
+                                Lines="2"
+                                AutoGrow="true"
+                                MaxLines="10"
+                                Class="flex-grow-1"
+                                Immediate="true"
+                                @onkeyup="HandleKeyUp"
                             />
-                            <MudButton
-                                Variant="Variant.Filled"
-                                Color="Color.Primary"
-                                EndIcon="@Icons.Material.Filled.Send"
-                                OnClick="SendMessage"
-                                aria-label="Send message"
+                        </div>
+                        <div style="display: flex; align-items: center; margin-top: 8px;">
+                            <MudSelect
+                                @bind-Value="ChatSelectedOption"
+                                Label="Select a model"
+                                Variant="Variant.Outlined"
+                                Margin="Margin.Dense"
+                                FitContent="true"
+                                Class="mr-2"
                             >
-                                Send
-                            </MudButton>
+                                @foreach (var opt in ChatOptions)
+                                {
+                                    <MudSelectItem Value="@opt">
+                                        @opt
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudToggleIconButton
+                                @bind-Toggled="_searchEnabled"
+                                Icon="@Icons.Material.Filled.Public"
+                                ToggledIcon="@Icons.Material.Filled.PublicOff"
+                                Color="Color.Primary"
+                                ToggledColor="Color.Secondary"
+                                aria-label="Toggle search"
+                                Class="ml-2"
+                            />
+                            <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                                <MudIconButton
+                                    Icon="@Icons.Material.Filled.AttachFile"
+                                    Color="Color.Primary"
+                                    OnClick="AttachFile"
+                                    aria-label="Attach file"
+                                    Class="mr-2"
+                                />
+                                <MudButton
+                                    Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    EndIcon="@Icons.Material.Filled.Send"
+                                    OnClick="SendMessage"
+                                    aria-label="Send message"
+                                >
+                                    Send
+                                </MudButton>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </MudContainer>
-        </MudPaper>
+                </MudContainer>
+            </MudPaper>
+        </div>
     </MudMainContent>
 </MudLayout>
 
@@ -424,7 +432,7 @@
 
     private void PinChat(SidebarChat chat)
     {
-        // TODO: Implement pin logic
+// TODO: Implement pin logic
         Console.WriteLine($"Pin chat: {chat.Name}");
     }
 
@@ -437,7 +445,7 @@
     private class SidebarChat
     {
         public string Name { get; set; } = "";
-        // Add more properties as needed (e.g., IsPinned)
+// Add more properties as needed (e.g., IsPinned)
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -490,4 +498,5 @@
         public bool IsUser { get; init; }
         public string Text { get; init; } = "";
     }
+
 }
