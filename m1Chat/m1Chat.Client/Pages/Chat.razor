@@ -4,17 +4,19 @@
 @using Markdig
 @using m1Chat.Client.Components
 @inject NavigationManager NavigationManager
+@inject IScrollManager ScrollManager
 
 <style>
     /* Hide native scrollbars but keep vertical scrolling */
     .no-scrollbar {
         overflow-y: auto;
         overflow-x: hidden;
-        -ms-overflow-style: none;  /* IE/Edge */
-        scrollbar-width: none;      /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+        scrollbar-width: none; /* Firefox */
     }
+
     .no-scrollbar::-webkit-scrollbar {
-        display: none;              /* Chrome/Safari/Opera */
+        display: none; /* Chrome/Safari/Opera */
     }
 
     /* Kill MudMainContent's top-padding (for an AppBar) */
@@ -62,16 +64,19 @@
         padding: 1.5rem 0 1.5rem 0;
         margin: 0;
     }
+
     .ai-message h2,
     .user-message h2 {
         padding: 1.25rem 0 1.25rem 0;
         margin: 0;
     }
+
     .ai-message h3,
     .user-message h3 {
         padding: 1rem 0 1rem 0;
         margin: 0;
     }
+
     .ai-message h4,
     .ai-message h5,
     .ai-message h6,
@@ -90,6 +95,7 @@
         padding: 0.75rem;
         list-style-position: inside;
     }
+
     .ai-message ul li::marker,
     .ai-message ol li::marker,
     .user-message ul li::marker,
@@ -123,11 +129,10 @@
     /* style links so they are primary color and bold */
     .ai-message a,
     .user-message a {
-        color: var(--mud-palette-primary); /* Use MudBlazor primary color */
+        color: var(--mud-palette-primary);
         text-decoration: underline;
-        font-weight: bold; /* Make the text bold */
+        font-weight: bold;
     }
-
 
     /* Customized code-block styling */
     .ai-message pre,
@@ -142,7 +147,6 @@
         font-size: 0.875rem;
         line-height: 1.4;
         overflow-x: auto;
-        /* Ensure code block respects user bubble max-width */
         max-width: 100%;
     }
 
@@ -163,8 +167,7 @@
         font-size: 1rem;
         overflow-x: auto;
         display: block;
-        border: none; /* Remove outer border */
-        /* Ensure table respects user bubble max-width */
+        border: none;
         max-width: 100%;
     }
 
@@ -172,8 +175,8 @@
     .ai-message td,
     .user-message th,
     .user-message td {
-        border: none; /* Remove all borders */
-        border-bottom: 1px solid var(--mud-palette-divider); /* Only horizontal dividers */
+        border: none;
+        border-bottom: 1px solid var(--mud-palette-divider);
         padding: 0.75rem 1rem;
         text-align: left;
         vertical-align: top;
@@ -182,15 +185,13 @@
     .ai-message th,
     .user-message th {
         font-weight: 600;
-        border-bottom: 1px solid var(--mud-palette-drawer-text); /* Distinct divider below headers */
+        border-bottom: 1px solid var(--mud-palette-drawer-text);
     }
 
-    /* Make the first row after the header have a distinct border if needed */
     .ai-message tr:first-of-type td,
     .user-message tr:first-of-type td {
         border-bottom: 1px solid var(--mud-palette-divider);
     }
-
 
     .ai-message caption,
     .user-message caption {
@@ -201,9 +202,30 @@
         text-align: left;
     }
 
+    /* Sidebar chat row hover actions */
+    .sidebar-chat-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-right: 2.5rem; /* space for buttons */
+        cursor: pointer;
+    }
+
+    .sidebar-chat-row .chat-actions {
+        display: flex;
+        gap: 0.25rem;
+        position: absolute;
+        right: 0.5rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+    }
+
+    .sidebar-chat-row:hover .chat-actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
 </style>
-
-
 
 <MudLayout>
     <MudDrawer
@@ -233,13 +255,32 @@
 
         <div class="flex-grow-1 no-scrollbar">
             <MudList T="string">
-                <MudListItem Text="Chat with Alice" />
-                <MudListItem Text="Project Discussion" />
-                <!-- …etc… -->
+                @foreach (var chat in SidebarChats)
+                {
+                    <div class="sidebar-chat-row">
+                        <MudListItem Text="@chat.Name" />
+                        <span class="chat-actions">
+                            <MudIconButton
+                                Icon="@Icons.Material.Outlined.PushPin"
+                                Color="Color.Default"
+                                Size="Size.Small"
+                                Style="margin-right: 0.25rem;"
+                                OnClick="@(() => PinChat(chat))"
+                                aria-label="Pin chat"
+                            />
+                            <MudIconButton
+                                Icon="@Icons.Material.Outlined.Delete"
+                                Color="Color.Error"
+                                Size="Size.Small"
+                                OnClick="@(() => DeleteChat(chat))"
+                                aria-label="Delete chat"
+                            />
+                        </span>
+                    </div>
+                }
             </MudList>
         </div>
 
-        <!-- Footer with user email and Logout button -->
         <div class="pa-2">
             <MudText Typo="Typo.subtitle2" Class="mb-1">
                 @UserEmail
@@ -259,7 +300,6 @@
         Class="d-flex flex-column p-0"
         Style="height:100vh;overflow:hidden;"
     >
-        <!-- scrollable chat area -->
         <MudPaper
             Elevation="0"
             Class="chat-container px-2 pb-2 no-scrollbar"
@@ -272,20 +312,19 @@
                         <MudStack JustifyContent="FlexEnd">
                             <MudChatBubble
                                 Variant="Variant.Text" Class="user-message">
-                                <UserMarkdown Markdown="@m.Text" />
+                                <UserMarkdown Markdown="@m.Text"/>
                             </MudChatBubble>
                         </MudStack>
                     }
                     else
                     {
-                        <AiMarkdown Markdown="@m.Text" />
+                        <AiMarkdown Markdown="@m.Text"/>
                     }
                 }
             </MudStack>
         </MudPaper>
 
-        <!-- input area -->
-       <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
+        <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
             <MudContainer Class="pa-0">
                 <div style="display: flex; flex-direction: column;">
                     <div style="display: flex; align-items: center;">
@@ -349,20 +388,17 @@
                 </div>
             </MudContainer>
         </MudPaper>
-
     </MudMainContent>
 </MudLayout>
 
 @code {
     private bool _drawerOpen = true;
     private bool _searchEnabled = false;
+    private bool _needsScroll;
 
-    // Placeholder for the logged‐in user's email
     private string UserEmail { get; set; } = "user@example.com";
-
     private string MessageText { get; set; } = "";
-    private string ChatSelectedOption { get; set; } =
-        "Gemini 2.5 Pro";
+    private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
 
     private List<string> ChatOptions = new()
     {
@@ -380,62 +416,75 @@
         }
     };
 
+    private List<SidebarChat> SidebarChats = new()
+    {
+        new SidebarChat { Name = "Chat with Alice" },
+        new SidebarChat { Name = "Project Discussion" }
+    };
+
+    private void PinChat(SidebarChat chat)
+    {
+        // TODO: Implement pin logic
+        Console.WriteLine($"Pin chat: {chat.Name}");
+    }
+
+    private void DeleteChat(SidebarChat chat)
+    {
+        SidebarChats.Remove(chat);
+        StateHasChanged();
+    }
+
+    private class SidebarChat
+    {
+        public string Name { get; set; } = "";
+        // Add more properties as needed (e.g., IsPinned)
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsScroll)
+        {
+            await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Smooth);
+            _needsScroll = false;
+        }
+    }
+
     void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
     private async Task HandleKeyUp(KeyboardEventArgs args)
     {
         if (args.Key == "Enter" && !args.ShiftKey)
         {
-            // Prevent default behavior (like adding a newline in some cases)
-            // and ensure message sends immediately without waiting for blur.
             await SendMessage();
-            // Optionally clear the text field faster here if needed,
-            // but SendMessage already does it.
             MessageText = "";
-            await InvokeAsync(StateHasChanged); // Ensure UI updates if HandleKeyUp is faster than SendMessage render
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task SendMessage()
     {
-        var textToSend = MessageText.Trim(); // Capture before clearing
-        if (string.IsNullOrWhiteSpace(textToSend))
-        {
-            return;
-        }
+        var textToSend = MessageText.Trim();
+        if (string.IsNullOrWhiteSpace(textToSend)) return;
 
-        ChatHistory.Add(new ChatMessage
-        {
-            IsUser = true,
-            Text = textToSend // Use the captured, trimmed text
-        });
+        ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
+        MessageText = "";
+        _needsScroll = true;
+        StateHasChanged();
 
-        MessageText = ""; // Clear the input field
-        StateHasChanged(); // Update UI to show user message immediately
-
-        // simulate AI call
         await Task.Delay(500);
-        // Example Markdown response for testing
-        var aiReply = $"{textToSend}";
-        ChatHistory.Add(new ChatMessage
-        {
-            IsUser = false,
-            Text = aiReply
-        });
-        StateHasChanged(); // Update UI to show AI response
+        ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"{textToSend}" });
+        _needsScroll = true;
+        StateHasChanged();
     }
 
-    private void AttachFile()
-        => Console.WriteLine("Attach file clicked.");
+    private void AttachFile() => Console.WriteLine("Attach file clicked.");
 
     private void Logout()
     {
         Console.WriteLine("Logout clicked");
-        // In a real app, you'd clear auth state here
         NavigationManager.NavigateTo("/");
     }
 
-    // Simple record to hold message info
     private record ChatMessage
     {
         public bool IsUser { get; init; }
