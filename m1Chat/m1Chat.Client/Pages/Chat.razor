@@ -7,68 +7,70 @@
 @inject IScrollManager ScrollManager
 
 <style>
-  /* Hide native scrollbars but keep vertical scrolling */
   .no-scrollbar {
     overflow-y: auto;
     overflow-x: hidden;
-    -ms-overflow-style: none; /* IE/Edge */
-    scrollbar-width: none;     /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .no-scrollbar::-webkit-scrollbar {
-    display: none;             /* Chrome/Safari/Opera */
+    display: none;
   }
-
-  /* Kill MudMainContent's top-padding */
   .mud-main-content {
     padding-top: 0 !important;
   }
-
-  /* Set background of chat area */
   .chat-main-content-bg {
     background-color: var(--mud-palette-surface);
   }
-
-  /* Chat viewport height (subtract header+footer) */
   .chat-container {
     overflow-y: auto;
     height: calc(100vh - 128px);
   }
-
-  /* User bubble styling */
   .user-message {
     margin: 0;
     line-height: 1.43;
     font-size: 1rem;
   }
-
-  /* Container for user bubble + actions */
   .user-message-container {
     position: relative;
-    display: inline-block; /* Shrink-wrap to content */
-    max-width: 60%;
-    margin-left: auto;     /* Push to the right */
+    width: 70%;
+    margin-left: 15%;
   }
-
-  /* Action buttons: float just below the bubble */
   .message-actions {
     position: absolute;
-    top: 100%;              /* Just below */
-    right: 0;               /* Align to container's right */
-    margin-top: 0.25rem;    /* Small gap */
+    top: 100%;
+    left: 0;
+    width: 100%;
+    margin-top: 0.25rem;
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: 0.25rem;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s ease-in-out;
+    transition: opacity 0.15s ease-in-out 0.1s;
     z-index: 10;
     background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
+    box-sizing: border-box;
   }
-  .user-message-container:hover .message-actions {
+  .user-message-hoverzone {
+    position: absolute;
+    top: calc(100% + 0.5rem); /* just below the buttons */
+    left: 0;
+    width: 100%;
+    height: 32px; /* adjust as needed */
+    z-index: 5;
+    /* background: rgba(255,0,0,0.05);  Uncomment for debugging */
+    pointer-events: auto;
+  }
+  .user-message-container:hover .message-actions,
+  .message-actions:hover,
+  .user-message-hoverzone:hover ~ .message-actions {
     opacity: 1;
     pointer-events: auto;
+    transition-delay: 0s;
   }
   .message-actions .mud-icon-button {
     padding: 3px;
@@ -76,8 +78,6 @@
   .message-actions .mud-icon-button .mud-icon-root {
     font-size: 1rem;
   }
-
-  /* AI message styling */
   .ai-message {
     display: block;
     width: 70%;
@@ -86,14 +86,10 @@
     line-height: 1.43;
     padding: 1rem;
   }
-
-  /* Input area width */
   .input-area-container {
     width: 70%;
     margin: 0 auto;
   }
-
-  /* Shared styles for hr, headings, lists, blockquotes, code, tables */
   .ai-message hr,
   .user-message hr {
     border: none;
@@ -106,16 +102,13 @@
   .ai-message h2,
   .user-message h2 { padding: 1.25rem 0; margin: 0; }
   .ai-message h3,
-  .user-message h3 { padding: 1rem 0;   margin: 0; }
+  .user-message h3 { padding: 1rem 0; margin: 0; }
   .ai-message h4,
   .ai-message h5,
   .ai-message h6,
   .user-message h4,
   .user-message h5,
-  .user-message h6 {
-    padding: 0.75rem 0;
-    margin: 0;
-  }
+  .user-message h6 { padding: 0.75rem 0; margin: 0; }
   .ai-message ul,
   .ai-message ol,
   .user-message ul,
@@ -130,9 +123,7 @@
     color: var(--mud-palette-primary);
   }
   .ai-message li,
-  .user-message li {
-    margin: 1rem 0;
-  }
+  .user-message li { margin: 1rem 0; }
   .ai-message blockquote,
   .user-message blockquote {
     border-left: 4px solid var(--mud-palette-primary-lighten);
@@ -173,12 +164,11 @@
   }
   .ai-message pre,
   .user-message pre {
-    background: var(--mud-palette-code-background,
-      var(--mud-palette-background));
+    background: var(--mud-palette-code-background, var(--mud-palette-background));
     border: 1px solid var(--mud-palette-divider);
     border-left: 3px solid var(--mud-palette-primary);
     padding: 0.75rem;
-    margin: 0 0 1rem;
+    margin: 0 0 1rem 0;
     font-family: Consolas, Monaco, 'Courier New', monospace;
     font-size: 0.875rem;
     line-height: 1.4;
@@ -244,8 +234,6 @@
     font-size: 0.95em;
     text-align: left;
   }
-
-  /* Sidebar chat row hover actions */
   .sidebar-chat-row {
     position: relative;
     display: flex;
@@ -400,7 +388,7 @@
       Elevation="0"
       Class="chat-container px-2 pb-2 no-scrollbar"
     >
-      <MudStack Spacing="1">
+      <MudStack Spacing="4">
         @foreach (var m in ChatHistory)
         {
           if (m.IsUser)
@@ -442,6 +430,7 @@
                     />
                   </span>
                 </div>
+                <div class="user-message-hoverzone"></div>
               </div>
             </MudStack>
           }
