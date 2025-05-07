@@ -7,694 +7,419 @@
 @inject IScrollManager ScrollManager
 
 <style>
-  .no-scrollbar {
-    overflow-y: auto;
-    overflow-x: hidden;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .mud-main-content {
-    padding-top: 0 !important;
-  }
-  .chat-main-content-bg {
-    background-color: var(--mud-palette-surface);
-  }
-  .chat-container {
-    overflow-y: auto;
-    height: calc(100vh - 128px);
-  }
-  .user-message {
-    margin: 0;
-    line-height: 1.43;
-    font-size: 1rem;
-  }
-  .user-message-container {
-    position: relative;
-    width: 70%;
-    margin-left: 15%;
-  }
-  .ai-message-container {
-    position: relative;
-    width: 70%;
-    margin: auto;
-  }
-  .message-actions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    margin-top: 0.25rem;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0.25rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s ease-in-out 0.1s;
-    z-index: 10;
-    background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    box-sizing: border-box;
-  }
-  .user-message-hoverzone,
-  .ai-message-hoverzone {
-    position: absolute;
-    top: calc(100% + 0.5rem); /* just below the buttons */
-    left: 0;
-    width: 100%;
-    height: 32px; /* adjust as needed */
-    z-index: 5;
-    /* background: rgba(255,0,0,0.05);  Uncomment for debugging */
-    pointer-events: auto;
-  }
-  .user-message-container:hover .message-actions,
-  .message-actions:hover,
-  .user-message-hoverzone:hover ~ .message-actions,
-  .ai-message-container:hover .message-actions,
-  .ai-message-hoverzone:hover ~ .message-actions {
-    opacity: 1;
-    pointer-events: auto;
-    transition-delay: 0s;
-  }
-  .message-actions .mud-icon-button {
-    padding: 3px;
-  }
-  .message-actions .mud-icon-button .mud-icon-root {
-    font-size: 1rem;
-  }
-  .ai-message {
-    display: block;
-    width: 100%;  /* Fixed to fill the container */
-    white-space: normal;
-    line-height: 1.43;
-    padding: 1rem;
-  }
-  .input-area-container {
-    width: 70%;
-    margin: 0 auto;
-  }
-  .ai-message hr,
-  .user-message hr {
-    border: none;
-    height: 1px;
-    background-color: var(--mud-palette-primary);
-    margin: 1rem 0;
-  }
-  .ai-message h1,
-  .user-message h1 { padding: 1.5rem 0; margin: 0; }
-  .ai-message h2,
-  .user-message h2 { padding: 1.25rem 0; margin: 0; }
-  .ai-message h3,
-  .user-message h3 { padding: 1rem 0; margin: 0; }
-  .ai-message h4,
-  .ai-message h5,
-  .ai-message h6,
-  .user-message h4,
-  .user-message h5,
-  .user-message h6 { padding: 0.75rem 0; margin: 0; }
-  .ai-message ul,
-  .ai-message ol,
-  .user-message ul,
-  .user-message ol {
-    padding: 0.75rem;
-    list-style-position: inside;
-  }
-  .ai-message ul li::marker,
-  .ai-message ol li::marker,
-  .user-message ul li::marker,
-  .user-message ol li::marker {
-    color: var(--mud-palette-primary);
-  }
-  .ai-message li,
-  .user-message li { margin: 1rem 0; }
-  .ai-message blockquote,
-  .user-message blockquote {
-    border-left: 4px solid var(--mud-palette-primary-lighten);
-    margin: 1rem 0;
-    background-color: var(--mud-palette-background-grey);
-    color: var(--mud-palette-text);
-    font-style: italic;
-  }
-  .ai-message blockquote p,
-  .user-message blockquote p {
-    margin-bottom: 0;
-    padding: 0.75rem;
-  }
-  .ai-message a,
-  .user-message a {
-    color: var(--mud-palette-primary);
-    text-decoration: underline;
-    font-weight: bold;
-  }
-  .code-block-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--mud-palette-appbar-background, #27272f);
-    color: var(--mud-palette-appbar-text, #fff);
-    padding: 0.4rem 0.75rem;
-    border: 1px solid var(--mud-palette-divider);
-    border-bottom: none;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    margin-top: 1rem;
-  }
-  .language-name {
-    font-size: 0.8rem;
-    font-family: Consolas, Monaco, 'Courier New', monospace;
-    color: var(--mud-palette-text-secondary);
-    text-transform: capitalize;
-  }
-  .ai-message pre,
-  .user-message pre {
-    background: var(--mud-palette-code-background, var(--mud-palette-background));
-    border: 1px solid var(--mud-palette-divider);
-    border-left: 3px solid var(--mud-palette-primary);
-    padding: 0.75rem;
-    margin: 0 0 1rem 0;
-    font-family: Consolas, Monaco, 'Courier New', monospace;
-    font-size: 0.875rem;
-    line-height: 1.4;
-    overflow-x: auto;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-  }
-  .ai-message pre code,
-  .user-message pre code {
-    display: block;
-    background: transparent;
-    white-space: pre;
-    padding: 0;
-    margin: 0;
-    font-family: inherit;
-    font-size: 1em;
-    font-weight: normal; /* Ensure code blocks are not bold */
-  }
-  .ai-message code,
-  .user-message code {
-    background-color: var(--mud-palette-appbar-background, #27272f);
-    color: var(--mud-palette-text-primary);
-    padding: 0.2em 0.4em;
-    margin: 0 0.1em;
-    font-family: Consolas, Monaco, 'Courier New', monospace;
-    font-size: 85%;
-    border-radius: 3px;
-    font-weight: bold; /* Inline code remains bold */
-  }
-  .ai-message table,
-  .user-message table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    font-size: 1rem;
-    overflow-x: auto;
-    display: block;
-  }
-  .ai-message th,
-  .ai-message td,
-  .user-message th,
-  .user-message td {
-    border-bottom: 1px solid var(--mud-palette-divider);
-    padding: 0.75rem 1rem;
-    text-align: left;
-    vertical-align: top;
-  }
-  .ai-message th,
-  .user-message th {
-    font-weight: 600;
-    border-bottom: 1px solid var(--mud-palette-drawer-text);
-  }
-  .ai-message tr:first-of-type td,
-  .user-message tr:first-of-type td {
-    border-bottom: 1px solid var(--mud-palette-divider);
-  }
-  .ai-message caption,
-  .user-message caption {
-    caption-side: bottom;
-    padding: 0.5rem;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.95em;
-    text-align: left;
-  }
-  .sidebar-chat-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    min-height: 48px;
-    padding: 0 16px;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  .sidebar-chat-row .chat-name-text {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-  }
-  .sidebar-chat-row .chat-actions {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 0.25rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s ease-in-out;
-    background-color: var(--mud-palette-drawer-background);
-    padding: 0.25rem;
-    border-radius: 4px;
-    z-index: 10;
-  }
-  .sidebar-chat-row .chat-actions > span {
-    display: inline-flex;
-  }
-  .sidebar-chat-row:hover .chat-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
 </style>
 
 <MudLayout>
-  <MudDrawer
-    @bind-Open="_drawerOpen"
-    Anchor="Anchor.Left"
-    Elevation="1"
-    Variant="DrawerVariant.Persistent"
-    Class="d-flex flex-column"
-  >
-    <MudDrawerHeader Class="d-flex flex-column pa-2">
-      <div class="d-flex align-center justify-space-between">
-        <MudText Typo="Typo.h6">M1 Chat</MudText>
-        <MudIconButton
-          Icon="@Icons.Material.Filled.ChevronLeft"
-          OnClick="ToggleDrawer"
-        />
-      </div>
-      <MudButton
-        Variant="Variant.Filled"
-        Color="Color.Primary"
-        Class="mt-2"
-        FullWidth="true"
-      >
-        New Chat
-      </MudButton>
-    </MudDrawerHeader>
-
-    <div class="flex-grow-1 no-scrollbar">
-      <MudList T="SidebarChat" Clickable="false">
-        @foreach (var chat in SidebarChats)
-        {
-          <MudMenu
-            Style="width: 100%;"
-            ActivationEvent="@MouseEvent.RightClick"
-            AnchorOrigin="Origin.BottomLeft"
-            TransformOrigin="Origin.TopLeft"
-          >
-            <ActivatorContent>
-              <div
-                class="sidebar-chat-row"
-                @onclick="@(() => LoadChat(chat))"
-                @oncontextmenu:preventDefault
-                @oncontextmenu="@(() => { })"
-              >
-                <MudText Class="chat-name-text">@chat.Name</MudText>
-                <span class="chat-actions">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.PushPin"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="@(() => PinChat(chat))"
-                      aria-label="Pin chat"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.Delete"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="@(() => DeleteChat(chat))"
-                      aria-label="Delete chat"
-                    />
-                  </span>
-                </span>
-              </div>
-            </ActivatorContent>
-            <ChildContent>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                OnClick="@(() => HandleRenameChat(chat))"
-              >
-                Rename
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.Delete"
-                OnClick="@(() => DeleteChat(chat))"
-              >
-                Delete
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.ArrowOutward"
-                OnClick="@(() => HandleExportChat(chat))"
-              >
-                Export
-              </MudMenuItem>
-            </ChildContent>
-          </MudMenu>
-        }
-      </MudList>
-    </div>
-
-    <div class="pa-2">
-      <MudText Typo="Typo.subtitle2" Class="mb-1">@UserEmail</MudText>
-      <MudButton
-        Variant="Variant.Filled"
-        Color="Color.Secondary"
-        FullWidth="true"
-        OnClick="Logout"
-      >
-        Logout
-      </MudButton>
-    </div>
-  </MudDrawer>
-
-  <MudMainContent
-    Class="d-flex flex-column p-0 chat-main-content-bg"
-    Style="height:100vh;overflow:hidden;"
-  >
-    <MudPaper
-      Elevation="0"
-      Class="chat-container px-2 pb-2 no-scrollbar"
+    <MudDrawer
+        @bind-Open="_drawerOpen"
+        Anchor="Anchor.Left"
+        Elevation="1"
+        Variant="DrawerVariant.Persistent"
+        Class="d-flex flex-column"
     >
-      <MudStack Spacing="4">
-        @foreach (var m in ChatHistory)
-        {
-          if (m.IsUser)
-          {
-            <MudStack JustifyContent="FlexEnd">
-              <div class="user-message-container">
-                <MudChatBubble
-                  Variant="Variant.Text"
-                  Class="user-message"
-                >
-                  <UserMarkdown Markdown="@m.Text" />
-                </MudChatBubble>
-                <div class="message-actions">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.Refresh"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleRegenerateMessage(m))"
-                      aria-label="Regenerate"
-                      Title="Regenerate"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.Edit"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleEditMessage(m))"
-                      aria-label="Edit"
-                      Title="Edit"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.ContentCopy"
-                      Size="Size.Small"
-                      OnClick="@(async () => await HandleCopyMessage(m))"
-                      aria-label="Copy"
-                      Title="Copy"
-                    />
-                  </span>
-                </div>
-                <div class="user-message-hoverzone"></div>
-              </div>
-            </MudStack>
-          }
-          else
-          {
-            <MudStack JustifyContent="FlexStart">
-              <div class="ai-message-container">
-                <AiMarkdown Markdown="@m.Text" />
-                <div class="message-actions">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.ContentCopy"
-                      Size="Size.Small"
-                      OnClick="@(async () => await HandleCopyMessage(m))"
-                      aria-label="Copy"
-                      Title="Copy"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.MergeType"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleBranchMessage(m))"
-                      aria-label="Branch"
-                      Title="Branch"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.Refresh"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleRegenerateMessage(m))"
-                      aria-label="Regenerate"
-                      Title="Regenerate"
-                    />
-                  </span>
-                </div>
-                <div class="ai-message-hoverzone"></div>
-              </div>
-            </MudStack>
-          }
-        }
-      </MudStack>
-    </MudPaper>
-
-    <div class="input-area-container">
-      <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
-        <MudContainer Class="pa-0">
-          <div style="display: flex; flex-direction: column;">
-            <div style="display: flex; align-items: center;">
-              <MudTextField
-                @bind-Value="MessageText"
-                Label="Enter your message"
-                Variant="Variant.Outlined"
-                Lines="2"
-                AutoGrow="true"
-                MaxLines="10"
-                Class="flex-grow-1"
-                Immediate="true"
-                @onkeyup="HandleKeyUp"
-              />
-            </div>
-            <div
-              style="display: flex; align-items: center; margin-top: 8px;"
-            >
-              <MudSelect
-                @bind-Value="ChatSelectedOption"
-                Label="Select a model"
-                Variant="Variant.Outlined"
-                Margin="Margin.Dense"
-                FitContent="true"
-                Class="mr-2"
-              >
-                @foreach (var opt in ChatOptions)
-                {
-                  <MudSelectItem Value="@opt">@opt</MudSelectItem>
-                }
-              </MudSelect>
-              <MudToggleIconButton
-                @bind-Toggled="_searchEnabled"
-                Icon="@Icons.Material.Filled.Public"
-                ToggledIcon="@Icons.Material.Filled.PublicOff"
-                Color="Color.Primary"
-                ToggledColor="Color.Secondary"
-                aria-label="Toggle search"
-                Class="ml-2"
-              />
-              <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
-              <div
-                style="margin-left: auto; display: flex; align-items: center;"
-              >
+        <MudDrawerHeader Class="d-flex flex-column pa-2">
+            <div class="d-flex align-center justify-space-between">
+                <MudText Typo="Typo.h6">M1 Chat</MudText>
                 <MudIconButton
-                  Icon="@Icons.Material.Filled.AttachFile"
-                  Color="Color.Primary"
-                  OnClick="AttachFile"
-                  aria-label="Attach file"
-                  Class="mr-2"
+                    Icon="@Icons.Material.Filled.ChevronLeft"
+                    OnClick="ToggleDrawer"
                 />
-                <MudButton
-                  Variant="Variant.Filled"
-                  Color="Color.Primary"
-                  EndIcon="@Icons.Material.Filled.Send"
-                  OnClick="SendMessage"
-                  aria-label="Send message"
-                >
-                  Send
-                </MudButton>
-              </div>
             </div>
-          </div>
-        </MudContainer>
-      </MudPaper>
-    </div>
-  </MudMainContent>
+            <MudButton
+                Variant="Variant.Filled"
+                Color="Color.Primary"
+                Class="mt-2"
+                FullWidth="true"
+            >
+                New Chat
+            </MudButton>
+        </MudDrawerHeader>
+
+        <div class="flex-grow-1 no-scrollbar">
+            <MudList T="SidebarChat" Clickable="false">
+                @foreach (var chat in SidebarChats)
+                {
+                    <MudMenu
+                        Style="width: 100%;"
+                        ActivationEvent="@MouseEvent.RightClick"
+                        AnchorOrigin="Origin.BottomLeft"
+                        TransformOrigin="Origin.TopLeft"
+                    >
+                        <ActivatorContent>
+                            <div
+                                class="sidebar-chat-row"
+                                @onclick="@(() => LoadChat(chat))"
+                                @oncontextmenu:preventDefault
+                                @oncontextmenu="@(() => { })"
+                            >
+                                <MudText Class="chat-name-text">@chat.Name</MudText>
+                                <span class="chat-actions">
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Outlined.PushPin"
+                                            Color="Color.Default"
+                                            Size="Size.Small"
+                                            OnClick="@(() => PinChat(chat))"
+                                            aria-label="Pin chat"
+                                        />
+                                    </span>
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Outlined.Delete"
+                                            Color="Color.Default"
+                                            Size="Size.Small"
+                                            OnClick="@(() => DeleteChat(chat))"
+                                            aria-label="Delete chat"
+                                        />
+                                    </span>
+                                </span>
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem
+                                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                                OnClick="@(() => HandleRenameChat(chat))"
+                            >
+                                Rename
+                            </MudMenuItem>
+                            <MudMenuItem
+                                Icon="@Icons.Material.Outlined.Delete"
+                                OnClick="@(() => DeleteChat(chat))"
+                            >
+                                Delete
+                            </MudMenuItem>
+                            <MudMenuItem
+                                Icon="@Icons.Material.Outlined.ArrowOutward"
+                                OnClick="@(() => HandleExportChat(chat))"
+                            >
+                                Export
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                }
+            </MudList>
+        </div>
+
+        <div class="pa-2">
+            <MudText Typo="Typo.subtitle2" Class="mb-1">@UserEmail</MudText>
+            <MudButton
+                Variant="Variant.Filled"
+                Color="Color.Secondary"
+                FullWidth="true"
+                OnClick="Logout"
+            >
+                Logout
+            </MudButton>
+        </div>
+    </MudDrawer>
+
+    <MudMainContent
+        Class="d-flex flex-column p-0 chat-main-content-bg"
+        Style="height:100vh;overflow:hidden;"
+    >
+        <MudPaper
+            Elevation="0"
+            Class="chat-container px-2 pb-2 no-scrollbar"
+        >
+            <MudStack Spacing="4">
+                @foreach (var m in ChatHistory)
+                {
+                    if (m.IsUser)
+                    {
+                        <MudStack JustifyContent="FlexEnd">
+                            <div class="user-message-container">
+                                <MudChatBubble
+                                    Variant="Variant.Text"
+                                    Class="user-message"
+                                >
+                                    <UserMarkdown Markdown="@m.Text" />
+                                </MudChatBubble>
+                                <div class="message-actions">
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Outlined.Refresh"
+                                            Size="Size.Small"
+                                            OnClick="@(() => HandleRegenerateMessage(m))"
+                                            aria-label="Regenerate"
+                                            Title="Regenerate"
+                                        />
+                                    </span>
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Filled.Edit"
+                                            Size="Size.Small"
+                                            OnClick="@(() => HandleEditMessage(m))"
+                                            aria-label="Edit"
+                                            Title="Edit"
+                                        />
+                                    </span>
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Filled.ContentCopy"
+                                            Size="Size.Small"
+                                            OnClick="@(async () => await HandleCopyMessage(m))"
+                                            aria-label="Copy"
+                                            Title="Copy"
+                                        />
+                                    </span>
+                                </div>
+                                <div class="user-message-hoverzone"></div>
+                            </div>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack JustifyContent="FlexStart">
+                            <div class="ai-message-container">
+                                <AiMarkdown Markdown="@m.Text" />
+                                <div class="message-actions">
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Filled.ContentCopy"
+                                            Size="Size.Small"
+                                            OnClick="@(async () => await HandleCopyMessage(m))"
+                                            aria-label="Copy"
+                                            Title="Copy"
+                                        />
+                                    </span>
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Filled.MergeType"
+                                            Size="Size.Small"
+                                            OnClick="@(() => HandleBranchMessage(m))"
+                                            aria-label="Branch"
+                                            Title="Branch"
+                                        />
+                                    </span>
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton
+                                            Icon="@Icons.Material.Filled.Refresh"
+                                            Size="Size.Small"
+                                            OnClick="@(() => HandleRegenerateMessage(m))"
+                                            aria-label="Regenerate"
+                                            Title="Regenerate"
+                                        />
+                                    </span>
+                                </div>
+                                <div class="ai-message-hoverzone"></div>
+                            </div>
+                        </MudStack>
+                    }
+                }
+            </MudStack>
+        </MudPaper>
+
+        <div class="input-area-container">
+            <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
+                <MudContainer Class="pa-0">
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="display: flex; align-items: center;">
+                            <MudTextField
+                                @bind-Value="MessageText"
+                                Label="Enter your message"
+                                Variant="Variant.Outlined"
+                                Lines="2"
+                                AutoGrow="true"
+                                MaxLines="10"
+                                Class="flex-grow-1"
+                                Immediate="true"
+                                @onkeyup="HandleKeyUp"
+                            />
+                        </div>
+                        <div
+                            style="display: flex; align-items: center; margin-top: 8px;"
+                        >
+                            <MudSelect
+                                @bind-Value="ChatSelectedOption"
+                                Label="Select a model"
+                                Variant="Variant.Outlined"
+                                Margin="Margin.Dense"
+                                FitContent="true"
+                                Class="mr-2"
+                            >
+                                @foreach (var opt in ChatOptions)
+                                {
+                                    <MudSelectItem Value="@opt">@opt</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudToggleIconButton
+                                @bind-Toggled="_searchEnabled"
+                                Icon="@Icons.Material.Filled.Public"
+                                ToggledIcon="@Icons.Material.Filled.PublicOff"
+                                Color="Color.Primary"
+                                ToggledColor="Color.Secondary"
+                                aria-label="Toggle search"
+                                Class="ml-2"
+                            />
+                            <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
+                            <div
+                                style="margin-left: auto; display: flex; align-items: center;"
+                            >
+                                <MudIconButton
+                                    Icon="@Icons.Material.Filled.AttachFile"
+                                    Color="Color.Primary"
+                                    OnClick="AttachFile"
+                                    aria-label="Attach file"
+                                    Class="mr-2"
+                                />
+                                <MudButton
+                                    Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    EndIcon="@Icons.Material.Filled.Send"
+                                    OnClick="SendMessage"
+                                    aria-label="Send message"
+                                >
+                                    Send
+                                </MudButton>
+                            </div>
+                        </div>
+                    </div>
+                </MudContainer>
+            </MudPaper>
+        </div>
+    </MudMainContent>
 </MudLayout>
 
 @code {
-  private bool _drawerOpen = true;
-  private bool _searchEnabled = false;
-  private bool _needsScroll;
+    private bool _drawerOpen = true;
+    private bool _searchEnabled = false;
+    private bool _needsScroll;
 
-  private string UserEmail { get; set; } = "user@example.com";
-  private string MessageText { get; set; } = "";
-  private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
+    private string UserEmail { get; set; } = "user@example.com";
+    private string MessageText { get; set; } = "";
+    private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
 
-  private List<string> ChatOptions = new()
-  {
-    "Gemini 2.5 Pro",
-    "Gemini 2.5 Flash (Thinking)",
-    "Gemini 2.5 Flash"
-  };
-
-  private List<ChatMessage> ChatHistory = new()
-  {
-    new ChatMessage { IsUser = false, Text = "Hello! I am your assistant." }
-  };
-
-  private List<SidebarChat> SidebarChats = new()
-  {
-    new SidebarChat { Name = "Chat with Alice" },
-    new SidebarChat
+    private List<string> ChatOptions = new()
     {
-      Name =
-        "Project Discussion with a very very very long name to test overflow"
-    }
-  };
+        "Gemini 2.5 Pro",
+        "Gemini 2.5 Flash (Thinking)",
+        "Gemini 2.5 Flash"
+    };
 
-  private void PinChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
-  }
-
-  private void DeleteChat(SidebarChat chat)
-  {
-    SidebarChats.Remove(chat);
-    Console.WriteLine($"Delete chat: {chat.Name} (ID: {chat.Id})");
-    StateHasChanged();
-  }
-
-  private void HandleRenameChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Rename chat: {chat.Name}");
-  }
-
-  private void HandleExportChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Export chat: {chat.Name}");
-  }
-
-  private void LoadChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Load chat: {chat.Name}");
-    ChatHistory.Clear();
-    ChatHistory.Add(
-      new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" }
-    );
-    StateHasChanged();
-  }
-
-  private class SidebarChat
-  {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string Name { get; set; } = "";
-  }
-
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    if (_needsScroll)
+    private List<ChatMessage> ChatHistory = new()
     {
-      await ScrollManager.ScrollToBottomAsync(
-        ".chat-container",
-        ScrollBehavior.Smooth
-      );
-      _needsScroll = false;
+        new ChatMessage { IsUser = false, Text = "Hello! I am your assistant." }
+    };
+
+    private List<SidebarChat> SidebarChats = new()
+    {
+        new SidebarChat { Name = "Chat with Alice" },
+        new SidebarChat
+        {
+            Name =
+                "Project Discussion with a very very very long name to test overflow"
+        }
+    };
+
+    private void PinChat(SidebarChat chat)
+    {
+        Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
     }
-  }
 
-  void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void DeleteChat(SidebarChat chat)
+    {
+        SidebarChats.Remove(chat);
+        Console.WriteLine($"Delete chat: {chat.Name} (ID: {chat.Id})");
+        StateHasChanged();
+    }
 
-  private async Task HandleKeyUp(KeyboardEventArgs args)
-  {
-    if (args.Key == "Enter" && !args.ShiftKey)
-      await SendMessage();
-  }
+    private void HandleRenameChat(SidebarChat chat)
+    {
+        Console.WriteLine($"Rename chat: {chat.Name}");
+    }
 
-  private async Task SendMessage()
-  {
-    var textToSend = MessageText.Trim();
-    if (string.IsNullOrWhiteSpace(textToSend))
-      return;
+    private void HandleExportChat(SidebarChat chat)
+    {
+        Console.WriteLine($"Export chat: {chat.Name}");
+    }
 
-    ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
-    var temp = MessageText;
-    MessageText = "";
-    _needsScroll = true;
-    StateHasChanged();
+    private void LoadChat(SidebarChat chat)
+    {
+        Console.WriteLine($"Load chat: {chat.Name}");
+        ChatHistory.Clear();
+        ChatHistory.Add(
+            new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" }
+        );
+        StateHasChanged();
+    }
 
-    await Task.Delay(500);
-    ChatHistory.Add(new ChatMessage { IsUser = false, Text = temp });
-    _needsScroll = true;
-    StateHasChanged();
-  }
+    private class SidebarChat
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = "";
+    }
 
-  private void AttachFile() => Console.WriteLine("Attach file clicked.");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsScroll)
+        {
+            await ScrollManager.ScrollToBottomAsync(
+                ".chat-container",
+                ScrollBehavior.Smooth
+            );
+            _needsScroll = false;
+        }
+    }
 
-  private void Logout()
-  {
-    Console.WriteLine("Logout clicked");
-    NavigationManager.NavigateTo("/");
-  }
+    void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
-  private record ChatMessage
-  {
-    public string Id { get; init; } = Guid.NewGuid().ToString();
-    public bool IsUser { get; init; }
-    public string Text { get; init; } = "";
-  }
+    private async Task HandleKeyUp(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !args.ShiftKey)
+            await SendMessage();
+    }
 
-  private void HandleRegenerateMessage(ChatMessage message)
-  {
-    Console.WriteLine($"Regenerate message: {message.Id}");
-  }
+    private async Task SendMessage()
+    {
+        var textToSend = MessageText.Trim();
+        if (string.IsNullOrWhiteSpace(textToSend))
+            return;
 
-  private void HandleEditMessage(ChatMessage message)
-  {
-    Console.WriteLine($"Edit message: {message.Id}");
-  }
+        ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
+        var temp = MessageText;
+        MessageText = "";
+        _needsScroll = true;
+        StateHasChanged();
 
-  private async Task HandleCopyMessage(ChatMessage message)
-  {
-    Console.WriteLine($"Copy message: {message.Id}");
-    // To actually copy: await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", message.Text);
-  }
+        await Task.Delay(500);
+        ChatHistory.Add(new ChatMessage { IsUser = false, Text = temp });
+        _needsScroll = true;
+        StateHasChanged();
+    }
 
-  private void HandleBranchMessage(ChatMessage message)
-  {
-    Console.WriteLine($"Branch message: {message.Id}");
-  }
+    private void AttachFile() => Console.WriteLine("Attach file clicked.");
+
+    private void Logout()
+    {
+        Console.WriteLine("Logout clicked");
+        NavigationManager.NavigateTo("/");
+    }
+
+    private record ChatMessage
+    {
+        public string Id { get; init; } = Guid.NewGuid().ToString();
+        public bool IsUser { get; init; }
+        public string Text { get; init; } = "";
+    }
+
+    private void HandleRegenerateMessage(ChatMessage message)
+    {
+        Console.WriteLine($"Regenerate message: {message.Id}");
+    }
+
+    private void HandleEditMessage(ChatMessage message)
+    {
+        Console.WriteLine($"Edit message: {message.Id}");
+    }
+
+    private async Task HandleCopyMessage(ChatMessage message)
+    {
+        Console.WriteLine($"Copy message: {message.Id}");
+        // To actually copy: await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", message.Text);
+    }
+
+    private void HandleBranchMessage(ChatMessage message)
+    {
+        Console.WriteLine($"Branch message: {message.Id}");
+    }
 }
