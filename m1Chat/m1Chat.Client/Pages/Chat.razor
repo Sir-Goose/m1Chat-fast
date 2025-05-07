@@ -362,7 +362,8 @@
             <MudList T="SidebarChat" Clickable="false">
                 @foreach (var chat in SidebarChats)
                 {
-                    <MudMenu ActivationEvent="@MouseEvent.RightClick" AnchorOrigin="Origin.BottomLeft"
+                    <MudMenu Style="width: 100%;"
+                             ActivationEvent="@MouseEvent.RightClick" AnchorOrigin="Origin.BottomLeft"
                              TransformOrigin="Origin.TopLeft">
                         <ActivatorContent>
                             <div class="sidebar-chat-row"
