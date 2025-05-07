@@ -294,37 +294,48 @@
 
     /* Sidebar chat row hover actions */
     .sidebar-chat-row {
-        position: relative;
+        position: relative; /* Crucial for absolute positioning of children */
         display: flex;
         align-items: center;
-        justify-content: space-between; /* MODIFIED: Ensures text is left, actions are right */
         cursor: pointer;
         min-height: 48px;
-        padding-left: 16px;
-        padding-right: 16px;
+        padding-left: 16px; /* Overall padding for the row */
+        padding-right: 16px; /* Overall padding for the row - icons will be positioned within this space */
         width: 100%;
         box-sizing: border-box;
+        overflow: hidden; /* Ensures the row itself clips if necessary */
+    }
+
+    /* Class for the chat name text */
+    .sidebar-chat-row .chat-name-text {
+        flex-grow: 1; /* Take up available space */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0; /* Essential for flex item to shrink and allow ellipsis */
+        /* REMOVED: padding-right: 75px; */
     }
 
     .sidebar-chat-row .chat-actions {
+        position: absolute;
+        right: 8px; /* Position from the right edge of the sidebar-chat-row's content box */
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
-        gap: 0.25rem; /* Gap between buttons */
-        /* REMOVED: position, right, top, transform */
+        gap: 0.25rem;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.15s;
-        background-color: var(--mud-palette-drawer-background);
-        padding: 0.25rem;
+        transition: opacity 0.15s ease-in-out;
+        background-color: var(--mud-palette-drawer-background); /* Key to hide text underneath */
+        padding: 0.25rem; /* Padding for the actions container itself */
         border-radius: 4px;
-        z-index: 1;
-        flex-shrink: 0; /* ADDED: Prevents actions from shrinking */
-        margin-left: 8px; /* ADDED: Ensures some space from text */
+        z-index: 10; /* Ensure it's above the text */
+        flex-shrink: 0; /* Prevent this container from shrinking */
     }
 
-    .sidebar-chat-row .chat-actions > span { /* Target the wrapping spans for icon buttons */
+    .sidebar-chat-row .chat-actions > span {
         display: inline-flex;
     }
-
 
     .sidebar-chat-row:hover .chat-actions {
         opacity: 1;
@@ -370,7 +381,7 @@
                                  @onclick="@(() => LoadChat(chat))"
                                  @oncontextmenu:preventDefault
                                  @oncontextmenu="@(() => { })">
-                                <MudText Style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
+                                <MudText Class="chat-name-text">
                                     @chat.Name
                                 </MudText>
 
