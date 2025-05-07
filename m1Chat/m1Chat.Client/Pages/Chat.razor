@@ -24,10 +24,15 @@
         padding-top: 0 !important;
     }
 
+    /* Set MudMainContent background to surface color for this chat page */
+    .chat-main-content-bg {
+        background-color: var(--mud-palette-surface);
+    }
+
     /* Chat viewport height (subtract header+footer) */
     .chat-container {
         overflow-y: auto;
-        height: calc(100vh - 128px);
+        height: calc(100vh - 128px); /* Assuming input area height is roughly 64px * 2 for header/footer */
     }
 
     /* User bubble is capped to ~60% width */
@@ -143,7 +148,7 @@
     /* Customized code-block styling */
     .ai-message pre,
     .user-message pre {
-        background: var(--mud-palette-background);
+        background: var(--mud-palette-background); /* Or var(--mud-palette-surface) if you want it to blend more */
         border: 1px solid var(--mud-palette-divider);
         border-left: 3px solid var(--mud-palette-primary);
         border-radius: 4px;
@@ -303,7 +308,7 @@
     </MudDrawer>
 
     <MudMainContent
-        Class="d-flex flex-column p-0"
+        Class="d-flex flex-column p-0 chat-main-content-bg"
         Style="height:100vh;overflow:hidden;"
     >
         <MudPaper
@@ -331,7 +336,7 @@
         </MudPaper>
 
         <div class="input-area-container">
-            <MudPaper Elevation="1" Class="pa-2 flex-shrink-0">
+            <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
                 <MudContainer Class="pa-0">
                     <div style="display: flex; flex-direction: column;">
                         <div style="display: flex; align-items: center;">
@@ -479,8 +484,8 @@
         _needsScroll = true;
         StateHasChanged();
 
-        await Task.Delay(500);
-        ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"{textToSend}" });
+        await Task.Delay(500); // Simulate AI response delay
+        ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"Echo: {textToSend}" }); // Simple echo for now
         _needsScroll = true;
         StateHasChanged();
     }
