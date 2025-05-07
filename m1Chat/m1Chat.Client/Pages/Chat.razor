@@ -36,6 +36,11 @@
     width: 70%;
     margin-left: 15%;
   }
+  .ai-message-container {
+    position: relative;
+    width: 70%;
+    margin: auto;
+  }
   .message-actions {
     position: absolute;
     top: 100%;
@@ -55,7 +60,8 @@
     border-radius: 4px;
     box-sizing: border-box;
   }
-  .user-message-hoverzone {
+  .user-message-hoverzone,
+  .ai-message-hoverzone {
     position: absolute;
     top: calc(100% + 0.5rem); /* just below the buttons */
     left: 0;
@@ -67,7 +73,9 @@
   }
   .user-message-container:hover .message-actions,
   .message-actions:hover,
-  .user-message-hoverzone:hover ~ .message-actions {
+  .user-message-hoverzone:hover ~ .message-actions,
+  .ai-message-container:hover .message-actions,
+  .ai-message-hoverzone:hover ~ .message-actions {
     opacity: 1;
     pointer-events: auto;
     transition-delay: 0s;
@@ -80,8 +88,7 @@
   }
   .ai-message {
     display: block;
-    width: 70%;
-    margin: auto;
+    width: 100%;  /* Fixed to fill the container */
     white-space: normal;
     line-height: 1.43;
     padding: 1rem;
@@ -436,7 +443,41 @@
           }
           else
           {
-            <AiMarkdown Markdown="@m.Text" />
+            <MudStack JustifyContent="FlexStart">
+              <div class="ai-message-container">
+                <AiMarkdown Markdown="@m.Text" />
+                <div class="message-actions">
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Filled.ContentCopy"
+                      Size="Size.Small"
+                      OnClick="@(async () => await HandleCopyMessage(m))"
+                      aria-label="Copy"
+                      Title="Copy"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Filled.MergeType"
+                      Size="Size.Small"
+                      OnClick="@(() => HandleBranchMessage(m))"
+                      aria-label="Branch"
+                      Title="Branch"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Filled.Refresh"
+                      Size="Size.Small"
+                      OnClick="@(() => HandleRegenerateMessage(m))"
+                      aria-label="Regenerate"
+                      Title="Regenerate"
+                    />
+                  </span>
+                </div>
+                <div class="ai-message-hoverzone"></div>
+              </div>
+            </MudStack>
           }
         }
       </MudStack>
@@ -650,4 +691,10 @@
     Console.WriteLine($"Copy message: {message.Id}");
     // To actually copy: await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", message.Text);
   }
+
+  private void HandleBranchMessage(ChatMessage message)
+  {
+    Console.WriteLine($"Branch message: {message.Id}");
+  }
 }
+
