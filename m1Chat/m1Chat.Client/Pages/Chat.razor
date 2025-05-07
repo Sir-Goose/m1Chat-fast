@@ -199,7 +199,7 @@
         line-height: 1; /* Ensure text aligns well with icon */
     }
 
-    /* Customized code-block styling for pre elements */ /* MODIFIED THIS LINE */
+    /* Customized code-block styling for pre elements */
     .ai-message pre,
     .user-message pre {
         background: var(--mud-palette-code-background, var(--mud-palette-background)); /* Use theme variable or fallback */
@@ -216,7 +216,6 @@
         border-top-right-radius: 0; /* Top radius handled by header */
         border-bottom-left-radius: 4px; /* Keep bottom radius */
         border-bottom-right-radius: 4px; /* Keep bottom radius */
-        /* The border-left: 3px solid var(--mud-palette-primary) will override the left part of the main border */
     }
 
 
@@ -298,6 +297,7 @@
         position: relative;
         display: flex;
         align-items: center;
+        justify-content: space-between; /* MODIFIED: Ensures text is left, actions are right */
         cursor: pointer;
         min-height: 48px;
         padding-left: 16px;
@@ -309,10 +309,7 @@
     .sidebar-chat-row .chat-actions {
         display: flex;
         gap: 0.25rem; /* Gap between buttons */
-        position: absolute;
-        right: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
+        /* REMOVED: position, right, top, transform */
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.15s;
@@ -320,10 +317,12 @@
         padding: 0.25rem;
         border-radius: 4px;
         z-index: 1;
+        flex-shrink: 0; /* ADDED: Prevents actions from shrinking */
+        margin-left: 8px; /* ADDED: Ensures some space from text */
     }
 
     .sidebar-chat-row .chat-actions > span { /* Target the wrapping spans for icon buttons */
-        display: inline-flex; /* Helps with alignment if needed */
+        display: inline-flex;
     }
 
 
@@ -370,10 +369,10 @@
                                  @onclick="@(() => LoadChat(chat))"
                                  @oncontextmenu:preventDefault
                                  @oncontextmenu="@(() => { })">
-                                <MudText
-                                    Style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 70px;"> @* Increased padding for actions *@
+                                <MudText Style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
                                     @chat.Name
                                 </MudText>
+
                                 <span class="chat-actions">
                                     <span @onclick:stopPropagation="true">
                                         <MudIconButton
