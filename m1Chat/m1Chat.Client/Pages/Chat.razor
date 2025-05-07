@@ -387,7 +387,7 @@
                                     <span @onclick:stopPropagation="true">
                                         <MudIconButton
                                             Icon="@Icons.Material.Outlined.Delete"
-                                            Color="Color.Error"
+                                            Color="Color.Default"
                                             Size="Size.Small"
                                             OnClick="@(() => DeleteChat(chat))"
                                             aria-label="Delete chat"
@@ -627,7 +627,6 @@
         StateHasChanged();
 
         await Task.Delay(500); // Simulate AI response delay
-// Example AI response with code and math
         string aiResponse = $"{tempMessageText}";
         ChatHistory.Add(new ChatMessage { IsUser = false, Text = aiResponse });
         _needsScroll = true;
