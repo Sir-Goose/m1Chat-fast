@@ -8,7 +8,6 @@
 @* @inject IJSRuntime JSRuntime // Potentially for prompt in HandleRenameChat demo *@
 @* @inject IDialogService DialogService // For a proper rename dialog *@
 
-
 <style>
     /* Hide native scrollbars but keep vertical scrolling */
     .no-scrollbar {
@@ -148,27 +147,84 @@
         font-weight: bold;
     }
 
-    /* Customized code-block styling */
+    /* Code block header styling */
+    .code-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--mud-palette-appbar-background, #27272f); /* Darker, distinct background */
+        color: var(--mud-palette-appbar-text, #ffffff);
+        padding: 0.4rem 0.75rem;
+        border: 1px solid var(--mud-palette-divider);
+        border-bottom: none;
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        margin-top: 1rem; /* Match original pre's margin-top */
+        margin-left: 0; /* Align with pre */
+        margin-right: 0; /* Align with pre */
+    }
+
+    .language-name {
+        font-size: 0.8rem;
+        font-family: Consolas, Monaco, 'Courier New', monospace; /* Consistent font */
+        color: var(--mud-palette-text-secondary);
+        text-transform: capitalize;
+    }
+
+    .copy-button {
+        background-color: transparent;
+        border: 1px solid transparent; /* for consistent height */
+        color: var(--mud-palette-action-default);
+        cursor: pointer;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+
+    .copy-button:hover {
+        background-color: var(--mud-palette-action-hover);
+        border-color: var(--mud-palette-divider);
+    }
+
+    .copy-button svg {
+        vertical-align: middle;
+    }
+
+    .copy-button span {
+        vertical-align: middle;
+        line-height: 1; /* Ensure text aligns well with icon */
+    }
+
+    /* Customized code-block styling for pre elements */ /* MODIFIED THIS LINE */
     .ai-message pre,
     .user-message pre {
-        background: var(--mud-palette-background);
+        background: var(--mud-palette-code-background, var(--mud-palette-background)); /* Use theme variable or fallback */
         border: 1px solid var(--mud-palette-divider);
-        border-left: 3px solid var(--mud-palette-primary);
-        border-radius: 4px;
+        border-left: 3px solid var(--mud-palette-primary); /* Keep original distinctive left border */
         padding: 0.75rem;
-        margin: 1rem 0;
+        margin: 0 0 1rem 0; /* Header now handles top margin */
         font-family: Consolas, Monaco, 'Courier New', monospace;
         font-size: 0.875rem;
         line-height: 1.4;
         overflow-x: auto;
         max-width: 100%;
+        border-top-left-radius: 0; /* Top radius handled by header */
+        border-top-right-radius: 0; /* Top radius handled by header */
+        border-bottom-left-radius: 4px; /* Keep bottom radius */
+        border-bottom-right-radius: 4px; /* Keep bottom radius */
+        /* The border-left: 3px solid var(--mud-palette-primary) will override the left part of the main border */
     }
+
 
     .ai-message pre code,
     .user-message pre code {
         display: block;
-        color: var(--mud-palette-text-primary);
-        background: transparent;
+        color: var(--mud-palette-text-primary); /* Ensure code text is readable on background */
+        background: transparent; /* Code background is handled by pre */
         white-space: pre;
     }
 
@@ -222,29 +278,29 @@
         display: flex;
         align-items: center;
         cursor: pointer;
-        min-height: 48px; 
-        padding-left: 16px; 
-        padding-right: 16px; 
-        width: 100%; 
-        box-sizing: border-box; 
+        min-height: 48px;
+        padding-left: 16px;
+        padding-right: 16px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .sidebar-chat-row .chat-actions {
         display: flex;
         gap: 0.25rem; /* Gap between buttons */
         position: absolute;
-        right: 0.5rem; 
+        right: 0.5rem;
         top: 50%;
         transform: translateY(-50%);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.15s;
-        background-color: var(--mud-palette-drawer-background); 
-        padding: 0.25rem; 
+        background-color: var(--mud-palette-drawer-background);
+        padding: 0.25rem;
         border-radius: 4px;
-        z-index: 1; 
+        z-index: 1;
     }
-    
+
     .sidebar-chat-row .chat-actions > span { /* Target the wrapping spans for icon buttons */
         display: inline-flex; /* Helps with alignment if needed */
     }
@@ -286,13 +342,15 @@
             <MudList T="SidebarChat" Clickable="false">
                 @foreach (var chat in SidebarChats)
                 {
-                    <MudMenu ActivationEvent="@MouseEvent.RightClick" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                    <MudMenu ActivationEvent="@MouseEvent.RightClick" AnchorOrigin="Origin.BottomLeft"
+                             TransformOrigin="Origin.TopLeft">
                         <ActivatorContent>
-                            <div class="sidebar-chat-row" 
-                                 @onclick="@(() => LoadChat(chat))" 
-                                 @oncontextmenu:preventDefault 
-                                 @oncontextmenu="@(() => {})">
-                                <MudText Style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 70px;"> @* Increased padding for actions *@
+                            <div class="sidebar-chat-row"
+                                 @onclick="@(() => LoadChat(chat))"
+                                 @oncontextmenu:preventDefault
+                                 @oncontextmenu="@(() => { })">
+                                <MudText
+                                    Style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 70px;"> @* Increased padding for actions *@
                                     @chat.Name
                                 </MudText>
                                 <span class="chat-actions">
@@ -318,9 +376,15 @@
                             </div>
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline" OnClick="@(() => HandleRenameChat(chat))">Rename</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Delete" OnClick="@(() => DeleteChat(chat))">Delete</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.ArrowOutward" OnClick="@(() => HandleExportChat(chat))">Export</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                                         OnClick="@(() => HandleRenameChat(chat))">Rename
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.Delete" OnClick="@(() => DeleteChat(chat))">
+                                Delete
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Outlined.ArrowOutward"
+                                         OnClick="@(() => HandleExportChat(chat))">Export
+                            </MudMenuItem>
                         </ChildContent>
                     </MudMenu>
                 }
@@ -460,7 +524,7 @@
         new ChatMessage
         {
             IsUser = false,
-            Text = "Hello! I am your assistant. How can I help today?\n\nYou can use **Markdown** in your messages too!"
+            Text = "Hello! I am your assistant."
         }
     };
 
@@ -472,7 +536,7 @@
 
     private void PinChat(SidebarChat chat)
     {
-        // TODO: Implement pin logic
+// TODO: Implement pin logic
         Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
     }
 
@@ -485,19 +549,19 @@
 
     private void HandleRenameChat(SidebarChat chat)
     {
-        // TODO: Implement actual rename logic.
+// TODO: Implement actual rename logic.
         Console.WriteLine($"Rename action triggered for chat: {chat.Name} (ID: {chat.Id})");
     }
 
     private void HandleExportChat(SidebarChat chat)
     {
-        // TODO: Implement actual export logic.
+// TODO: Implement actual export logic.
         Console.WriteLine($"Export action triggered for chat: {chat.Name} (ID: {chat.Id})");
     }
 
     private void LoadChat(SidebarChat chat)
     {
-        // TODO: Implement logic to load the selected chat
+// TODO: Implement logic to load the selected chat
         Console.WriteLine($"Load chat: {chat.Name} (ID: {chat.Id})");
         ChatHistory.Clear();
         ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" });
@@ -507,7 +571,7 @@
 
     private class SidebarChat
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString(); 
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Name { get; set; } = "";
     }
 
@@ -536,15 +600,17 @@
         if (string.IsNullOrWhiteSpace(textToSend)) return;
 
         ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
-        var tempMessageText = MessageText; 
-        MessageText = ""; 
+        var tempMessageText = MessageText;
+        MessageText = "";
         _needsScroll = true;
-        StateHasChanged(); 
+        StateHasChanged();
 
-        await Task.Delay(500);
-        ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"AI response to: {tempMessageText}" });
+        await Task.Delay(500); // Simulate AI response delay
+// Example AI response with code and math
+        string aiResponse = $"{tempMessageText}";
+        ChatHistory.Add(new ChatMessage { IsUser = false, Text = aiResponse });
         _needsScroll = true;
-        StateHasChanged(); 
+        StateHasChanged();
     }
 
     private void AttachFile() => Console.WriteLine("Attach file clicked.");

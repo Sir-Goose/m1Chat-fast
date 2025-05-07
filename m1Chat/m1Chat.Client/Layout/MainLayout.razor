@@ -1,16 +1,27 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider DefaultScrollbar="true"  IsDarkMode="true"/>
+<MudThemeProvider DefaultScrollbar="true" IsDarkMode="true" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudPopoverProvider />
 <!-- KaTeX CSS and JS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
-<!-- Prism.js CSS (choose a theme you like) -->
-<link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-okaidia.css" rel="stylesheet" />
-
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css"
+/>
+<script
+    defer
+    src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"
+></script>
+<script
+    defer
+    src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+></script>
+<!-- Prism.js CSS (okaidia theme) -->
+<link
+    href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-okaidia.css"
+    rel="stylesheet"
+/>
 
 <!-- Prism.js core -->
 <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
@@ -18,11 +29,10 @@
 <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
 <!-- Configure Autoloader path -->
 <script>
-  // Tell Autoloader where to fetch language components from the CDN
-  Prism.plugins.autoloader.languages_path =
-    "https://cdn.jsdelivr.net/npm/prismjs/components/";
+    // Tell Autoloader where to fetch language components from the CDN
+    Prism.plugins.autoloader.languages_path =
+        "https://cdn.jsdelivr.net/npm/prismjs/components/";
 </script>
-
 
 <script>
     window.setInnerHtmlAndRenderMath = (element, html) => {
@@ -32,19 +42,103 @@
             if (window.renderMathInElement) {
                 window.renderMathInElement(element, {
                     delimiters: [
-                        { left: "$$", right: "$$", display: true },
-                        { left: "$", right: "$", display: false }
-                    ]
+                        { left: "$$", right: "$$", display: true }, // For display math $$...$$
+                        { left: "$", right: "$", display: false }, // For inline math $...$
+                    ],
+                    throwOnError: false, // Prevents KaTeX from stopping on errors
                 });
             }
             // Highlight code (Prism)
             if (window.Prism) {
                 window.Prism.highlightAllUnder(element);
+
+                // Add custom header to Prism code blocks
+                const preElements = element.querySelectorAll(
+                    'pre[class*="language-"]',
+                );
+                preElements.forEach((preElement) => {
+                    // Check if a header already exists to prevent duplicates
+                    if (
+                        preElement.previousElementSibling &&
+                        preElement.previousElementSibling.classList.contains(
+                            "code-block-header",
+                        )
+                    ) {
+                        return;
+                    }
+
+                    const codeElement = preElement.querySelector(
+                        'code[class*="language-"]',
+                    );
+                    let language = "";
+                    if (codeElement) {
+                        const langClass = Array.from(codeElement.classList).find((cls) =>
+                            cls.startsWith("language-"),
+                        );
+                        if (langClass) {
+                            language = langClass.replace("language-", "");
+                        }
+                    } else if (preElement.className.includes("language-")) {
+                        // Fallback if language class is on pre and not code
+                        const langClass = Array.from(preElement.classList).find((cls) =>
+                            cls.startsWith("language-"),
+                        );
+                        if (langClass) {
+                            language = langClass.replace("language-", "");
+                        }
+                    }
+
+                    language = language
+                        ? language.charAt(0).toUpperCase() + language.slice(1)
+                        : "Code";
+
+                    const header = document.createElement("div");
+                    header.className = "code-block-header";
+
+                    const langSpan = document.createElement("span");
+                    langSpan.className = "language-name";
+                    langSpan.textContent = language;
+
+                    const copyButton = document.createElement("button");
+                    copyButton.className = "copy-button";
+                    copyButton.setAttribute("aria-label", "Copy code to clipboard");
+                    // SVG icon for "ContentCopy" + Text
+                    copyButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 0 24 24" width="16px" fill="currentColor">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
+            <span>Copy</span>`;
+
+                    copyButton.onclick = () => {
+                        const codeToCopy = preElement.querySelector("code").innerText;
+                        navigator.clipboard
+                            .writeText(codeToCopy)
+                            .then(() => {
+                                const textSpan = copyButton.querySelector("span:last-child");
+                                if (textSpan) textSpan.textContent = "Copied!";
+                                setTimeout(() => {
+                                    if (textSpan) textSpan.textContent = "Copy";
+                                }, 2000);
+                            })
+                            .catch((err) => {
+                                console.error("Failed to copy: ", err);
+                                const textSpan = copyButton.querySelector("span:last-child");
+                                if (textSpan) textSpan.textContent = "Error!";
+                                setTimeout(() => {
+                                    if (textSpan) textSpan.textContent = "Copy";
+                                }, 2000);
+                            });
+                    };
+
+                    header.appendChild(langSpan);
+                    header.appendChild(copyButton);
+                    // Insert header before the pre element
+                    preElement.parentNode.insertBefore(header, preElement);
+                });
             }
         }
     };
 </script>
-
-
 
 @Body
