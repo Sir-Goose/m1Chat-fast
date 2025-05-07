@@ -5,657 +5,660 @@
 @using m1Chat.Client.Components
 @inject NavigationManager NavigationManager
 @inject IScrollManager ScrollManager
-@* @inject IJSRuntime JSRuntime // Potentially for prompt in HandleRenameChat demo *@
-@* @inject IDialogService DialogService // For a proper rename dialog *@
 
 <style>
-    /* Hide native scrollbars but keep vertical scrolling */
-    .no-scrollbar {
-        overflow-y: auto;
-        overflow-x: hidden;
-        -ms-overflow-style: none; /* IE/Edge */
-        scrollbar-width: none; /* Firefox */
-    }
+  /* Hide native scrollbars but keep vertical scrolling */
+  .no-scrollbar {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;             /* Chrome/Safari/Opera */
+  }
 
-    .no-scrollbar::-webkit-scrollbar {
-        display: none; /* Chrome/Safari/Opera */
-    }
+  /* Kill MudMainContent's top-padding */
+  .mud-main-content {
+    padding-top: 0 !important;
+  }
 
-    /* Kill MudMainContent's top-padding (for an AppBar) */
-    .mud-main-content {
-        padding-top: 0 !important;
-    }
+  /* Set background of chat area */
+  .chat-main-content-bg {
+    background-color: var(--mud-palette-surface);
+  }
 
-    /* Set MudMainContent background to surface color for this chat page */
-    .chat-main-content-bg {
-        background-color: var(--mud-palette-surface);
-    }
+  /* Chat viewport height (subtract header+footer) */
+  .chat-container {
+    overflow-y: auto;
+    height: calc(100vh - 128px);
+  }
 
-    /* Chat viewport height (subtract header+footer) */
-    .chat-container {
-        overflow-y: auto;
-        height: calc(100vh - 128px);
-    }
+  /* User bubble styling */
+  .user-message {
+    margin: 0;
+    line-height: 1.43;
+    font-size: 1rem;
+  }
 
-    /* User bubble is capped to ~60% width */
-    .user-message {
-        max-width: 60%;
-        margin: auto;
-        line-height: 1.43;
-        font-size: 1rem;
-    }
+  /* Container for user bubble + actions */
+  .user-message-container {
+    position: relative;
+    display: inline-block; /* Shrink-wrap to content */
+    max-width: 60%;
+    margin-left: auto;     /* Push to the right */
+  }
 
-    /* AI message is plain full-width text */
-    .ai-message {
-        display: block;
-        width: 70%;
-        margin: auto;
-        white-space: normal;
-        line-height: 1.43;
-        padding: 1rem;
-    }
+  /* Action buttons: float just below the bubble */
+  .message-actions {
+    position: absolute;
+    top: 100%;              /* Just below */
+    right: 0;               /* Align to container's right */
+    margin-top: 0.25rem;    /* Small gap */
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    z-index: 10;
+    background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+  .user-message-container:hover .message-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .message-actions .mud-icon-button {
+    padding: 3px;
+  }
+  .message-actions .mud-icon-button .mud-icon-root {
+    font-size: 1rem;
+  }
 
-    /* Input area width matches AI message */
-    .input-area-container {
-        width: 70%;
-        margin: 0 auto;
-    }
+  /* AI message styling */
+  .ai-message {
+    display: block;
+    width: 70%;
+    margin: auto;
+    white-space: normal;
+    line-height: 1.43;
+    padding: 1rem;
+  }
 
-    /* Style the horizontal rule within .ai-message AND .user-message */
-    .ai-message hr,
-    .user-message hr {
-        border: none;
-        height: 1px;
-        background-color: var(--mud-palette-primary);
-        padding: 0;
-        margin: 1rem 0;
-    }
+  /* Input area width */
+  .input-area-container {
+    width: 70%;
+    margin: 0 auto;
+  }
 
-    /* Heading styles with padding */
-    .ai-message h1,
-    .user-message h1 {
-        padding: 1.5rem 0 1.5rem 0;
-        margin: 0;
-    }
+  /* Shared styles for hr, headings, lists, blockquotes, code, tables */
+  .ai-message hr,
+  .user-message hr {
+    border: none;
+    height: 1px;
+    background-color: var(--mud-palette-primary);
+    margin: 1rem 0;
+  }
+  .ai-message h1,
+  .user-message h1 { padding: 1.5rem 0; margin: 0; }
+  .ai-message h2,
+  .user-message h2 { padding: 1.25rem 0; margin: 0; }
+  .ai-message h3,
+  .user-message h3 { padding: 1rem 0;   margin: 0; }
+  .ai-message h4,
+  .ai-message h5,
+  .ai-message h6,
+  .user-message h4,
+  .user-message h5,
+  .user-message h6 {
+    padding: 0.75rem 0;
+    margin: 0;
+  }
+  .ai-message ul,
+  .ai-message ol,
+  .user-message ul,
+  .user-message ol {
+    padding: 0.75rem;
+    list-style-position: inside;
+  }
+  .ai-message ul li::marker,
+  .ai-message ol li::marker,
+  .user-message ul li::marker,
+  .user-message ol li::marker {
+    color: var(--mud-palette-primary);
+  }
+  .ai-message li,
+  .user-message li {
+    margin: 1rem 0;
+  }
+  .ai-message blockquote,
+  .user-message blockquote {
+    border-left: 4px solid var(--mud-palette-primary-lighten);
+    margin: 1rem 0;
+    background-color: var(--mud-palette-background-grey);
+    color: var(--mud-palette-text);
+    font-style: italic;
+  }
+  .ai-message blockquote p,
+  .user-message blockquote p {
+    margin-bottom: 0;
+    padding: 0.75rem;
+  }
+  .ai-message a,
+  .user-message a {
+    color: var(--mud-palette-primary);
+    text-decoration: underline;
+    font-weight: bold;
+  }
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--mud-palette-appbar-background, #27272f);
+    color: var(--mud-palette-appbar-text, #fff);
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-top: 1rem;
+  }
+  .language-name {
+    font-size: 0.8rem;
+    font-family: Consolas, Monaco, 'Courier New', monospace;
+    color: var(--mud-palette-text-secondary);
+    text-transform: capitalize;
+  }
+  .ai-message pre,
+  .user-message pre {
+    background: var(--mud-palette-code-background,
+      var(--mud-palette-background));
+    border: 1px solid var(--mud-palette-divider);
+    border-left: 3px solid var(--mud-palette-primary);
+    padding: 0.75rem;
+    margin: 0 0 1rem;
+    font-family: Consolas, Monaco, 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    overflow-x: auto;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+  .ai-message pre code,
+  .user-message pre code {
+    display: block;
+    background: transparent;
+    white-space: pre;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: 1em;
+  }
+  .ai-message code,
+  .user-message code {
+    background-color: var(--mud-palette-appbar-background, #27272f);
+    color: var(--mud-palette-text-primary);
+    padding: 0.2em 0.4em;
+    margin: 0 0.1em;
+    font-family: Consolas, Monaco, 'Courier New', monospace;
+    font-size: 85%;
+    border-radius: 3px;
+    font-weight: bold;
+  }
+  .ai-message table,
+  .user-message table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 1rem;
+    overflow-x: auto;
+    display: block;
+  }
+  .ai-message th,
+  .ai-message td,
+  .user-message th,
+  .user-message td {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .ai-message th,
+  .user-message th {
+    font-weight: 600;
+    border-bottom: 1px solid var(--mud-palette-drawer-text);
+  }
+  .ai-message tr:first-of-type td,
+  .user-message tr:first-of-type td {
+    border-bottom: 1px solid var(--mud-palette-divider);
+  }
+  .ai-message caption,
+  .user-message caption {
+    caption-side: bottom;
+    padding: 0.5rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.95em;
+    text-align: left;
+  }
 
-    .ai-message h2,
-    .user-message h2 {
-        padding: 1.25rem 0 1.25rem 0;
-        margin: 0;
-    }
-
-    .ai-message h3,
-    .user-message h3 {
-        padding: 1rem 0 1rem 0;
-        margin: 0;
-    }
-
-    .ai-message h4,
-    .ai-message h5,
-    .ai-message h6,
-    .user-message h4,
-    .user-message h5,
-    .user-message h6 {
-        padding: 0.75rem 0 0.75rem 0;
-        margin: 0;
-    }
-
-    /* restore list styling inside .ai-message AND .user-message */
-    .ai-message ul,
-    .ai-message ol,
-    .user-message ul,
-    .user-message ol {
-        padding: 0.75rem;
-        list-style-position: inside;
-    }
-
-    .ai-message ul li::marker,
-    .ai-message ol li::marker,
-    .user-message ul li::marker,
-    .user-message ol li::marker {
-        color: var(--mud-palette-primary);
-    }
-
-    .ai-message li,
-    .user-message li {
-        margin: 1rem 0;
-    }
-
-    /* Style blockquotes within .ai-message AND .user-message */
-    .ai-message blockquote,
-    .user-message blockquote {
-        border-left: 4px solid var(--mud-palette-primary-lighten);
-        padding: 0rem 0rem;
-        margin: 1rem 0;
-        background-color: var(--mud-palette-background-grey);
-        color: var(--mud-palette-text);
-        font-style: italic;
-    }
-
-    /* Ensure paragraphs inside blockquotes don't add extra margin */
-    .ai-message blockquote p,
-    .user-message blockquote p {
-        margin-bottom: 0;
-        padding: 0.75rem;
-    }
-
-    /* style links so they are primary color and bold */
-    .ai-message a,
-    .user-message a {
-        color: var(--mud-palette-primary);
-        text-decoration: underline;
-        font-weight: bold;
-    }
-
-    /* Code block header styling */
-    .code-block-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: var(--mud-palette-appbar-background, #27272f); /* Darker, distinct background */
-        color: var(--mud-palette-appbar-text, #ffffff);
-        padding: 0.4rem 0.75rem;
-        border: 1px solid var(--mud-palette-divider);
-        border-bottom: none;
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-        margin-top: 1rem; /* Match original pre's margin-top */
-        margin-left: 0; /* Align with pre */
-        margin-right: 0; /* Align with pre */
-    }
-
-    .language-name {
-        font-size: 0.8rem;
-        font-family: Consolas, Monaco, 'Courier New', monospace; /* Consistent font */
-        color: var(--mud-palette-text-secondary);
-        text-transform: capitalize;
-    }
-
-    .copy-button {
-        background-color: transparent;
-        border: 1px solid transparent; /* for consistent height */
-        color: var(--mud-palette-action-default);
-        cursor: pointer;
-        padding: 0.2rem 0.4rem;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.75rem;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    }
-
-    .copy-button:hover {
-        background-color: var(--mud-palette-action-hover);
-        border-color: var(--mud-palette-divider);
-    }
-
-    .copy-button svg {
-        vertical-align: middle;
-    }
-
-    .copy-button span {
-        vertical-align: middle;
-        line-height: 1; /* Ensure text aligns well with icon */
-    }
-
-    /* Customized code-block styling for pre elements */
-    .ai-message pre,
-    .user-message pre {
-        background: var(--mud-palette-code-background, var(--mud-palette-background)); /* Use theme variable or fallback */
-        border: 1px solid var(--mud-palette-divider);
-        border-left: 3px solid var(--mud-palette-primary); /* Keep original distinctive left border */
-        padding: 0.75rem;
-        margin: 0 0 1rem 0; /* Header now handles top margin */
-        font-family: Consolas, Monaco, 'Courier New', monospace;
-        font-size: 0.875rem;
-        line-height: 1.4;
-        overflow-x: auto;
-        max-width: 100%;
-        border-top-left-radius: 0; /* Top radius handled by header */
-        border-top-right-radius: 0; /* Top radius handled by header */
-        border-bottom-left-radius: 4px; /* Keep bottom radius */
-        border-bottom-right-radius: 4px; /* Keep bottom radius */
-    }
-
-
-    .ai-message pre code,
-    .user-message pre code {
-        display: block;
-        color: var(--mud-palette-text-primary); /* Ensure code text is readable on background */
-        background: transparent; /* Code background is handled by pre */
-        white-space: pre;
-        /* Reset properties that might be set by a general 'code' style */
-        padding: 0;
-        margin: 0;
-        font-family: inherit; /* Use font from 'pre' */
-        font-size: 1em; /* Use font-size from 'pre' */
-        border-radius: 0; /* 'pre' handles border-radius */
-        font-weight: normal;
-    }
-
-    /* Inline code styling (for `code` elements not within `pre`) */
-    .ai-message code,
-    .user-message code {
-        background-color: var(--mud-palette-appbar-background, #27272f);
-        color: var(--mud-palette-text-primary);
-        padding: 0.2em 0.4em;
-        margin: 0 0.1em;
-        font-family: Consolas, Monaco, "Courier New", monospace;
-        font-size: 85%; /* Relative to the parent element's font size */
-        border-radius: 3px;
-        font-weight: bold;
-    }
-
-
-    /* Table styling inside .ai-message AND .user-message */
-    .ai-message table,
-    .user-message table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1rem 0;
-        font-size: 1rem;
-        overflow-x: auto;
-        display: block;
-        border: none;
-        max-width: 100%;
-    }
-
-    .ai-message th,
-    .ai-message td,
-    .user-message th,
-    .user-message td {
-        border: none;
-        border-bottom: 1px solid var(--mud-palette-divider);
-        padding: 0.75rem 1rem;
-        text-align: left;
-        vertical-align: top;
-    }
-
-    .ai-message th,
-    .user-message th {
-        font-weight: 600;
-        border-bottom: 1px solid var(--mud-palette-drawer-text);
-    }
-
-    .ai-message tr:first-of-type td,
-    .user-message tr:first-of-type td {
-        border-bottom: 1px solid var(--mud-palette-divider);
-    }
-
-    .ai-message caption,
-    .user-message caption {
-        caption-side: bottom;
-        padding: 0.5rem;
-        color: var(--mud-palette-text-secondary);
-        font-size: 0.95em;
-        text-align: left;
-    }
-
-    /* Sidebar chat row hover actions */
-    .sidebar-chat-row {
-        position: relative; /* Crucial for absolute positioning of children */
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-        min-height: 48px;
-        padding-left: 16px; /* Overall padding for the row */
-        padding-right: 16px; /* Overall padding for the row - icons will be positioned within this space */
-        width: 100%;
-        box-sizing: border-box;
-        overflow: hidden; /* Ensures the row itself clips if necessary */
-    }
-
-    /* Class for the chat name text */
-    .sidebar-chat-row .chat-name-text {
-        flex-grow: 1; /* Take up available space */
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        min-width: 0; /* Essential for flex item to shrink and allow ellipsis */
-        /* REMOVED: padding-right: 75px; */
-    }
-
-    .sidebar-chat-row .chat-actions {
-        position: absolute;
-        right: 8px; /* Position from the right edge of the sidebar-chat-row's content box */
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        gap: 0.25rem;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.15s ease-in-out;
-        background-color: var(--mud-palette-drawer-background); /* Key to hide text underneath */
-        padding: 0.25rem; /* Padding for the actions container itself */
-        border-radius: 4px;
-        z-index: 10; /* Ensure it's above the text */
-        flex-shrink: 0; /* Prevent this container from shrinking */
-    }
-
-    .sidebar-chat-row .chat-actions > span {
-        display: inline-flex;
-    }
-
-    .sidebar-chat-row:hover .chat-actions {
-        opacity: 1;
-        pointer-events: auto;
-    }
+  /* Sidebar chat row hover actions */
+  .sidebar-chat-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    min-height: 48px;
+    padding: 0 16px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .sidebar-chat-row .chat-name-text {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .sidebar-chat-row .chat-actions {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    background-color: var(--mud-palette-drawer-background);
+    padding: 0.25rem;
+    border-radius: 4px;
+    z-index: 10;
+  }
+  .sidebar-chat-row .chat-actions > span {
+    display: inline-flex;
+  }
+  .sidebar-chat-row:hover .chat-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 </style>
 
 <MudLayout>
-    <MudDrawer
-        @bind-Open="_drawerOpen"
-        Anchor="Anchor.Left"
-        Elevation="1"
-        Variant="DrawerVariant.Persistent"
-        Class="d-flex flex-column"
+  <MudDrawer
+    @bind-Open="_drawerOpen"
+    Anchor="Anchor.Left"
+    Elevation="1"
+    Variant="DrawerVariant.Persistent"
+    Class="d-flex flex-column"
+  >
+    <MudDrawerHeader Class="d-flex flex-column pa-2">
+      <div class="d-flex align-center justify-space-between">
+        <MudText Typo="Typo.h6">M1 Chat</MudText>
+        <MudIconButton
+          Icon="@Icons.Material.Filled.ChevronLeft"
+          OnClick="ToggleDrawer"
+        />
+      </div>
+      <MudButton
+        Variant="Variant.Filled"
+        Color="Color.Primary"
+        Class="mt-2"
+        FullWidth="true"
+      >
+        New Chat
+      </MudButton>
+    </MudDrawerHeader>
+
+    <div class="flex-grow-1 no-scrollbar">
+      <MudList T="SidebarChat" Clickable="false">
+        @foreach (var chat in SidebarChats)
+        {
+          <MudMenu
+            Style="width: 100%;"
+            ActivationEvent="@MouseEvent.RightClick"
+            AnchorOrigin="Origin.BottomLeft"
+            TransformOrigin="Origin.TopLeft"
+          >
+            <ActivatorContent>
+              <div
+                class="sidebar-chat-row"
+                @onclick="@(() => LoadChat(chat))"
+                @oncontextmenu:preventDefault
+                @oncontextmenu="@(() => { })"
+              >
+                <MudText Class="chat-name-text">@chat.Name</MudText>
+                <span class="chat-actions">
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.PushPin"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="@(() => PinChat(chat))"
+                      aria-label="Pin chat"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.Delete"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="@(() => DeleteChat(chat))"
+                      aria-label="Delete chat"
+                    />
+                  </span>
+                </span>
+              </div>
+            </ActivatorContent>
+            <ChildContent>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                OnClick="@(() => HandleRenameChat(chat))"
+              >
+                Rename
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.Delete"
+                OnClick="@(() => DeleteChat(chat))"
+              >
+                Delete
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.ArrowOutward"
+                OnClick="@(() => HandleExportChat(chat))"
+              >
+                Export
+              </MudMenuItem>
+            </ChildContent>
+          </MudMenu>
+        }
+      </MudList>
+    </div>
+
+    <div class="pa-2">
+      <MudText Typo="Typo.subtitle2" Class="mb-1">@UserEmail</MudText>
+      <MudButton
+        Variant="Variant.Filled"
+        Color="Color.Secondary"
+        FullWidth="true"
+        OnClick="Logout"
+      >
+        Logout
+      </MudButton>
+    </div>
+  </MudDrawer>
+
+  <MudMainContent
+    Class="d-flex flex-column p-0 chat-main-content-bg"
+    Style="height:100vh;overflow:hidden;"
+  >
+    <MudPaper
+      Elevation="0"
+      Class="chat-container px-2 pb-2 no-scrollbar"
     >
-        <MudDrawerHeader Class="d-flex flex-column pa-2">
-            <div class="d-flex align-center justify-space-between">
-                <MudText Typo="Typo.h6">M1 Chat</MudText>
-                <MudIconButton
-                    Icon="@Icons.Material.Filled.ChevronLeft"
-                    OnClick="ToggleDrawer"
-                />
-            </div>
-            <MudButton
-                Variant="Variant.Filled"
-                Color="Color.Primary"
-                Class="mt-2"
-                FullWidth="true"
-            >
-                New Chat
-            </MudButton>
-        </MudDrawerHeader>
-
-        <div class="flex-grow-1 no-scrollbar">
-            <MudList T="SidebarChat" Clickable="false">
-                @foreach (var chat in SidebarChats)
-                {
-                    <MudMenu Style="width: 100%;"
-                             ActivationEvent="@MouseEvent.RightClick" AnchorOrigin="Origin.BottomLeft"
-                             TransformOrigin="Origin.TopLeft">
-                        <ActivatorContent>
-                            <div class="sidebar-chat-row"
-                                 @onclick="@(() => LoadChat(chat))"
-                                 @oncontextmenu:preventDefault
-                                 @oncontextmenu="@(() => { })">
-                                <MudText Class="chat-name-text">
-                                    @chat.Name
-                                </MudText>
-
-                                <span class="chat-actions">
-                                    <span @onclick:stopPropagation="true">
-                                        <MudIconButton
-                                            Icon="@Icons.Material.Outlined.PushPin"
-                                            Color="Color.Default"
-                                            Size="Size.Small"
-                                            OnClick="@(() => PinChat(chat))"
-                                            aria-label="Pin chat"
-                                        />
-                                    </span>
-                                    <span @onclick:stopPropagation="true">
-                                        <MudIconButton
-                                            Icon="@Icons.Material.Outlined.Delete"
-                                            Color="Color.Default"
-                                            Size="Size.Small"
-                                            OnClick="@(() => DeleteChat(chat))"
-                                            aria-label="Delete chat"
-                                        />
-                                    </span>
-                                </span>
-                            </div>
-                        </ActivatorContent>
-                        <ChildContent>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                                         OnClick="@(() => HandleRenameChat(chat))">Rename
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.Delete" OnClick="@(() => DeleteChat(chat))">
-                                Delete
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Outlined.ArrowOutward"
-                                         OnClick="@(() => HandleExportChat(chat))">Export
-                            </MudMenuItem>
-                        </ChildContent>
-                    </MudMenu>
-                }
-            </MudList>
-        </div>
-
-        <div class="pa-2">
-            <MudText Typo="Typo.subtitle2" Class="mb-1">
-                @UserEmail
-            </MudText>
-            <MudButton
-                Variant="Variant.Filled"
-                Color="Color.Secondary"
-                FullWidth="true"
-                OnClick="Logout"
-            >
-                Logout
-            </MudButton>
-        </div>
-    </MudDrawer>
-
-    <MudMainContent
-        Class="d-flex flex-column p-0 chat-main-content-bg"
-        Style="height:100vh;overflow:hidden;"
-    >
-        <MudPaper
-            Elevation="0"
-            Class="chat-container px-2 pb-2 no-scrollbar"
-        >
-            <MudStack Spacing="1">
-                @foreach (var m in ChatHistory)
-                {
-                    if (m.IsUser)
-                    {
-                        <MudStack JustifyContent="FlexEnd">
-                            <MudChatBubble
-                                Variant="Variant.Text" Class="user-message">
-                                <UserMarkdown Markdown="@m.Text"/>
-                            </MudChatBubble>
-                        </MudStack>
-                    }
-                    else
-                    {
-                        <AiMarkdown Markdown="@m.Text"/>
-                    }
-                }
+      <MudStack Spacing="1">
+        @foreach (var m in ChatHistory)
+        {
+          if (m.IsUser)
+          {
+            <MudStack JustifyContent="FlexEnd">
+              <div class="user-message-container">
+                <MudChatBubble
+                  Variant="Variant.Text"
+                  Class="user-message"
+                >
+                  <UserMarkdown Markdown="@m.Text" />
+                </MudChatBubble>
+                <div class="message-actions">
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.Refresh"
+                      Size="Size.Small"
+                      OnClick="@(() => HandleRegenerateMessage(m))"
+                      aria-label="Regenerate"
+                      Title="Regenerate"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Filled.Edit"
+                      Size="Size.Small"
+                      OnClick="@(() => HandleEditMessage(m))"
+                      aria-label="Edit"
+                      Title="Edit"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Filled.ContentCopy"
+                      Size="Size.Small"
+                      OnClick="@(async () => await HandleCopyMessage(m))"
+                      aria-label="Copy"
+                      Title="Copy"
+                    />
+                  </span>
+                </div>
+              </div>
             </MudStack>
-        </MudPaper>
+          }
+          else
+          {
+            <AiMarkdown Markdown="@m.Text" />
+          }
+        }
+      </MudStack>
+    </MudPaper>
 
-        <div class="input-area-container">
-            <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
-                <MudContainer Class="pa-0">
-                    <div style="display: flex; flex-direction: column;">
-                        <div style="display: flex; align-items: center;">
-                            <MudTextField
-                                @bind-Value="MessageText"
-                                Label="Enter your message"
-                                Variant="Variant.Outlined"
-                                Lines="2"
-                                AutoGrow="true"
-                                MaxLines="10"
-                                Class="flex-grow-1"
-                                Immediate="true"
-                                @onkeyup="HandleKeyUp"
-                            />
-                        </div>
-                        <div style="display: flex; align-items: center; margin-top: 8px;">
-                            <MudSelect
-                                @bind-Value="ChatSelectedOption"
-                                Label="Select a model"
-                                Variant="Variant.Outlined"
-                                Margin="Margin.Dense"
-                                FitContent="true"
-                                Class="mr-2"
-                            >
-                                @foreach (var opt in ChatOptions)
-                                {
-                                    <MudSelectItem Value="@opt">
-                                        @opt
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                            <MudToggleIconButton
-                                @bind-Toggled="_searchEnabled"
-                                Icon="@Icons.Material.Filled.Public"
-                                ToggledIcon="@Icons.Material.Filled.PublicOff"
-                                Color="Color.Primary"
-                                ToggledColor="Color.Secondary"
-                                aria-label="Toggle search"
-                                Class="ml-2"
-                            />
-                            <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
-                            <div style="margin-left: auto; display: flex; align-items: center;">
-                                <MudIconButton
-                                    Icon="@Icons.Material.Filled.AttachFile"
-                                    Color="Color.Primary"
-                                    OnClick="AttachFile"
-                                    aria-label="Attach file"
-                                    Class="mr-2"
-                                />
-                                <MudButton
-                                    Variant="Variant.Filled"
-                                    Color="Color.Primary"
-                                    EndIcon="@Icons.Material.Filled.Send"
-                                    OnClick="SendMessage"
-                                    aria-label="Send message"
-                                >
-                                    Send
-                                </MudButton>
-                            </div>
-                        </div>
-                    </div>
-                </MudContainer>
-            </MudPaper>
-        </div>
-    </MudMainContent>
+    <div class="input-area-container">
+      <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
+        <MudContainer Class="pa-0">
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center;">
+              <MudTextField
+                @bind-Value="MessageText"
+                Label="Enter your message"
+                Variant="Variant.Outlined"
+                Lines="2"
+                AutoGrow="true"
+                MaxLines="10"
+                Class="flex-grow-1"
+                Immediate="true"
+                @onkeyup="HandleKeyUp"
+              />
+            </div>
+            <div
+              style="display: flex; align-items: center; margin-top: 8px;"
+            >
+              <MudSelect
+                @bind-Value="ChatSelectedOption"
+                Label="Select a model"
+                Variant="Variant.Outlined"
+                Margin="Margin.Dense"
+                FitContent="true"
+                Class="mr-2"
+              >
+                @foreach (var opt in ChatOptions)
+                {
+                  <MudSelectItem Value="@opt">@opt</MudSelectItem>
+                }
+              </MudSelect>
+              <MudToggleIconButton
+                @bind-Toggled="_searchEnabled"
+                Icon="@Icons.Material.Filled.Public"
+                ToggledIcon="@Icons.Material.Filled.PublicOff"
+                Color="Color.Primary"
+                ToggledColor="Color.Secondary"
+                aria-label="Toggle search"
+                Class="ml-2"
+              />
+              <MudText Typo="Typo.body1" Class="ml-1">Search</MudText>
+              <div
+                style="margin-left: auto; display: flex; align-items: center;"
+              >
+                <MudIconButton
+                  Icon="@Icons.Material.Filled.AttachFile"
+                  Color="Color.Primary"
+                  OnClick="AttachFile"
+                  aria-label="Attach file"
+                  Class="mr-2"
+                />
+                <MudButton
+                  Variant="Variant.Filled"
+                  Color="Color.Primary"
+                  EndIcon="@Icons.Material.Filled.Send"
+                  OnClick="SendMessage"
+                  aria-label="Send message"
+                >
+                  Send
+                </MudButton>
+              </div>
+            </div>
+          </div>
+        </MudContainer>
+      </MudPaper>
+    </div>
+  </MudMainContent>
 </MudLayout>
 
 @code {
-    private bool _drawerOpen = true;
-    private bool _searchEnabled = false;
-    private bool _needsScroll;
+  private bool _drawerOpen = true;
+  private bool _searchEnabled = false;
+  private bool _needsScroll;
 
-    private string UserEmail { get; set; } = "user@example.com";
-    private string MessageText { get; set; } = "";
-    private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
+  private string UserEmail { get; set; } = "user@example.com";
+  private string MessageText { get; set; } = "";
+  private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
 
-    private List<string> ChatOptions = new()
+  private List<string> ChatOptions = new()
+  {
+    "Gemini 2.5 Pro",
+    "Gemini 2.5 Flash (Thinking)",
+    "Gemini 2.5 Flash"
+  };
+
+  private List<ChatMessage> ChatHistory = new()
+  {
+    new ChatMessage { IsUser = false, Text = "Hello! I am your assistant." }
+  };
+
+  private List<SidebarChat> SidebarChats = new()
+  {
+    new SidebarChat { Name = "Chat with Alice" },
+    new SidebarChat
     {
-        "Gemini 2.5 Pro",
-        "Gemini 2.5 Flash (Thinking)",
-        "Gemini 2.5 Flash"
-    };
-
-    private List<ChatMessage> ChatHistory = new()
-    {
-        new ChatMessage
-        {
-            IsUser = false,
-            Text = "Hello! I am your assistant."
-        }
-    };
-
-    private List<SidebarChat> SidebarChats = new()
-    {
-        new SidebarChat { Name = "Chat with Alice" },
-        new SidebarChat { Name = "Project Discussion with a very very very long name to test overflow" }
-    };
-
-    private void PinChat(SidebarChat chat)
-    {
-// TODO: Implement pin logic
-        Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
+      Name =
+        "Project Discussion with a very very very long name to test overflow"
     }
+  };
 
-    private void DeleteChat(SidebarChat chat)
+  private void PinChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
+  }
+
+  private void DeleteChat(SidebarChat chat)
+  {
+    SidebarChats.Remove(chat);
+    Console.WriteLine($"Delete chat: {chat.Name} (ID: {chat.Id})");
+    StateHasChanged();
+  }
+
+  private void HandleRenameChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Rename chat: {chat.Name}");
+  }
+
+  private void HandleExportChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Export chat: {chat.Name}");
+  }
+
+  private void LoadChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Load chat: {chat.Name}");
+    ChatHistory.Clear();
+    ChatHistory.Add(
+      new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" }
+    );
+    StateHasChanged();
+  }
+
+  private class SidebarChat
+  {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Name { get; set; } = "";
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (_needsScroll)
     {
-        SidebarChats.Remove(chat);
-        Console.WriteLine($"Delete chat: {chat.Name} (ID: {chat.Id})");
-        StateHasChanged();
+      await ScrollManager.ScrollToBottomAsync(
+        ".chat-container",
+        ScrollBehavior.Smooth
+      );
+      _needsScroll = false;
     }
+  }
 
-    private void HandleRenameChat(SidebarChat chat)
-    {
-// TODO: Implement actual rename logic.
-        Console.WriteLine($"Rename action triggered for chat: {chat.Name} (ID: {chat.Id})");
-    }
+  void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
-    private void HandleExportChat(SidebarChat chat)
-    {
-// TODO: Implement actual export logic.
-        Console.WriteLine($"Export action triggered for chat: {chat.Name} (ID: {chat.Id})");
-    }
+  private async Task HandleKeyUp(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter" && !args.ShiftKey)
+      await SendMessage();
+  }
 
-    private void LoadChat(SidebarChat chat)
-    {
-// TODO: Implement logic to load the selected chat
-        Console.WriteLine($"Load chat: {chat.Name} (ID: {chat.Id})");
-        ChatHistory.Clear();
-        ChatHistory.Add(new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" });
-        StateHasChanged();
-    }
+  private async Task SendMessage()
+  {
+    var textToSend = MessageText.Trim();
+    if (string.IsNullOrWhiteSpace(textToSend))
+      return;
 
+    ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
+    var temp = MessageText;
+    MessageText = "";
+    _needsScroll = true;
+    StateHasChanged();
 
-    private class SidebarChat
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Name { get; set; } = "";
-    }
+    await Task.Delay(500);
+    ChatHistory.Add(new ChatMessage { IsUser = false, Text = temp });
+    _needsScroll = true;
+    StateHasChanged();
+  }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_needsScroll)
-        {
-            await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Smooth);
-            _needsScroll = false;
-        }
-    }
+  private void AttachFile() => Console.WriteLine("Attach file clicked.");
 
-    void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+  private void Logout()
+  {
+    Console.WriteLine("Logout clicked");
+    NavigationManager.NavigateTo("/");
+  }
 
-    private async Task HandleKeyUp(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter" && !args.ShiftKey)
-        {
-            await SendMessage();
-        }
-    }
+  private record ChatMessage
+  {
+    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public bool IsUser { get; init; }
+    public string Text { get; init; } = "";
+  }
 
-    private async Task SendMessage()
-    {
-        var textToSend = MessageText.Trim();
-        if (string.IsNullOrWhiteSpace(textToSend)) return;
+  private void HandleRegenerateMessage(ChatMessage message)
+  {
+    Console.WriteLine($"Regenerate message: {message.Id}");
+  }
 
-        ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
-        var tempMessageText = MessageText;
-        MessageText = "";
-        _needsScroll = true;
-        StateHasChanged();
+  private void HandleEditMessage(ChatMessage message)
+  {
+    Console.WriteLine($"Edit message: {message.Id}");
+  }
 
-        await Task.Delay(500); // Simulate AI response delay
-        string aiResponse = $"{tempMessageText}";
-        ChatHistory.Add(new ChatMessage { IsUser = false, Text = aiResponse });
-        _needsScroll = true;
-        StateHasChanged();
-    }
-
-    private void AttachFile() => Console.WriteLine("Attach file clicked.");
-
-    private void Logout()
-    {
-        Console.WriteLine("Logout clicked");
-        NavigationManager.NavigateTo("/");
-    }
-
-    private record ChatMessage
-    {
-        public bool IsUser { get; init; }
-        public string Text { get; init; } = "";
-    }
-
+  private async Task HandleCopyMessage(ChatMessage message)
+  {
+    Console.WriteLine($"Copy message: {message.Id}");
+    // To actually copy: await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", message.Text);
+  }
 }
