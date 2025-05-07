@@ -226,7 +226,28 @@
         color: var(--mud-palette-text-primary); /* Ensure code text is readable on background */
         background: transparent; /* Code background is handled by pre */
         white-space: pre;
+        /* Reset properties that might be set by a general 'code' style */
+        padding: 0;
+        margin: 0;
+        font-family: inherit; /* Use font from 'pre' */
+        font-size: 1em; /* Use font-size from 'pre' */
+        border-radius: 0; /* 'pre' handles border-radius */
+        font-weight: normal;
     }
+
+    /* Inline code styling (for `code` elements not within `pre`) */
+    .ai-message code,
+    .user-message code {
+        background-color: var(--mud-palette-appbar-background, #27272f);
+        color: var(--mud-palette-text-primary);
+        padding: 0.2em 0.4em;
+        margin: 0 0.1em;
+        font-family: Consolas, Monaco, "Courier New", monospace;
+        font-size: 85%; /* Relative to the parent element's font size */
+        border-radius: 3px;
+        font-weight: bold;
+    }
+
 
     /* Table styling inside .ai-message AND .user-message */
     .ai-message table,
