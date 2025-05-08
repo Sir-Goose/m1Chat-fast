@@ -3,7 +3,7 @@ name: Deploy to Arch Server via Tailscale
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
