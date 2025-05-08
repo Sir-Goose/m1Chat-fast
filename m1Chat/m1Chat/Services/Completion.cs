@@ -19,7 +19,9 @@ namespace m1Chat.Services
         public Completion()
         {
             _httpClient = new HttpClient();
-            _openRouterApiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+            //_openRouterApiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+            _openRouterApiKey = "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";
+            
             if (string.IsNullOrEmpty(_openRouterApiKey))
             {
                 throw new InvalidOperationException(
@@ -40,7 +42,7 @@ namespace m1Chat.Services
         {
             var requestBody = new
             {
-                model = "openrouter/google/gemini-2.0-flash-exp:free",
+                model = "google/gemini-2.0-flash-exp:free",
                 messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
