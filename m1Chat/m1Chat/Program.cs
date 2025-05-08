@@ -1,3 +1,4 @@
+using m1Chat.Client.Services;
 using MudBlazor.Services;
 using m1Chat.Components;
 // using m1Chat.Client.Pages; // Not needed for server setup
@@ -14,6 +15,7 @@ builder.Services.AddMudServices();
 
 // Register HttpClient factory - good practice
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<ChatCompletionService>();
 
 // *** IMPORTANT: Register services for API Controllers ***
 builder.Services.AddControllers();
