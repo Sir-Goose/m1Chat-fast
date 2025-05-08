@@ -1,0 +1,35 @@
+name: Deploy to Arch Server via Tailscale
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Tailscale and join tailnet
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname github-runner-${{ github.run_id }}
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Deploy via SSH over Tailscale
+        env:
+          TAILSCALE_IP: "100.94.253.110"
+        run: |
+          ssh -o StrictHostKeyChecking=no matt@$TAILSCALE_IP 'bash /home/matt/deploy.sh'
+
+      - name: Logout from Tailscale
+        if: always()
+        run: |
+          sudo tailscale logout
