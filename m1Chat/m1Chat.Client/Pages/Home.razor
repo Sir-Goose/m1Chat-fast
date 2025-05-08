@@ -4,6 +4,7 @@
 @code {
     protected override void OnInitialized()
     {
+        // Redirect to the /Chat page when the root URL is accessed
         NavigationManager.NavigateTo("/Chat", forceLoad: false);
     }
 }
