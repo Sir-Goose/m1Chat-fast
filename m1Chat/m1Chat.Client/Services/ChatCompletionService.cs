@@ -1,7 +1,10 @@
-using System.Net.Http;
-using System.Text;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
-using System.IO;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using Microsoft.JSInterop;
 
 namespace m1Chat.Client.Services
 {
@@ -11,65 +14,50 @@ namespace m1Chat.Client.Services
         public string Content { get; set; }
     }
 
-    public class ChatHistoryRequest
-    {
-        public List<ChatMessage> Messages { get; set; }
-    }
-    
     public class ChatCompletionService
     {
-        private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
 
-        public ChatCompletionService(HttpClient httpClient)
+        public ChatCompletionService(IJSRuntime jsRuntime)
         {
-            _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
         }
 
-        public async IAsyncEnumerable<string> StreamCompletionAsync(List<ChatMessage> messages)
+        public IAsyncEnumerable<string> StreamCompletionAsync(List<ChatMessage> messages)
         {
-            var request = new ChatHistoryRequest { Messages = messages };
+            // unbounded channel to push chunks into
+            var channel = Channel.CreateUnbounded<string>();
+            var writer = channel.Writer;
 
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/completions/stream")
-            {
-                Content = new StringContent(
-                    JsonSerializer.Serialize(request),
-                    Encoding.UTF8,
-                    "application/json"
-                )
-            };
+            // create a .NET object reference that JS can call into
+            var dotnetRef = DotNetObjectReference.Create(new StreamCallback(writer));
 
-            var response = await _httpClient.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead
+            // fire-and-forget JS interop
+            _ = _jsRuntime.InvokeVoidAsync(
+                "streamChatCompletion",
+                "/api/completions/stream",
+                messages.Select(m => new { role = m.Role, content = m.Content }).ToArray(),
+                dotnetRef
             );
 
-            response.EnsureSuccessStatusCode();
+            return channel.Reader.ReadAllAsync();
+        }
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var reader = new StreamReader(stream);
+        private class StreamCallback
+        {
+            private readonly ChannelWriter<string> _writer;
+            public StreamCallback(ChannelWriter<string> writer) => _writer = writer;
 
-            while (!reader.EndOfStream)
+            [JSInvokable("Receive")]
+            public void Receive(string chunk)
             {
-                var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
+                _writer.TryWrite(chunk);
+            }
 
-                string? chunk = null;
-                try
-                {
-                    using var doc = JsonDocument.Parse(line);
-                    if (doc.RootElement.TryGetProperty("content", out var contentProp))
-                    {
-                        chunk = contentProp.GetString();
-                    }
-                }
-                catch
-                {
-                    // Ignore malformed lines
-                }
-
-                if (!string.IsNullOrEmpty(chunk))
-                    yield return chunk;
+            [JSInvokable("Complete")]
+            public void Complete()
+            {
+                _writer.TryComplete();
             }
         }
     }
