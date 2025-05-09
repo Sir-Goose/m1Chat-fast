@@ -1,9 +1,7 @@
-// In m1Chat.Client/Services/ChatCompletionService.cs
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-
+using System.IO;
 
 namespace m1Chat.Client.Services
 {
@@ -33,10 +31,17 @@ namespace m1Chat.Client.Services
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/completions/stream")
             {
-                Content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json")
+                Content = new StringContent(
+                    JsonSerializer.Serialize(request),
+                    Encoding.UTF8,
+                    "application/json"
+                )
             };
 
-            var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+            var response = await _httpClient.SendAsync(
+                httpRequest,
+                HttpCompletionOption.ResponseHeadersRead
+            );
 
             response.EnsureSuccessStatusCode();
 
@@ -49,11 +54,22 @@ namespace m1Chat.Client.Services
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
 
-                if (line.StartsWith("data: "))
+                string? chunk = null;
+                try
                 {
-                    var chunk = line.Substring("data: ".Length);
-                    yield return chunk;
+                    using var doc = JsonDocument.Parse(line);
+                    if (doc.RootElement.TryGetProperty("content", out var contentProp))
+                    {
+                        chunk = contentProp.GetString();
+                    }
                 }
+                catch
+                {
+                    // Ignore malformed lines
+                }
+
+                if (!string.IsNullOrEmpty(chunk))
+                    yield return chunk;
             }
         }
     }

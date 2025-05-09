@@ -17,12 +17,21 @@ namespace m1Chat.Controllers
         [HttpPost("stream")]
         public async Task Stream([FromBody] ChatHistoryRequest request)
         {
-            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.ContentType = "application/json";
+            Response.Headers.Add("Cache-Control", "no-cache");
 
-            await foreach (var chunk in _completion.CompleteAsync(request.Messages))
+            try
             {
-                await Response.WriteAsync($"data: {chunk}\n\n");
-                await Response.Body.FlushAsync();
+                await foreach (var chunk in _completion.CompleteAsync(request.Messages))
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(new { content = chunk });
+                    await Response.WriteAsync(json + "\n");
+                    await Response.Body.FlushAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("I am in the Completions Controller");
             }
         }
     }

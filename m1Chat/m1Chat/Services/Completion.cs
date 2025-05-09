@@ -10,7 +10,6 @@ using System.IO;
 
 namespace m1Chat.Services
 {
-
     public class Completion
     {
         private readonly HttpClient _httpClient;
@@ -19,7 +18,6 @@ namespace m1Chat.Services
         public Completion()
         {
             _httpClient = new HttpClient();
-            //_openRouterApiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
             _openRouterApiKey = "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";
             
             if (string.IsNullOrEmpty(_openRouterApiKey))
@@ -53,7 +51,6 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
 
-            // Remove headers if they already exist to avoid duplicates
             if (_httpClient.DefaultRequestHeaders.Contains("HTTP-Referer"))
                 _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             if (_httpClient.DefaultRequestHeaders.Contains("X-Title"))
@@ -96,7 +93,6 @@ namespace m1Chat.Services
                 {
                     var jsonData = line.Substring("data: ".Length).Trim();
 
-                    // The stream may send a [DONE] message at the end
                     if (jsonData == "[DONE]")
                         break;
 
@@ -116,7 +112,6 @@ namespace m1Chat.Services
                 using var doc = JsonDocument.Parse(jsonData);
                 var root = doc.RootElement;
 
-                // Extract the assistant's reply chunk
                 var choices = root.GetProperty("choices");
                 if (choices.GetArrayLength() > 0)
                 {
