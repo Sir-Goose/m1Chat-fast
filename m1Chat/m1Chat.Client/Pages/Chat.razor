@@ -7,6 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject IScrollManager ScrollManager
 @inject ChatCompletionService CompletionService
+@inject IJSRuntime JS
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
 
 <MudLayout>
@@ -121,99 +122,102 @@
     Class="d-flex flex-column p-0 chat-main-content-bg"
     Style="height:100vh;overflow:hidden;"
   >
-    <MudPaper
-      Elevation="0"
-      Class="chat-container px-2 pb-2 no-scrollbar"
+    <div
+      class="chat-container px-2 pb-2 no-scrollbar"
+      @ref="_chatContainerRef"
+      style="overflow-y:auto; flex:1 1 auto;"
     >
-      <MudStack Spacing="4">
-        @foreach (var m in ChatHistory)
-        {
-          if (m.IsUser)
+      <MudPaper Elevation="0">
+        <MudStack Spacing="4">
+          @foreach (var m in ChatHistory)
           {
-            <MudStack JustifyContent="FlexEnd">
-              <div class="user-message-container">
-                <MudChatBubble
-                  Variant="Variant.Text"
-                  Class="user-message"
-                >
-                  <UserMarkdown Markdown="@m.Text" />
-                </MudChatBubble>
-                <div class="message-actions">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.Refresh"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleRegenerateMessage(m))"
-                      aria-label="Regenerate"
-                      Title="Regenerate"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.Edit"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleEditMessage(m))"
-                      aria-label="Edit"
-                      Title="Edit"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.ContentCopy"
-                      Size="Size.Small"
-                      OnClick="@(async () => await HandleCopyMessage(m))"
-                      aria-label="Copy"
-                      Title="Copy"
-                    />
-                  </span>
+            if (m.IsUser)
+            {
+              <MudStack JustifyContent="FlexEnd">
+                <div class="user-message-container">
+                  <MudChatBubble
+                    Variant="Variant.Text"
+                    Class="user-message"
+                  >
+                    <UserMarkdown Markdown="@m.Text" />
+                  </MudChatBubble>
+                  <div class="message-actions">
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Outlined.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleRegenerateMessage(m))"
+                        aria-label="Regenerate"
+                        Title="Regenerate"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.Edit"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleEditMessage(m))"
+                        aria-label="Edit"
+                        Title="Edit"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(async () => await HandleCopyMessage(m))"
+                        aria-label="Copy"
+                        Title="Copy"
+                      />
+                    </span>
+                  </div>
+                  <div class="user-message-hoverzone"></div>
                 </div>
-                <div class="user-message-hoverzone"></div>
-              </div>
-            </MudStack>
-          }
-          else
-          {
-            <MudStack JustifyContent="FlexStart">
-              <div class="ai-message-container">
-                <AiMarkdown Markdown="@m.Text" />
-                <div class="message-actions">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.ContentCopy"
-                      Size="Size.Small"
-                      OnClick="@(
-                        async () => await HandleCopyMessage(m)
-                      )"
-                      aria-label="Copy"
-                      Title="Copy"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.MergeType"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleBranchMessage(m))"
-                      aria-label="Branch"
-                      Title="Branch"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Filled.Refresh"
-                      Size="Size.Small"
-                      OnClick="@(() => HandleRegenerateMessage(m))"
-                      aria-label="Regenerate"
-                      Title="Regenerate"
-                    />
-                  </span>
+              </MudStack>
+            }
+            else
+            {
+              <MudStack JustifyContent="FlexStart">
+                <div class="ai-message-container">
+                  <AiMarkdown Markdown="@m.Text" />
+                  <div class="message-actions">
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(
+                          async () => await HandleCopyMessage(m)
+                        )"
+                        aria-label="Copy"
+                        Title="Copy"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.MergeType"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleBranchMessage(m))"
+                        aria-label="Branch"
+                        Title="Branch"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleRegenerateMessage(m))"
+                        aria-label="Regenerate"
+                        Title="Regenerate"
+                      />
+                    </span>
+                  </div>
+                  <div class="ai-message-hoverzone"></div>
                 </div>
-                <div class="ai-message-hoverzone"></div>
-              </div>
-            </MudStack>
+              </MudStack>
+            }
           }
-        }
-      </MudStack>
-    </MudPaper>
+        </MudStack>
+      </MudPaper>
+    </div>
 
     <div class="input-area-container">
       <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
@@ -292,6 +296,9 @@
   private bool _drawerOpen = true;
   private bool _searchEnabled = false;
   private bool _needsScroll;
+  private bool _isAtBottom = true;
+
+  private ElementReference _chatContainerRef;
 
   private string UserEmail { get; set; } = "user@example.com";
   private string MessageText { get; set; } = "";
@@ -367,9 +374,26 @@
     }).ToList();
   }
 
+  [JSInvokable]
+  public void SetAtBottom(bool atBottom)
+  {
+    _isAtBottom = atBottom;
+  }
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (_needsScroll)
+    if (firstRender)
+    {
+      // Attach JS scroll event handler
+      await JS.InvokeVoidAsync(
+        "chatScroll.onScroll",
+        _chatContainerRef,
+        DotNetObjectReference.Create(this)
+      );
+    }
+
+    // Only scroll if needed and user is at bottom
+    if (_needsScroll && _isAtBottom)
     {
       await ScrollManager.ScrollToBottomAsync(
         ".chat-container",
@@ -396,6 +420,8 @@
     // 1) add the user’s message
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
     MessageText = "";
+
+    _isAtBottom = true; // Force scroll to bottom on send
     _needsScroll = true;
     StateHasChanged();
 
@@ -403,6 +429,7 @@
     var sharedMessages = ToSharedMessages();
     var aiMessage      = new ChatMessage { IsUser = false, Text = "" };
     ChatHistory.Add(aiMessage);
+
     _needsScroll = true;
     StateHasChanged();
 
@@ -410,11 +437,10 @@
     try
     {
       await foreach (var chunk in CompletionService
-        .StreamCompletionAsync(sharedMessages))
+                       .StreamCompletionAsync(sharedMessages))
       {
         aiMessage.Text += chunk;
         _needsScroll = true;
-        // force immediate UI update per chunk
         await InvokeAsync(StateHasChanged);
       }
     }
@@ -424,6 +450,7 @@
       await InvokeAsync(StateHasChanged);
     }
   }
+
 
   private void AttachFile() => Console.WriteLine("Attach file clicked.");
 

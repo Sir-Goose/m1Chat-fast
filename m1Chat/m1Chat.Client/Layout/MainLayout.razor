@@ -389,6 +389,19 @@
 </script>
 
 <script>
+    window.chatScroll = {
+        onScroll: function (element, dotNetHelper) {
+            element.addEventListener('scroll', function () {
+                const atBottom =
+                    element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+                dotNetHelper.invokeMethodAsync('SetAtBottom', atBottom);
+            });
+        }
+    };
+
+</script>
+
+<script>
     window.streamChatCompletion = async (url, messages, dotnetRef) => {
         const resp = await fetch(url, {
             method: 'POST',
