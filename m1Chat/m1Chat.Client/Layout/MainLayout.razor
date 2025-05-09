@@ -389,6 +389,62 @@
 </script>
 
 <script>
+    window.streamChatCompletion = async (url, messages, dotnetRef) => {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages })
+        });
+        if (!resp.ok) {
+            const txt = await resp.text();
+            await dotnetRef.invokeMethodAsync('Receive', `[Error: ${txt}]`);
+            await dotnetRef.invokeMethodAsync('Complete');
+            return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // partial line
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const obj = JSON.parse(line);
+                    if (obj.content) {
+                        await dotnetRef.invokeMethodAsync('Receive', obj.content);
+                    }
+                } catch (e) {
+                    console.warn('invalid JSON line', line, e);
+                }
+            }
+        }
+
+        // final partial
+        if (buffer.trim()) {
+            try {
+                const obj = JSON.parse(buffer);
+                if (obj.content) {
+                    await dotnetRef.invokeMethodAsync('Receive', obj.content);
+                }
+            } catch { /*ignore*/ }
+        }
+
+        await dotnetRef.invokeMethodAsync('Complete');
+    };
+
+</script>
+
+
+
+<script>
     window.setInnerHtmlAndRenderMath = (element, html) => {
         if (element) {
             element.innerHTML = html;
