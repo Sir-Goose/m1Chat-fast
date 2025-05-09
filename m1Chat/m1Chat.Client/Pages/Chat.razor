@@ -3,8 +3,12 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Markdig
 @using m1Chat.Client.Components
+@using m1Chat.Client.Services
 @inject NavigationManager NavigationManager
 @inject IScrollManager ScrollManager
+@inject ChatCompletionService CompletionService
+@using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <MudLayout>
     <MudDrawer
@@ -298,6 +302,12 @@
         new ChatMessage { IsUser = false, Text = "Hello! I am your assistant." }
     };
 
+    private class SidebarChat
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = "";
+    }
+
     private List<SidebarChat> SidebarChats = new()
     {
         new SidebarChat { Name = "Chat with Alice" },
@@ -340,10 +350,14 @@
         StateHasChanged();
     }
 
-    private class SidebarChat
+    // Map UI ChatMessage to service ChatMessage
+    private List<ServiceChatMessage> ToSharedMessages()
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Name { get; set; } = "";
+        return ChatHistory.Select(m => new ServiceChatMessage
+        {
+            Role = m.IsUser ? "user" : "assistant",
+            Content = m.Text
+        }).ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -372,16 +386,36 @@
         if (string.IsNullOrWhiteSpace(textToSend))
             return;
 
+        // Add user message
         ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
-        var temp = MessageText;
         MessageText = "";
         _needsScroll = true;
         StateHasChanged();
 
-        await Task.Delay(500);
-        ChatHistory.Add(new ChatMessage { IsUser = false, Text = temp });
+        // Prepare chat history for backend
+        var sharedMessages = ToSharedMessages();
+
+        // Add a placeholder for the assistant's response
+        var aiMessage = new ChatMessage { IsUser = false, Text = "" };
+        ChatHistory.Add(aiMessage);
         _needsScroll = true;
         StateHasChanged();
+
+        // Stream the response from the backend
+        try
+        {
+            await foreach (var chunk in CompletionService.StreamCompletionAsync(sharedMessages))
+            {
+                aiMessage.Text += chunk;
+                _needsScroll = true;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            aiMessage.Text = $"[Error: {ex.Message}]";
+            StateHasChanged();
+        }
     }
 
     private void AttachFile() => Console.WriteLine("Attach file clicked.");
@@ -396,7 +430,7 @@
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
         public bool IsUser { get; init; }
-        public string Text { get; init; } = "";
+        public string Text { get; set; } = "";
     }
 
     private void HandleRegenerateMessage(ChatMessage message)

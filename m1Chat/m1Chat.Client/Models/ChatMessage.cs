@@ -1,6 +1,6 @@
 namespace m1Chat.Client.Models;
 
-public class ChatMessage
+public class ClientChatMessage
 {
     public string UserId { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty; // Or use UserId to lookup Author Name/Avatar
