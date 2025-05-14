@@ -14,24 +14,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Services Registration ---
 builder.Services.AddScoped<UserService>();
-// MudBlazor (if needed for server-side rendering)
 builder.Services.AddMudServices();
-
-// HttpClient for DI
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ChatCompletionService>();
 
-// Register EF Core with SQLite
 builder.Services.AddDbContext<ChatDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register your server-side Completion service
 builder.Services.AddScoped<Completion>();
-
-// Add API Controllers
 builder.Services.AddControllers();
 
-// Add Authentication/Authorization
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = CloudflareAccessAuthenticationHandler.SchemeName;
@@ -43,17 +35,23 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Add Blazor components (for interactive SSR or hybrid scenarios)
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
-// --- Automatic Database Migration ---
+// --- Hybrid Database Initialization ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
 // --- Middleware Pipeline ---
