@@ -9,6 +9,8 @@
 @inject ChatCompletionService CompletionService
 @inject IJSRuntime JS
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
+@inject UserService UserService
+
 
 <MudLayout>
   <MudDrawer
@@ -300,7 +302,7 @@
 
   private ElementReference _chatContainerRef;
 
-  private string UserEmail { get; set; } = "user@example.com";
+  private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
   private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
 
@@ -310,6 +312,11 @@
     "Gemini 2.5 Flash (Thinking)",
     "Gemini 2.5 Flash"
   };
+  
+  protected override async Task OnInitializedAsync()
+  {
+    UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
+  }
 
   private List<ChatMessage> ChatHistory = new()
   {

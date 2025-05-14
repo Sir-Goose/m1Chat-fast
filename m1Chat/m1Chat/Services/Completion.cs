@@ -40,7 +40,7 @@ namespace m1Chat.Services
         {
             var requestBody = new
             {
-                model = "deepseek/deepseek-chat-v3-0324:free",
+                model = "google/gemini-2.0-flash-exp:free",
                 messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };

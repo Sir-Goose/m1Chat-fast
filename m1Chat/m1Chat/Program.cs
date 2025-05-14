@@ -1,36 +1,63 @@
+using m1Chat.Authentication;
 using m1Chat.Client.Services;
 using MudBlazor.Services;
 using m1Chat.Components;
-// using m1Chat.Client.Pages; // Not needed for server setup
-// using m1Chat.Client.Services; // Client service, not for server DI for controllers
-
-// Assuming your server-side Completion service is in this namespace
 using m1Chat.Services;
-
+using m1Chat.Data;
+using m1Chat.Middleware;
+using m1Chat.Authentication; 
+using m1Chat.Middleware;    
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MudBlazor services (if your server also serves Blazor Server/SSR parts that use MudBlazor)
+// --- Services Registration ---
+builder.Services.AddScoped<UserService>();
+// MudBlazor (if needed for server-side rendering)
 builder.Services.AddMudServices();
 
-// Register HttpClient factory - good practice
+// HttpClient for DI
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ChatCompletionService>();
 
-// *** IMPORTANT: Register services for API Controllers ***
+// Register EF Core with SQLite
+builder.Services.AddDbContext<ChatDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register your server-side Completion service
+builder.Services.AddScoped<Completion>();
+
+// Add API Controllers
 builder.Services.AddControllers();
 
-// *** IMPORTANT: Register your SERVER-SIDE service that the controller uses ***
-// Replace 'Completion' with the actual class name if different, and ensure its namespace is imported.
-builder.Services.AddScoped<Completion>(); // Or AddTransient/AddSingleton as appropriate
+// Add Authentication/Authorization
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CloudflareAccessAuthenticationHandler.SchemeName;
+    options.DefaultChallengeScheme = CloudflareAccessAuthenticationHandler.SchemeName;
+})
+.AddScheme<AuthenticationSchemeOptions, CloudflareAccessAuthenticationHandler>(
+    CloudflareAccessAuthenticationHandler.SchemeName, options => { }
+);
 
-// Add services for Blazor components (if this project also hosts Blazor UI)
+builder.Services.AddAuthorization();
+
+// Add Blazor components (for interactive SSR or hybrid scenarios)
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// --- Automatic Database Migration ---
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
+    db.Database.Migrate();
+}
+
+// --- Middleware Pipeline ---
+
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -42,20 +69,17 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseAntiforgery();
 
-// Serves static files from wwwroot (including your Blazor WASM app)
-app.UseStaticFiles(); // Ensure this is present if MapStaticAssets isn't a custom extension doing this. Standard is UseStaticFiles().
+app.UseAuthentication();
+app.UseMiddleware<CloudflareUserSyncMiddleware>();
+app.UseAuthorization();
 
-app.UseAntiforgery(); // Antiforgery middleware is enabled. More on this below.
-
-// *** IMPORTANT: Map API Controllers ***
-// This should typically come before MapRazorComponents if your API routes might overlap
-// with Blazor routes, though with "/api/" prefix it's usually fine.
 app.MapControllers();
 
-// Map Blazor components
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(m1Chat.Client._Imports).Assembly); // For finding client-side routable components
+    .AddAdditionalAssemblies(typeof(m1Chat.Client._Imports).Assembly);
 
 app.Run();
