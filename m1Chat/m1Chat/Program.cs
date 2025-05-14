@@ -5,8 +5,6 @@ using m1Chat.Components;
 using m1Chat.Services;
 using m1Chat.Data;
 using m1Chat.Middleware;
-using m1Chat.Authentication; 
-using m1Chat.Middleware;    
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 
@@ -24,14 +22,29 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 builder.Services.AddScoped<Completion>();
 builder.Services.AddControllers();
 
-builder.Services.AddAuthentication(options =>
+// --- Conditional Authentication Registration --- //
+if (builder.Environment.IsDevelopment())
 {
-    options.DefaultAuthenticateScheme = CloudflareAccessAuthenticationHandler.SchemeName;
-    options.DefaultChallengeScheme = CloudflareAccessAuthenticationHandler.SchemeName;
-})
-.AddScheme<AuthenticationSchemeOptions, CloudflareAccessAuthenticationHandler>(
-    CloudflareAccessAuthenticationHandler.SchemeName, options => { }
-);
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = DevAuthenticationHandler.SchemeName;
+        options.DefaultChallengeScheme = DevAuthenticationHandler.SchemeName;
+    })
+    .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(
+        DevAuthenticationHandler.SchemeName, options => { }
+    );
+}
+else
+{
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CloudflareAccessAuthenticationHandler.SchemeName;
+        options.DefaultChallengeScheme = CloudflareAccessAuthenticationHandler.SchemeName;
+    })
+    .AddScheme<AuthenticationSchemeOptions, CloudflareAccessAuthenticationHandler>(
+        CloudflareAccessAuthenticationHandler.SchemeName, options => { }
+    );
+}
 
 builder.Services.AddAuthorization();
 
