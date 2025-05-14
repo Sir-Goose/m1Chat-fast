@@ -104,6 +104,38 @@
                   >
                     <UserMarkdown Markdown="@m.Text" />
                   </MudChatBubble>
+
+                  <div class="message-actions">
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Outlined.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleRegenerateMessage(m))"
+                        aria-label="Regenerate"
+                        Title="Regenerate"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.Edit"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleEditMessage(m))"
+                        aria-label="Edit"
+                        Title="Edit"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(async () => await HandleCopyMessage(m))"
+                        aria-label="Copy"
+                        Title="Copy"
+                      />
+                    </span>
+                  </div>
+
+                  <div class="user-message-hoverzone"></div>
                 </div>
               </MudStack>
             }
@@ -112,6 +144,38 @@
               <MudStack JustifyContent="FlexStart">
                 <div class="ai-message-container">
                   <AiMarkdown Markdown="@m.Text" />
+
+                  <div class="message-actions">
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(async () => await HandleCopyMessage(m))"
+                        aria-label="Copy"
+                        Title="Copy"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.MergeType"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleBranchMessage(m))"
+                        aria-label="Branch"
+                        Title="Branch"
+                      />
+                    </span>
+                    <span @onclick:stopPropagation="true">
+                      <MudIconButton
+                        Icon="@Icons.Material.Filled.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => HandleRegenerateMessage(m))"
+                        aria-label="Regenerate"
+                        Title="Regenerate"
+                      />
+                    </span>
+                  </div>
+
+                  <div class="ai-message-hoverzone"></div>
                 </div>
               </MudStack>
             }
@@ -198,6 +262,7 @@
   private bool _searchEnabled = false;
   private bool _needsScroll;
   private bool _isAtBottom = true;
+
   private ElementReference _chatContainerRef;
 
   private string UserEmail { get; set; } = "";
@@ -211,14 +276,11 @@
     "Gemini 2.5 Flash"
   };
 
-  // current chat state
   private string? ChatId;
   private string ChatName = "New Chat";
   private List<ChatMessage> ChatHistory = new();
 
-  // sidebar
   private List<SidebarChat> SidebarChats = new();
-
   private record SidebarChat(string Id, string Name);
 
   protected override async Task OnInitializedAsync()
@@ -305,14 +367,14 @@
     if (string.IsNullOrWhiteSpace(textToSend))
       return;
 
-    // 1) Add the user’s message locally
+    // add user message locally
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
     MessageText = "";
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
 
-    // 2) If brand‐new chat, create it on the server
+    // create on server if new
     if (ChatId == null)
     {
       ChatName = textToSend.Length <= 20
@@ -331,13 +393,13 @@
       await LoadSidebarChatsAsync();
     }
 
-    // 3) Add AI placeholder
+    // AI placeholder
     var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     ChatHistory.Add(aiMessage);
     _needsScroll = true;
     StateHasChanged();
 
-    // 4) Stream the AI reply
+    // stream AI response
     try
     {
       await foreach (var chunk in
@@ -354,7 +416,7 @@
       await InvokeAsync(StateHasChanged);
     }
 
-    // 5) Persist updated history
+    // persist updated history
     if (Guid.TryParse(ChatId, out var cId))
     {
       var updateReq = new ChatService.UpdateChatRequest(
@@ -383,4 +445,19 @@
     public bool   IsUser { get; init; }
     public string Text   { get; set; } = "";
   }
+
+  private void HandleRegenerateMessage(ChatMessage m) =>
+    Console.WriteLine($"Regenerate message: {m.Id}");
+
+  private void HandleEditMessage(ChatMessage m) =>
+    Console.WriteLine($"Edit message: {m.Id}");
+
+  private async Task HandleCopyMessage(ChatMessage m)
+  {
+    Console.WriteLine($"Copy message: {m.Id}");
+    // await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
+  }
+
+  private void HandleBranchMessage(ChatMessage m) =>
+    Console.WriteLine($"Branch message: {m.Id}");
 }
