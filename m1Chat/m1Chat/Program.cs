@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Services Registration ---
+// --- Services Registration --- // 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddMudServices();
 builder.Services.AddHttpClient();
