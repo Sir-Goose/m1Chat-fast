@@ -55,12 +55,53 @@
                 @onclick="@(() => LoadChat(chat))"
                 @oncontextmenu:preventDefault
                 @oncontextmenu="@(() => { })"
+                style="display: flex; align-items: center; justify-content: space-between;"
               >
                 <MudText Class="chat-name-text">
                   @chat.Name
                 </MudText>
+                <span class="chat-actions" style="display: flex; gap: 2px;">
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.PushPin"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="@(() => PinChat(chat))"
+                      aria-label="Pin chat"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.Delete"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="@(() => DeleteChat(chat))"
+                      aria-label="Delete chat"
+                    />
+                  </span>
+                </span>
               </div>
             </ActivatorContent>
+            <ChildContent>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                OnClick="@(() => HandleRenameChat(chat))"
+              >
+                Rename
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.Delete"
+                OnClick="@(() => DeleteChat(chat))"
+              >
+                Delete
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.ArrowOutward"
+                OnClick="@(() => HandleExportChat(chat))"
+              >
+                Export
+              </MudMenuItem>
+            </ChildContent>
           </MudMenu>
         }
       </MudList>
@@ -315,7 +356,7 @@
       .Select(m => new ChatMessage
       {
         IsUser = m.Role == "user",
-        Text = m.Content
+        Text   = m.Content
       })
       .ToList();
 
@@ -326,7 +367,7 @@
   private List<ServiceChatMessage> ToSharedMessages() =>
     ChatHistory.Select(m => new ServiceChatMessage
     {
-      Role = m.IsUser ? "user" : "assistant",
+      Role    = m.IsUser ? "user" : "assistant",
       Content = m.Text
     }).ToList();
 
@@ -343,6 +384,7 @@
         DotNetObjectReference.Create(this)
       );
     }
+
     if (_needsScroll && _isAtBottom)
     {
       await ScrollManager.ScrollToBottomAsync(
@@ -444,6 +486,42 @@
     public string Id { get; init; } = Guid.NewGuid().ToString();
     public bool   IsUser { get; init; }
     public string Text   { get; set; } = "";
+  }
+
+  // --- Sidebar actions ---
+
+  private void PinChat(SidebarChat chat)
+  {
+    // Move chat to top of sidebar (UI only)
+    SidebarChats.Remove(chat);
+    SidebarChats.Insert(0, chat);
+    StateHasChanged();
+  }
+
+  private async void DeleteChat(SidebarChat chat)
+  {
+    // Remove from server and UI
+    if (Guid.TryParse(chat.Id, out var chatId))
+    {
+      await ChatService.DeleteChatAsync(chatId);
+      SidebarChats.Remove(chat);
+      // If the deleted chat is open, clear the main area
+      if (ChatId == chat.Id)
+      {
+        CreateNewChat();
+      }
+      StateHasChanged();
+    }
+  }
+
+  private void HandleRenameChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Rename chat: {chat.Name}");
+  }
+
+  private void HandleExportChat(SidebarChat chat)
+  {
+    Console.WriteLine($"Export chat: {chat.Name}");
   }
 
   private void HandleRegenerateMessage(ChatMessage m) =>

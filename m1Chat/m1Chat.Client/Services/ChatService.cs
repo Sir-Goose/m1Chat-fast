@@ -40,6 +40,13 @@ namespace m1Chat.Client.Services
             var resp = await _http.PutAsJsonAsync($"api/chats/{id}", req);
             resp.EnsureSuccessStatusCode();
         }
+        
+        public async Task DeleteChatAsync(Guid id)
+        {
+            var resp = await _http.DeleteAsync($"api/chats/{id}");
+            resp.EnsureSuccessStatusCode();
+        }
+
 
         // ---- DTOs / Models ----
         public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt);
