@@ -14,11 +14,13 @@ namespace m1Chat.Services
     {
         private readonly HttpClient _httpClient;
         private readonly string _openRouterApiKey;
+        private readonly string _groqApiKey;
 
         public Completion()
         {
             _httpClient = new HttpClient();
             _openRouterApiKey = "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";
+            _groqApiKey = "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";
             
             if (string.IsNullOrEmpty(_openRouterApiKey))
             {
@@ -40,7 +42,8 @@ namespace m1Chat.Services
         {
             var requestBody = new
             {
-                model = "google/gemini-2.0-flash-exp:free",
+                // model = "google/gemini-2.0-flash-exp:free",
+                model = "llama-3.3-70b-versatile",
                 messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
@@ -49,19 +52,21 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
+                // new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
+                new AuthenticationHeaderValue("Bearer", _groqApiKey);
 
             if (_httpClient.DefaultRequestHeaders.Contains("HTTP-Referer"))
                 _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             if (_httpClient.DefaultRequestHeaders.Contains("X-Title"))
                 _httpClient.DefaultRequestHeaders.Remove("X-Title");
 
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://yourdomain.com");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
             var request = new HttpRequestMessage(
                 HttpMethod.Post,
-                "https://openrouter.ai/api/v1/chat/completions"
+                // "https://openrouter.ai/api/v1/chat/completions"
+                "https://api.groq.com/openai/v1/chat/completions"
             )
             {
                 Content = content
@@ -71,6 +76,11 @@ namespace m1Chat.Services
                 request,
                 HttpCompletionOption.ResponseHeadersRead
             );
+            
+            Console.WriteLine(
+                $"HTTP Response: {(int)response.StatusCode} {response.StatusCode} - {response.ReasonPhrase}"
+            );
+
 
             if (!response.IsSuccessStatusCode)
             {

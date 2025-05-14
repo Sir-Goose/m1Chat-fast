@@ -7,10 +7,10 @@
 @inject NavigationManager NavigationManager
 @inject IScrollManager ScrollManager
 @inject ChatCompletionService CompletionService
+@inject ChatService ChatService
 @inject IJSRuntime JS
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
 @inject UserService UserService
-
 
 <MudLayout>
   <MudDrawer
@@ -33,6 +33,7 @@
         Color="Color.Primary"
         Class="mt-2"
         FullWidth="true"
+        OnClick="CreateNewChat"
       >
         New Chat
       </MudButton>
@@ -54,11 +55,12 @@
                 @onclick="@(() => LoadChat(chat))"
                 @oncontextmenu:preventDefault
                 @oncontextmenu="@(() => { })"
+                style="display: flex; align-items: center; justify-content: space-between;"
               >
                 <MudText Class="chat-name-text">
                   @chat.Name
                 </MudText>
-                <span class="chat-actions">
+                <span class="chat-actions" style="display: flex; gap: 2px;">
                   <span @onclick:stopPropagation="true">
                     <MudIconButton
                       Icon="@Icons.Material.Outlined.PushPin"
@@ -143,6 +145,7 @@
                   >
                     <UserMarkdown Markdown="@m.Text" />
                   </MudChatBubble>
+
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
@@ -172,6 +175,7 @@
                       />
                     </span>
                   </div>
+
                   <div class="user-message-hoverzone"></div>
                 </div>
               </MudStack>
@@ -181,14 +185,13 @@
               <MudStack JustifyContent="FlexStart">
                 <div class="ai-message-container">
                   <AiMarkdown Markdown="@m.Text" />
+
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
                         Icon="@Icons.Material.Filled.ContentCopy"
                         Size="Size.Small"
-                        OnClick="@(
-                          async () => await HandleCopyMessage(m)
-                        )"
+                        OnClick="@(async () => await HandleCopyMessage(m))"
                         aria-label="Copy"
                         Title="Copy"
                       />
@@ -212,6 +215,7 @@
                       />
                     </span>
                   </div>
+
                   <div class="ai-message-hoverzone"></div>
                 </div>
               </MudStack>
@@ -304,94 +308,76 @@
 
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
-  private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
 
+  private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
   private List<string> ChatOptions = new()
   {
     "Gemini 2.5 Pro",
     "Gemini 2.5 Flash (Thinking)",
     "Gemini 2.5 Flash"
   };
-  
+
+  private string? ChatId;
+  private string ChatName = "New Chat";
+  private List<ChatMessage> ChatHistory = new();
+
+  private List<SidebarChat> SidebarChats = new();
+  private record SidebarChat(string Id, string Name);
+
   protected override async Task OnInitializedAsync()
   {
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
+    await LoadSidebarChatsAsync();
   }
 
-  private List<ChatMessage> ChatHistory = new()
+  private async Task LoadSidebarChatsAsync()
   {
-    new ChatMessage { IsUser = false, Text = "Hello! I am your assistant." }
-  };
-
-  private class SidebarChat
-  {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string Name { get; set; } = "";
+    var list = await ChatService.GetChatsAsync();
+    SidebarChats = list
+      .Select(c => new SidebarChat(c.Id.ToString(), c.Name))
+      .ToList();
   }
 
-  private List<SidebarChat> SidebarChats = new()
+  private void CreateNewChat()
   {
-    new SidebarChat { Name = "Chat with Alice" },
-    new SidebarChat
-    {
-      Name =
-        "Project Discussion with a very very very long name to test " +
-        "overflow"
-    }
-  };
-
-  private void PinChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Pin chat: {chat.Name} (ID: {chat.Id})");
-  }
-
-  private void DeleteChat(SidebarChat chat)
-  {
-    SidebarChats.Remove(chat);
-    Console.WriteLine($"Delete chat: {chat.Name} (ID: {chat.Id})");
-    StateHasChanged();
-  }
-
-  private void HandleRenameChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Rename chat: {chat.Name}");
-  }
-
-  private void HandleExportChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Export chat: {chat.Name}");
-  }
-
-  private void LoadChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Load chat: {chat.Name}");
+    ChatId = null;
+    ChatName = "New Chat";
     ChatHistory.Clear();
-    ChatHistory.Add(
-      new ChatMessage { IsUser = false, Text = $"Welcome to {chat.Name}!" }
-    );
     StateHasChanged();
   }
 
-  private List<ServiceChatMessage> ToSharedMessages()
+  private async Task LoadChat(SidebarChat chat)
   {
-    return ChatHistory.Select(m => new ServiceChatMessage
+    var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
+    ChatId = full.Id.ToString();
+    ChatName = full.Name;
+    ChatSelectedOption = full.Model;
+    ChatHistory = full.Messages
+      .Select(m => new ChatMessage
+      {
+        IsUser = m.Role == "user",
+        Text   = m.Content
+      })
+      .ToList();
+
+    _needsScroll = true;
+    StateHasChanged();
+  }
+
+  private List<ServiceChatMessage> ToSharedMessages() =>
+    ChatHistory.Select(m => new ServiceChatMessage
     {
       Role    = m.IsUser ? "user" : "assistant",
       Content = m.Text
     }).ToList();
-  }
 
   [JSInvokable]
-  public void SetAtBottom(bool atBottom)
-  {
-    _isAtBottom = atBottom;
-  }
+  public void SetAtBottom(bool atBottom) => _isAtBottom = atBottom;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
-      // Attach JS scroll event handler
       await JS.InvokeVoidAsync(
         "chatScroll.onScroll",
         _chatContainerRef,
@@ -399,7 +385,6 @@
       );
     }
 
-    // Only scroll if needed and user is at bottom
     if (_needsScroll && _isAtBottom)
     {
       await ScrollManager.ScrollToBottomAsync(
@@ -410,7 +395,7 @@
     }
   }
 
-  void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+  private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
@@ -424,40 +409,76 @@
     if (string.IsNullOrWhiteSpace(textToSend))
       return;
 
-    // 1) add the user’s message
+    // add user message locally
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
     MessageText = "";
-
-    _isAtBottom = true; // Force scroll to bottom on send
+    _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
 
-    // 2) prepare & add the AI placeholder
-    var sharedMessages = ToSharedMessages();
-    var aiMessage      = new ChatMessage { IsUser = false, Text = "" };
+    // create on server if new
+    if (ChatId == null)
+    {
+      ChatName = textToSend.Length <= 20
+        ? textToSend
+        : textToSend[..20] + "...";
+
+      var createReq = new ChatService.CreateChatRequest(
+        ChatName,
+        ChatSelectedOption,
+        ToSharedMessages()
+          .Select(m => new ChatService.ChatMessageDto(m.Role, m.Content))
+          .ToArray()
+      );
+      var newId = await ChatService.CreateChatAsync(createReq);
+      ChatId = newId.ToString();
+      await LoadSidebarChatsAsync();
+    }
+
+    // AI placeholder
+    var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     ChatHistory.Add(aiMessage);
-
     _needsScroll = true;
     StateHasChanged();
 
-    // 3) stream in each chunk
+    // stream AI response
     try
     {
-      await foreach (var chunk in CompletionService
-                       .StreamCompletionAsync(sharedMessages))
+      int chunkCount = 0;
+      await foreach (var chunk in CompletionService.StreamCompletionAsync(ToSharedMessages()))
       {
         aiMessage.Text += chunk;
+        chunkCount++;
         _needsScroll = true;
         await InvokeAsync(StateHasChanged);
       }
+      if (chunkCount == 0)
+      {
+        aiMessage.Text = "[No response received from AI]";
+        await InvokeAsync(StateHasChanged);
+      }
+
     }
     catch (Exception ex)
     {
       aiMessage.Text = $"[Error: {ex.Message}]";
       await InvokeAsync(StateHasChanged);
     }
-  }
 
+    // persist updated history
+    if (Guid.TryParse(ChatId, out var cId))
+    {
+      var updateReq = new ChatService.UpdateChatRequest(
+        ChatName,
+        ChatSelectedOption,
+        ToSharedMessages()
+          .Select(m => new ChatService.ChatMessageDto(m.Role, m.Content))
+          .ToArray()
+      );
+      await ChatService.UpdateChatAsync(cId, updateReq);
+      await LoadSidebarChatsAsync();
+    }
+  }
 
   private void AttachFile() => Console.WriteLine("Attach file clicked.");
 
@@ -474,25 +495,54 @@
     public string Text   { get; set; } = "";
   }
 
-  private void HandleRegenerateMessage(ChatMessage message)
+  // --- Sidebar actions ---
+
+  private void PinChat(SidebarChat chat)
   {
-    Console.WriteLine($"Regenerate message: {message.Id}");
+    // Move chat to top of sidebar (UI only)
+    SidebarChats.Remove(chat);
+    SidebarChats.Insert(0, chat);
+    StateHasChanged();
   }
 
-  private void HandleEditMessage(ChatMessage message)
+  private async void DeleteChat(SidebarChat chat)
   {
-    Console.WriteLine($"Edit message: {message.Id}");
+    // Remove from server and UI
+    if (Guid.TryParse(chat.Id, out var chatId))
+    {
+      await ChatService.DeleteChatAsync(chatId);
+      SidebarChats.Remove(chat);
+      // If the deleted chat is open, clear the main area
+      if (ChatId == chat.Id)
+      {
+        CreateNewChat();
+      }
+      StateHasChanged();
+    }
   }
 
-  private async Task HandleCopyMessage(ChatMessage message)
+  private void HandleRenameChat(SidebarChat chat)
   {
-    Console.WriteLine($"Copy message: {message.Id}");
-    // e.g. await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText",
-    // message.Text);
+    Console.WriteLine($"Rename chat: {chat.Name}");
   }
 
-  private void HandleBranchMessage(ChatMessage message)
+  private void HandleExportChat(SidebarChat chat)
   {
-    Console.WriteLine($"Branch message: {message.Id}");
+    Console.WriteLine($"Export chat: {chat.Name}");
   }
+
+  private void HandleRegenerateMessage(ChatMessage m) =>
+    Console.WriteLine($"Regenerate message: {m.Id}");
+
+  private void HandleEditMessage(ChatMessage m) =>
+    Console.WriteLine($"Edit message: {m.Id}");
+
+  private async Task HandleCopyMessage(ChatMessage m)
+  {
+    Console.WriteLine($"Copy message: {m.Id}");
+    // await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
+  }
+
+  private void HandleBranchMessage(ChatMessage m) =>
+    Console.WriteLine($"Branch message: {m.Id}");
 }
