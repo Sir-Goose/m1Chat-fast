@@ -444,13 +444,20 @@
     // stream AI response
     try
     {
-      await foreach (var chunk in
-        CompletionService.StreamCompletionAsync(ToSharedMessages()))
+      int chunkCount = 0;
+      await foreach (var chunk in CompletionService.StreamCompletionAsync(ToSharedMessages()))
       {
         aiMessage.Text += chunk;
+        chunkCount++;
         _needsScroll = true;
         await InvokeAsync(StateHasChanged);
       }
+      if (chunkCount == 0)
+      {
+        aiMessage.Text = "[No response received from AI]";
+        await InvokeAsync(StateHasChanged);
+      }
+
     }
     catch (Exception ex)
     {
