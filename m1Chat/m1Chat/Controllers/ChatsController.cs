@@ -117,6 +117,26 @@ namespace m1Chat.Controllers
             await _db.SaveChangesAsync();
             return NoContent();
         }
+        
+        // DELETE api/chats/{id}
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteChat(Guid id)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email == null) return Unauthorized();
+
+            var chat = await _db.Chats
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == id && c.User.Email == email);
+
+            if (chat == null) return NotFound();
+
+            _db.Chats.Remove(chat);
+            await _db.SaveChangesAsync();
+
+            return NoContent();
+        }
+
 
         // ---- DTOs ----
         public record ChatMessageDto(string Role, string Content);
