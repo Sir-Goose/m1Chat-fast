@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
-using m1Chat.Client.Services;
 
 namespace m1Chat.Client.Services
 {
@@ -18,8 +18,38 @@ namespace m1Chat.Client.Services
 
         public async Task<List<ChatSummary>> GetChatsAsync()
         {
-            return await _http.GetFromJsonAsync<List<ChatSummary>>("api/chats")
-                   ?? new List<ChatSummary>();
+            try
+            {
+                var response = await _http.GetAsync("api/chats");
+                var raw = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine("----- RAW RESPONSE FROM api/chats -----");
+                Console.WriteLine(raw);
+                Console.WriteLine("----- END RAW RESPONSE -----");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Non-success status code: {response.StatusCode}");
+                    return new List<ChatSummary>();
+                }
+
+                var chats = JsonSerializer.Deserialize<List<ChatSummary>>(
+                    raw,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                return chats ?? new List<ChatSummary>();
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"JSON error in GetChatsAsync: {ex.Message}");
+                return new List<ChatSummary>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error in GetChatsAsync: {ex.Message}");
+                return new List<ChatSummary>();
+            }
         }
 
         public async Task<ChatHistory> GetChatAsync(Guid id)
@@ -40,13 +70,12 @@ namespace m1Chat.Client.Services
             var resp = await _http.PutAsJsonAsync($"api/chats/{id}", req);
             resp.EnsureSuccessStatusCode();
         }
-        
+
         public async Task DeleteChatAsync(Guid id)
         {
             var resp = await _http.DeleteAsync($"api/chats/{id}");
             resp.EnsureSuccessStatusCode();
         }
-
 
         // ---- DTOs / Models ----
         public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt);
