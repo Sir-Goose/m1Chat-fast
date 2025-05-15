@@ -11,6 +11,7 @@
 @inject IJSRuntime JS
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
 @inject UserService UserService
+@inject IDialogService DialogService
 
 <MudLayout>
   <MudDrawer
@@ -322,7 +323,7 @@
   private List<ChatMessage> ChatHistory = new();
 
   private List<SidebarChat> SidebarChats = new();
-  private record SidebarChat(string Id, string Name);
+  private record SidebarChat(string Id, string Name, string Model);
 
   protected override async Task OnInitializedAsync()
   {
@@ -334,9 +335,10 @@
   {
     var list = await ChatService.GetChatsAsync();
     SidebarChats = list
-      .Select(c => new SidebarChat(c.Id.ToString(), c.Name))
+      .Select(c => new SidebarChat(c.Id.ToString(), c.Name, c.Model))
       .ToList();
   }
+
 
   private void CreateNewChat()
   {
@@ -521,10 +523,34 @@
     }
   }
 
-  private void HandleRenameChat(SidebarChat chat)
+  private async void HandleRenameChat(SidebarChat chat)
   {
-    Console.WriteLine($"Rename chat: {chat.Name}");
+    var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
+    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    var dialog = DialogService.Show<RenameChatDialog>("Rename Chat", parameters, options);
+    var result = await dialog.Result;
+
+    if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
+    {
+      // Get the full chat history to update
+      var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
+      var updateReq = new ChatService.UpdateChatRequest(
+        newName,
+        full.Model,
+        full.Messages
+      );
+      await ChatService.UpdateChatAsync(Guid.Parse(chat.Id), updateReq);
+
+      // Update sidebar and main chat name if open
+      await LoadSidebarChatsAsync();
+      if (ChatId == chat.Id)
+      {
+        ChatName = newName;
+        StateHasChanged();
+      }
+    }
   }
+
 
   private void HandleExportChat(SidebarChat chat)
   {
