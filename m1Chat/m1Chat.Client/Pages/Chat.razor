@@ -14,114 +14,15 @@
 @inject IDialogService DialogService
 
 <MudLayout>
-  <MudDrawer
-    @bind-Open="_drawerOpen"
-    Anchor="Anchor.Left"
-    Elevation="1"
-    Variant="DrawerVariant.Persistent"
-    Class="d-flex flex-column"
-  >
-    <MudDrawerHeader Class="d-flex flex-column pa-2">
-      <div class="d-flex align-center justify-space-between">
-        <MudText Typo="Typo.h6">M1 Chat</MudText>
-        <MudIconButton
-          Icon="@Icons.Material.Filled.ChevronLeft"
-          OnClick="ToggleDrawer"
-        />
-      </div>
-      <MudButton
-        Variant="Variant.Filled"
-        Color="Color.Primary"
-        Class="mt-2"
-        FullWidth="true"
-        OnClick="CreateNewChat"
-      >
-        New Chat
-      </MudButton>
-    </MudDrawerHeader>
-
-    <div class="flex-grow-1 no-scrollbar">
-      <MudList T="SidebarChat" Clickable="false">
-        @foreach (var chat in SidebarChats)
-        {
-          <MudMenu
-            Style="width:100%;"
-            ActivationEvent="@MouseEvent.RightClick"
-            AnchorOrigin="Origin.BottomLeft"
-            TransformOrigin="Origin.TopLeft"
-          >
-            <ActivatorContent>
-              <div
-                class="sidebar-chat-row"
-                @onclick="@(() => LoadChat(chat))"
-                @oncontextmenu:preventDefault
-                @oncontextmenu="@(() => { })"
-                style="display: flex; align-items: center; justify-content: space-between;"
-              >
-                <MudText Class="chat-name-text">
-                  @chat.Name
-                </MudText>
-                <span class="chat-actions" style="display: flex; gap: 2px;">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.PushPin"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="@(() => PinChat(chat))"
-                      aria-label="Pin chat"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.Delete"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="@(() => DeleteChat(chat))"
-                      aria-label="Delete chat"
-                    />
-                  </span>
-                </span>
-              </div>
-            </ActivatorContent>
-            <ChildContent>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                OnClick="@(() => HandleRenameChat(chat))"
-              >
-                Rename
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.Delete"
-                OnClick="@(() => DeleteChat(chat))"
-              >
-                Delete
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.ArrowOutward"
-                OnClick="@(() => HandleExportChat(chat))"
-              >
-                Export
-              </MudMenuItem>
-            </ChildContent>
-          </MudMenu>
-        }
-      </MudList>
-    </div>
-
-    <div class="pa-2">
-      <MudText Typo="Typo.subtitle2" Class="mb-1">
-        @UserEmail
-      </MudText>
-      <MudButton
-        Variant="Variant.Filled"
-        Color="Color.Secondary"
-        FullWidth="true"
-        OnClick="Logout"
-      >
-        Logout
-      </MudButton>
-    </div>
-  </MudDrawer>
+  <ChatDrawer @bind-DrawerOpen="_drawerOpen"
+              SidebarChats="SidebarChats"
+              UserEmail="@UserEmail"
+              ActiveChatId="@ChatId"
+              OnChatSelected="LoadChat"
+              OnCreateNewChat="CreateNewChat"
+              OnChatPinned="PinChat"
+              OnChatDeleted="DeleteChat"
+              OnChatRenamed="HandleChatRenamed" />
 
   <MudMainContent
     Class="d-flex flex-column p-0 chat-main-content-bg"
@@ -322,8 +223,7 @@
   private string ChatName = "New Chat";
   private List<ChatMessage> ChatHistory = new();
 
-  private List<SidebarChat> SidebarChats = new();
-  private record SidebarChat(string Id, string Name, string Model);
+  private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
   protected override async Task OnInitializedAsync()
   {
@@ -335,12 +235,11 @@
   {
     var list = await ChatService.GetChatsAsync();
     SidebarChats = list
-      .Select(c => new SidebarChat(c.Id.ToString(), c.Name, c.Model))
+      .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model))
       .ToList();
   }
 
-
-  private void CreateNewChat()
+  private async Task CreateNewChat()
   {
     ChatId = null;
     ChatName = "New Chat";
@@ -348,7 +247,7 @@
     StateHasChanged();
   }
 
-  private async Task LoadChat(SidebarChat chat)
+  private async Task LoadChat(ChatDrawer.SidebarChat chat)
   {
     var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     ChatId = full.Id.ToString();
@@ -397,8 +296,6 @@
     }
   }
 
-  private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
-
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
     if (args.Key == "Enter" && !args.ShiftKey)
@@ -411,14 +308,12 @@
     if (string.IsNullOrWhiteSpace(textToSend))
       return;
 
-    // add user message locally
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
     MessageText = "";
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
 
-    // create on server if new
     if (ChatId == null)
     {
       ChatName = textToSend.Length <= 20
@@ -437,13 +332,11 @@
       await LoadSidebarChatsAsync();
     }
 
-    // AI placeholder
     var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     ChatHistory.Add(aiMessage);
     _needsScroll = true;
     StateHasChanged();
 
-    // stream AI response
     try
     {
       int chunkCount = 0;
@@ -459,7 +352,6 @@
         aiMessage.Text = "[No response received from AI]";
         await InvokeAsync(StateHasChanged);
       }
-
     }
     catch (Exception ex)
     {
@@ -467,7 +359,6 @@
       await InvokeAsync(StateHasChanged);
     }
 
-    // persist updated history
     if (Guid.TryParse(ChatId, out var cId))
     {
       var updateReq = new ChatService.UpdateChatRequest(
@@ -484,77 +375,35 @@
 
   private void AttachFile() => Console.WriteLine("Attach file clicked.");
 
-  private void Logout()
+  private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
-    Console.WriteLine("Logout clicked");
-    NavigationManager.NavigateTo("/");
-  }
-
-  private record ChatMessage
-  {
-    public string Id { get; init; } = Guid.NewGuid().ToString();
-    public bool   IsUser { get; init; }
-    public string Text   { get; set; } = "";
-  }
-
-  // --- Sidebar actions ---
-
-  private void PinChat(SidebarChat chat)
-  {
-    // Move chat to top of sidebar (UI only)
     SidebarChats.Remove(chat);
     SidebarChats.Insert(0, chat);
     StateHasChanged();
   }
 
-  private async void DeleteChat(SidebarChat chat)
+  private async Task DeleteChat(ChatDrawer.SidebarChat chat)
   {
-    // Remove from server and UI
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.DeleteChatAsync(chatId);
       SidebarChats.Remove(chat);
-      // If the deleted chat is open, clear the main area
-      if (ChatId == chat.Id)
-      {
-        CreateNewChat();
-      }
+      if (ChatId == chat.Id) await CreateNewChat();
       StateHasChanged();
     }
   }
 
-  private async void HandleRenameChat(SidebarChat chat)
+  private async Task HandleChatRenamed(ChatDrawer.SidebarChat updatedChat)
   {
-    var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
-    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-    var dialog = DialogService.Show<RenameChatDialog>("Rename Chat", parameters, options);
-    var result = await dialog.Result;
-
-    if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
-    {
-      // Get the full chat history to update
-      var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
-      var updateReq = new ChatService.UpdateChatRequest(
-        newName,
-        full.Model,
-        full.Messages
-      );
-      await ChatService.UpdateChatAsync(Guid.Parse(chat.Id), updateReq);
-
-      // Update sidebar and main chat name if open
-      await LoadSidebarChatsAsync();
-      if (ChatId == chat.Id)
-      {
-        ChatName = newName;
-        StateHasChanged();
-      }
-    }
-  }
-
-
-  private void HandleExportChat(SidebarChat chat)
-  {
-    Console.WriteLine($"Export chat: {chat.Name}");
+    var updateReq = new ChatService.UpdateChatRequest(
+      updatedChat.Name,
+      updatedChat.Model,
+      (await ChatService.GetChatAsync(Guid.Parse(updatedChat.Id))).Messages
+    );
+    await ChatService.UpdateChatAsync(Guid.Parse(updatedChat.Id), updateReq);
+    await LoadSidebarChatsAsync();
+    if (ChatId == updatedChat.Id) ChatName = updatedChat.Name;
+    StateHasChanged();
   }
 
   private void HandleRegenerateMessage(ChatMessage m) =>
@@ -563,12 +412,16 @@
   private void HandleEditMessage(ChatMessage m) =>
     Console.WriteLine($"Edit message: {m.Id}");
 
-  private async Task HandleCopyMessage(ChatMessage m)
-  {
-    Console.WriteLine($"Copy message: {m.Id}");
-    // await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
-  }
+  private async Task HandleCopyMessage(ChatMessage m) =>
+    await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
 
   private void HandleBranchMessage(ChatMessage m) =>
     Console.WriteLine($"Branch message: {m.Id}");
+
+  private record ChatMessage
+  {
+    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public bool   IsUser { get; init; }
+    public string Text   { get; set; } = "";
+  }
 }

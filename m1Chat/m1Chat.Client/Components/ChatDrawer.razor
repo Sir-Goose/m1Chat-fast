@@ -1,0 +1,140 @@
+@using MudBlazor
+@using m1Chat.Client.Services
+@inject ChatService ChatService
+@inject UserService UserService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1" 
+           Variant="DrawerVariant.Persistent" Class="d-flex flex-column">
+  <MudDrawerHeader Class="d-flex flex-column pa-2">
+    <div class="d-flex align-center justify-space-between">
+      <MudText Typo="Typo.h6">M1 Chat</MudText>
+      <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" 
+                    OnClick="ToggleDrawer" />
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+              Class="mt-2" FullWidth="true" OnClick="HandleCreateNewChat">
+      New Chat
+    </MudButton>
+  </MudDrawerHeader>
+
+  <div class="flex-grow-1 no-scrollbar">
+    <MudList T="SidebarChat" Clickable="false">
+      @foreach (var chat in SidebarChats)
+      {
+        <MudMenu Style="width:100%" ActivationEvent="@MouseEvent.RightClick"
+                AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+          <ActivatorContent>
+            <div class="sidebar-chat-row" 
+                @onclick="() => HandleSelectChat(chat)"
+                @oncontextmenu:preventDefault
+                style="display: flex; align-items: center; justify-content: space-between;">
+              <MudText Class="chat-name-text">@chat.Name</MudText>
+              <span class="chat-actions" style="display: flex; gap: 2px;">
+                <span @onclick:stopPropagation="true">
+                  <MudIconButton Icon="@Icons.Material.Outlined.PushPin"
+                                Color="Color.Default" Size="Size.Small"
+                                OnClick="() => HandlePinChat(chat)" />
+                </span>
+                <span @onclick:stopPropagation="true">
+                  <MudIconButton Icon="@Icons.Material.Outlined.Delete"
+                                Color="Color.Default" Size="Size.Small"
+                                OnClick="() => HandleDeleteChat(chat)" />
+                </span>
+              </span>
+            </div>
+          </ActivatorContent>
+          <ChildContent>
+            <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                        OnClick="() => HandleRenameChat(chat)">
+              Rename
+            </MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Outlined.Delete"
+                        OnClick="() => HandleDeleteChat(chat)">
+              Delete
+            </MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Outlined.ArrowOutward"
+                        OnClick="() => HandleExportChat(chat)">
+              Export
+            </MudMenuItem>
+          </ChildContent>
+        </MudMenu>
+      }
+    </MudList>
+  </div>
+
+  <div class="pa-2">
+    <MudText Typo="Typo.subtitle2" Class="mb-1">@UserEmail</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Secondary" 
+              FullWidth="true" OnClick="Logout">
+      Logout
+    </MudButton>
+  </div>
+</MudDrawer>
+
+@code {
+  [Parameter]
+  public bool DrawerOpen { get; set; }
+
+  [Parameter]
+  public EventCallback<bool> DrawerOpenChanged { get; set; }
+
+  [Parameter]
+  public List<SidebarChat> SidebarChats { get; set; } = new();
+
+  [Parameter]
+  public string UserEmail { get; set; } = "";
+
+  [Parameter]
+  public string? ActiveChatId { get; set; }
+
+  [Parameter]
+  public EventCallback<SidebarChat> OnChatSelected { get; set; }
+
+  [Parameter]
+  public EventCallback OnCreateNewChat { get; set; }
+
+  [Parameter]
+  public EventCallback<SidebarChat> OnChatPinned { get; set; }
+
+  [Parameter]
+  public EventCallback<SidebarChat> OnChatDeleted { get; set; }
+
+  [Parameter]
+  public EventCallback<SidebarChat> OnChatRenamed { get; set; }
+
+  private void ToggleDrawer() => DrawerOpen = !DrawerOpen;
+
+  private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
+
+  private async Task HandleSelectChat(SidebarChat chat) => 
+    await OnChatSelected.InvokeAsync(chat);
+
+  private async Task HandlePinChat(SidebarChat chat) => 
+    await OnChatPinned.InvokeAsync(chat);
+
+  private async Task HandleDeleteChat(SidebarChat chat) => 
+    await OnChatDeleted.InvokeAsync(chat);
+
+  private async Task HandleExportChat(SidebarChat chat) => 
+    Console.WriteLine($"Export chat: {chat.Name}");
+
+  private async Task HandleRenameChat(SidebarChat chat)
+  {
+    var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
+    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    var dialog = DialogService.Show<RenameChatDialog>("Rename Chat", parameters, options);
+    var result = await dialog.Result;
+
+    if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
+    {
+      var updatedChat = chat with { Name = newName };
+      await OnChatRenamed.InvokeAsync(updatedChat);
+    }
+  }
+
+  private void Logout() => NavigationManager.NavigateTo("/");
+
+  public record SidebarChat(string Id, string Name, string Model);
+}
