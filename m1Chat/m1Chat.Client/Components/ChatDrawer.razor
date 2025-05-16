@@ -10,11 +10,18 @@
   <MudDrawerHeader Class="d-flex flex-column pa-2">
     <div class="d-flex align-center justify-space-between">
       <MudText Typo="Typo.h6">M1 Chat</MudText>
-      <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" 
-                    OnClick="ToggleDrawer" />
+      <MudIconButton
+        Icon="@Icons.Material.Filled.ChevronLeft"
+        OnClick="ToggleDrawer"
+      />
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
-              Class="mt-2" FullWidth="true" OnClick="HandleCreateNewChat">
+    <MudButton
+      Variant="Variant.Filled"
+      Color="Color.Primary"
+      Class="mt-2"
+      FullWidth="true"
+      OnClick="HandleCreateNewChat"
+    >
       New Chat
     </MudButton>
   </MudDrawerHeader>
@@ -23,39 +30,61 @@
     <MudList T="SidebarChat" Clickable="false">
       @foreach (var chat in SidebarChats)
       {
-        <MudMenu Style="width:100%" ActivationEvent="@MouseEvent.RightClick"
-                AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+        <MudMenu
+          Style="width:100%;"
+          ActivationEvent="@MouseEvent.RightClick"
+          AnchorOrigin="Origin.BottomLeft"
+          TransformOrigin="Origin.TopLeft"
+        >
           <ActivatorContent>
-            <div class="sidebar-chat-row" 
-                @onclick="() => HandleSelectChat(chat)"
-                @oncontextmenu:preventDefault
-                style="display: flex; align-items: center; justify-content: space-between;">
-              <MudText Class="chat-name-text">@chat.Name</MudText>
+            <div
+              class="sidebar-chat-row"
+              @onclick="() => HandleSelectChat(chat)"
+              @oncontextmenu:preventDefault
+              style="display: flex; align-items: center; justify-content: space-between;"
+            >
+              <MudText Class="chat-name-text">
+                @chat.Name
+              </MudText>
               <span class="chat-actions" style="display: flex; gap: 2px;">
                 <span @onclick:stopPropagation="true">
-                  <MudIconButton Icon="@Icons.Material.Outlined.PushPin"
-                                Color="Color.Default" Size="Size.Small"
-                                OnClick="() => HandlePinChat(chat)" />
+                  <MudIconButton
+                    Icon="@Icons.Material.Outlined.PushPin"
+                    Color="Color.Default"
+                    Size="Size.Small"
+                    OnClick="() => HandlePinChat(chat)"
+                    aria-label="Pin chat"
+                  />
                 </span>
                 <span @onclick:stopPropagation="true">
-                  <MudIconButton Icon="@Icons.Material.Outlined.Delete"
-                                Color="Color.Default" Size="Size.Small"
-                                OnClick="() => HandleDeleteChat(chat)" />
+                  <MudIconButton
+                    Icon="@Icons.Material.Outlined.Delete"
+                    Color="Color.Default"
+                    Size="Size.Small"
+                    OnClick="() => HandleDeleteChat(chat)"
+                    aria-label="Delete chat"
+                  />
                 </span>
               </span>
             </div>
           </ActivatorContent>
           <ChildContent>
-            <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                        OnClick="() => HandleRenameChat(chat)">
+            <MudMenuItem
+              Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+              OnClick="() => HandleRenameChat(chat)"
+            >
               Rename
             </MudMenuItem>
-            <MudMenuItem Icon="@Icons.Material.Outlined.Delete"
-                        OnClick="() => HandleDeleteChat(chat)">
+            <MudMenuItem
+              Icon="@Icons.Material.Outlined.Delete"
+              OnClick="() => HandleDeleteChat(chat)"
+            >
               Delete
             </MudMenuItem>
-            <MudMenuItem Icon="@Icons.Material.Outlined.ArrowOutward"
-                        OnClick="() => HandleExportChat(chat)">
+            <MudMenuItem
+              Icon="@Icons.Material.Outlined.ArrowOutward"
+              OnClick="() => HandleExportChat(chat)"
+            >
               Export
             </MudMenuItem>
           </ChildContent>
@@ -65,9 +94,15 @@
   </div>
 
   <div class="pa-2">
-    <MudText Typo="Typo.subtitle2" Class="mb-1">@UserEmail</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Secondary" 
-              FullWidth="true" OnClick="Logout">
+    <MudText Typo="Typo.subtitle2" Class="mb-1">
+      @UserEmail
+    </MudText>
+    <MudButton
+      Variant="Variant.Filled"
+      Color="Color.Secondary"
+      FullWidth="true"
+      OnClick="Logout"
+    >
       Logout
     </MudButton>
   </div>
@@ -104,7 +139,11 @@
   [Parameter]
   public EventCallback<SidebarChat> OnChatRenamed { get; set; }
 
-  private void ToggleDrawer() => DrawerOpen = !DrawerOpen;
+  private async Task ToggleDrawer()
+  {
+    DrawerOpen = !DrawerOpen;  // Flip the state
+    await DrawerOpenChanged.InvokeAsync(DrawerOpen);  // Notify the parent
+  }
 
   private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
 
@@ -135,6 +174,6 @@
   }
 
   private void Logout() => NavigationManager.NavigateTo("/");
-
+  
   public record SidebarChat(string Id, string Name, string Model);
 }

@@ -28,6 +28,18 @@
     Class="d-flex flex-column p-0 chat-main-content-bg"
     Style="height:100vh;overflow:hidden;"
   >
+    @if (!_drawerOpen)
+    {
+      <MudIconButton
+        Icon="@Icons.Material.Filled.ChevronRight"
+        OnClick="() => _drawerOpen = true"
+        Color="Color.Primary"
+        Class="ma-2"
+        Style="position: fixed; left: 0; top: 0; z-index: 100; background-color: var(--mud-palette-background); box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+        aria-label="Open menu"
+      />
+    }
+
     <div
       class="chat-container px-2 pb-2 no-scrollbar"
       @ref="_chatContainerRef"
