@@ -42,8 +42,8 @@ namespace m1Chat.Services
         {
             var requestBody = new
             {
-                // model = "google/gemini-2.0-flash-exp:free",
-                model = "llama-3.3-70b-versatile",
+                model = "deepseek/deepseek-chat-v3-0324:free",
+                // model = "llama-3.3-70b-versatile",
                 messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
@@ -52,8 +52,8 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                // new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
-                new AuthenticationHeaderValue("Bearer", _groqApiKey);
+                new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
+                // new AuthenticationHeaderValue("Bearer", _groqApiKey);
 
             if (_httpClient.DefaultRequestHeaders.Contains("HTTP-Referer"))
                 _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
@@ -65,8 +65,8 @@ namespace m1Chat.Services
 
             var request = new HttpRequestMessage(
                 HttpMethod.Post,
-                // "https://openrouter.ai/api/v1/chat/completions"
-                "https://api.groq.com/openai/v1/chat/completions"
+                 "https://openrouter.ai/api/v1/chat/completions"
+                //"https://api.groq.com/openai/v1/chat/completions"
             )
             {
                 Content = content
