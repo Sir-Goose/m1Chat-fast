@@ -59,7 +59,6 @@
                   >
                     <UserMarkdown Markdown="@m.Text" />
                   </MudChatBubble>
-
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
@@ -89,7 +88,6 @@
                       />
                     </span>
                   </div>
-
                   <div class="user-message-hoverzone"></div>
                 </div>
               </MudStack>
@@ -99,7 +97,6 @@
               <MudStack JustifyContent="FlexStart">
                 <div class="ai-message-container">
                   <AiMarkdown Markdown="@m.Text" />
-
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
@@ -129,7 +126,6 @@
                       />
                     </span>
                   </div>
-
                   <div class="ai-message-hoverzone"></div>
                 </div>
               </MudStack>
@@ -223,12 +219,14 @@
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
-  private string ChatSelectedOption { get; set; } = "Gemini 2.5 Pro";
+  // <-- your model selector binding
+  private string ChatSelectedOption { get; set; } = "deepseek/deepseek-chat-v3-0324:free";
   private List<string> ChatOptions = new()
   {
     "Gemini 2.5 Pro",
     "Gemini 2.5 Flash (Thinking)",
-    "Gemini 2.5 Flash"
+    "Gemini 2.5 Flash",
+    "deepseek/deepseek-chat-v3-0324:free"
   };
 
   private string? ChatId;
@@ -320,12 +318,14 @@
     if (string.IsNullOrWhiteSpace(textToSend))
       return;
 
+    // add user message
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
     MessageText = "";
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
 
+    // if new chat, create on server
     if (ChatId == null)
     {
       ChatName = textToSend.Length <= 20
@@ -344,6 +344,7 @@
       await LoadSidebarChatsAsync();
     }
 
+    // placeholder for AI
     var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     ChatHistory.Add(aiMessage);
     _needsScroll = true;
@@ -352,7 +353,11 @@
     try
     {
       int chunkCount = 0;
-      await foreach (var chunk in CompletionService.StreamCompletionAsync(ToSharedMessages()))
+      // <-- pass ChatSelectedOption into StreamCompletionAsync
+      await foreach (var chunk in CompletionService.StreamCompletionAsync(
+        ToSharedMessages(),
+        ChatSelectedOption
+      ))
       {
         aiMessage.Text += chunk;
         chunkCount++;
@@ -371,6 +376,7 @@
       await InvokeAsync(StateHasChanged);
     }
 
+    // update chat on server
     if (Guid.TryParse(ChatId, out var cId))
     {
       var updateReq = new ChatService.UpdateChatRequest(
@@ -389,12 +395,11 @@
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
-    var updatedChat = chat with { IsPinned = true };  // Update the flag
+    var updatedChat = chat with { IsPinned = true };
     SidebarChats.Remove(chat);
-    SidebarChats.Insert(0, updatedChat);  // Reorder
-    StateHasChanged();  // Force UI update
+    SidebarChats.Insert(0, updatedChat);
+    StateHasChanged();
   }
-
 
   private async Task DeleteChat(ChatDrawer.SidebarChat chat)
   {

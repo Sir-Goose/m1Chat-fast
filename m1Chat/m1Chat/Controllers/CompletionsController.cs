@@ -1,8 +1,18 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using m1Chat.Services;
+using m1Chat.Services;            // <-- ChatMessageDto & Completion live here
 
 namespace m1Chat.Controllers
 {
+    // DTO for binding model + messages
+    public class ChatHistoryRequest
+    {
+        public string            Model    { get; set; } = string.Empty;
+        public ChatMessageDto[]  Messages { get; set; } = Array.Empty<ChatMessageDto>();
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class CompletionsController : ControllerBase
@@ -22,7 +32,9 @@ namespace m1Chat.Controllers
 
             try
             {
-                await foreach (var chunk in _completion.CompleteAsync(request.Messages))
+                // Directly pass the DTO list to your service
+                var dtoList = request.Messages.ToList();
+                await foreach (var chunk in _completion.CompleteAsync(dtoList, request.Model))
                 {
                     var json = System.Text.Json.JsonSerializer.Serialize(new { content = chunk });
                     await Response.WriteAsync(json + "\n");
@@ -31,7 +43,7 @@ namespace m1Chat.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine("I am in the Completions Controller");
+                Console.WriteLine("Error in CompletionsController.Stream: " + ex);
             }
         }
     }
