@@ -42,7 +42,44 @@ namespace m1Chat.Services
             List<ChatMessageDto> messages,
             string               model
         )
+        // convert human name from selector into names used by providers
         {
+            
+            switch (model)
+            {
+                case "DeepSeek v3":
+                    model = "deepseek/deepseek-chat-v3-0324:free";
+                    break;
+                case "DeepSeek Prover v2":
+                    model = "deepseek/deepseek-prover-v2:free";
+                    break;
+                case "Gemini 2.5 Pro":
+                    model = "google/gemini-2.5-pro-exp-03-25";
+                    break;
+                case "Deepseek r1":
+                    model = "deepseek/deepseek-r1:free";
+                    break;
+                case "Gemini 2.0 Flash":
+                    model = "google/gemini-2.0-flash-exp:free";
+                    break;
+                case "Qwen3 235B":
+                    model = "qwen/qwen3-235b-a22b:free";
+                    break;
+                case "DeepSeek r1 v3 Chimera":
+                    model = "tngtech/deepseek-r1t-chimera:free";
+                    break;
+                case "Gemma 3 27B":
+                    model = "google/gemma-3-27b-it:free";
+                    break;
+                case "Qwen3 30B":
+                    model = "qwen/qwen3-30b-a3b:free";
+                    break;
+                default:
+                    model = "google/gemma-3-27b-it:free";
+                    break;
+            }
+
+            
             await foreach (var chunk in StreamOpenRouterAsync(messages, model))
             {
                 yield return chunk;

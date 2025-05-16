@@ -220,13 +220,18 @@
   private string MessageText { get; set; } = "";
 
   // <-- your model selector binding
-  private string ChatSelectedOption { get; set; } = "deepseek/deepseek-chat-v3-0324:free";
+  private string ChatSelectedOption { get; set; } = "DeepSeek v3";
   private List<string> ChatOptions = new()
   {
+    "DeepSeek v3",
+    "DeepSeek Prover v2",
     "Gemini 2.5 Pro",
-    "Gemini 2.5 Flash (Thinking)",
-    "Gemini 2.5 Flash",
-    "deepseek/deepseek-chat-v3-0324:free"
+    "Deepseek r1",
+    "Gemini 2.0 Flash",
+    "Qwen3 235B",
+    "DeepSeek r1 v3 Chimera",
+    "Gemma 3 27B",
+    "Qwen3 30B"
   };
 
   private string? ChatId;
