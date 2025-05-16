@@ -15,4 +15,23 @@
         <PackageReference Include="MudBlazor" Version="8.*"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Bold.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-BoldItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-ExtraBold.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-ExtraBoldItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-ExtraLight.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-ExtraLightItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Italic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Light.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-LightItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Medium.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-MediumItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Regular.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-SemiBold.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-SemiBoldItalic.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-Thin.woff2" />
+      <_ContentIncludedByDefault Remove="wwwroot\fonts\JetBrainsMono-ThinItalic.woff2" />
+    </ItemGroup>
+
 </Project>
