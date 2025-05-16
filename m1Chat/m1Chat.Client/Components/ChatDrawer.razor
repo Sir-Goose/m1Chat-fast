@@ -27,8 +27,78 @@
   </MudDrawerHeader>
 
   <div class="flex-grow-1 no-scrollbar">
+    @if (pinnedChats.Any())
+    {
+      <MudText Typo="Typo.subtitle1" Class="pa-2">Pinned Chats</MudText>
+      <MudList T="SidebarChat" Clickable="false">
+        @foreach (var chat in pinnedChats)
+        {
+          <MudMenu
+            Style="width:100%;"
+            ActivationEvent="@MouseEvent.RightClick"
+            AnchorOrigin="Origin.BottomLeft"
+            TransformOrigin="Origin.TopLeft"
+          >
+            <ActivatorContent>
+              <div
+                class="sidebar-chat-row"
+                @onclick="() => HandleSelectChat(chat)"
+                @oncontextmenu:preventDefault
+                style="display: flex; align-items: center; justify-content: space-between;"
+              >
+                <MudText Class="chat-name-text">
+                  @chat.Name
+                </MudText>
+                <span class="chat-actions" style="display: flex; gap: 2px;">
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.PushPin"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="() => HandlePinChat(chat)"
+                      aria-label="Pin chat"
+                    />
+                  </span>
+                  <span @onclick:stopPropagation="true">
+                    <MudIconButton
+                      Icon="@Icons.Material.Outlined.Delete"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      OnClick="() => HandleDeleteChat(chat)"
+                      aria-label="Delete chat"
+                    />
+                  </span>
+                </span>
+              </div>
+            </ActivatorContent>
+            <ChildContent>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                OnClick="() => HandleRenameChat(chat)"
+              >
+                Rename
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.Delete"
+                OnClick="() => HandleDeleteChat(chat)"
+              >
+                Delete
+              </MudMenuItem>
+              <MudMenuItem
+                Icon="@Icons.Material.Outlined.ArrowOutward"
+                OnClick="() => HandleExportChat(chat)"
+              >
+                Export
+              </MudMenuItem>
+            </ChildContent>
+          </MudMenu>
+        }
+      </MudList>
+    }
+
+    <MudText Typo="Typo.subtitle1" Class="pa-2">All Chats</MudText>
     <MudList T="SidebarChat" Clickable="false">
-      @foreach (var chat in SidebarChats)
+      @foreach (var chat in otherChats)
       {
         <MudMenu
           Style="width:100%;"
@@ -139,10 +209,13 @@
   [Parameter]
   public EventCallback<SidebarChat> OnChatRenamed { get; set; }
 
+  private List<SidebarChat> pinnedChats => SidebarChats.Where(c => c.IsPinned).ToList();
+  private List<SidebarChat> otherChats => SidebarChats.Where(c => !c.IsPinned).ToList();
+
   private async Task ToggleDrawer()
   {
-    DrawerOpen = !DrawerOpen;  // Flip the state
-    await DrawerOpenChanged.InvokeAsync(DrawerOpen);  // Notify the parent
+    DrawerOpen = !DrawerOpen;
+    await DrawerOpenChanged.InvokeAsync(DrawerOpen);
   }
 
   private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
@@ -174,6 +247,6 @@
   }
 
   private void Logout() => NavigationManager.NavigateTo("/");
-  
-  public record SidebarChat(string Id, string Name, string Model);
+
+  public record SidebarChat(string Id, string Name, string Model, bool IsPinned = false);
 }
