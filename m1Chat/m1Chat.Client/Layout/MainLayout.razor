@@ -527,11 +527,11 @@
 </script>
 
 <script>
-    window.streamChatCompletion = async (url, messages, dotnetRef) => {
+    window.streamChatCompletion = async (url, payload, dotnetRef) => {
         const resp = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages })
+            body: JSON.stringify(payload)
         });
         if (!resp.ok) {
             const txt = await resp.text();
@@ -548,10 +548,8 @@
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-
             const lines = buffer.split('\n');
-            buffer = lines.pop(); // partial line
-
+            buffer = lines.pop();
             for (const line of lines) {
                 if (!line.trim()) continue;
                 try {
@@ -559,24 +557,22 @@
                     if (obj.content) {
                         await dotnetRef.invokeMethodAsync('Receive', obj.content);
                     }
-                } catch (e) {
-                    console.warn('invalid JSON line', line, e);
-                }
+                } catch {}
             }
         }
 
-        // final partial
         if (buffer.trim()) {
             try {
                 const obj = JSON.parse(buffer);
                 if (obj.content) {
                     await dotnetRef.invokeMethodAsync('Receive', obj.content);
                 }
-            } catch { /*ignore*/ }
+            } catch {}
         }
 
         await dotnetRef.invokeMethodAsync('Complete');
     };
+
 
 </script>
 

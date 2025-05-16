@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
@@ -23,20 +21,31 @@ namespace m1Chat.Client.Services
             _jsRuntime = jsRuntime;
         }
 
-        public IAsyncEnumerable<string> StreamCompletionAsync(List<ChatMessage> messages)
+        // now accepts a model name
+        public IAsyncEnumerable<string> StreamCompletionAsync(
+            List<ChatMessage> messages,
+            string model
+        )
         {
-            // unbounded channel to push chunks into
             var channel = Channel.CreateUnbounded<string>();
             var writer = channel.Writer;
+            var dotnetRef = DotNetObjectReference.Create(
+                new StreamCallback(writer)
+            );
 
-            // create a .NET object reference that JS can call into
-            var dotnetRef = DotNetObjectReference.Create(new StreamCallback(writer));
+            // send both messages and model in one payload
+            var payload = new
+            {
+                model,
+                messages = messages
+                    .Select(m => new { role = m.Role, content = m.Content })
+                    .ToArray()
+            };
 
-            // fire-and-forget JS interop
             _ = _jsRuntime.InvokeVoidAsync(
                 "streamChatCompletion",
                 "/api/completions/stream",
-                messages.Select(m => new { role = m.Role, content = m.Content }).ToArray(),
+                payload,
                 dotnetRef
             );
 
@@ -46,7 +55,8 @@ namespace m1Chat.Client.Services
         private class StreamCallback
         {
             private readonly ChannelWriter<string> _writer;
-            public StreamCallback(ChannelWriter<string> writer) => _writer = writer;
+            public StreamCallback(ChannelWriter<string> writer) =>
+                _writer = writer;
 
             [JSInvokable("Receive")]
             public void Receive(string chunk)
