@@ -389,10 +389,12 @@
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
+    var updatedChat = chat with { IsPinned = true };  // Update the flag
     SidebarChats.Remove(chat);
-    SidebarChats.Insert(0, chat);
-    StateHasChanged();
+    SidebarChats.Insert(0, updatedChat);  // Reorder
+    StateHasChanged();  // Force UI update
   }
+
 
   private async Task DeleteChat(ChatDrawer.SidebarChat chat)
   {
