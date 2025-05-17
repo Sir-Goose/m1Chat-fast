@@ -7,7 +7,7 @@
 
 <MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1" 
            Variant="DrawerVariant.Persistent" Class="d-flex flex-column">
-  <MudDrawerHeader Class="d-flex flex-column pa-2">
+  <MudDrawerHeader Class="d-flex flex-column pa-2" Style="flex-shrink: 0;">
     <div class="d-flex align-center justify-space-between">
       <MudText Typo="Typo.h6">M1 Chat</MudText>
       <MudIconButton
@@ -20,13 +20,15 @@
       Color="Color.Primary"
       Class="mt-2"
       FullWidth="true"
+      Style="height: 40px; min-height: 40px;"
       OnClick="HandleCreateNewChat"
     >
       New Chat
     </MudButton>
   </MudDrawerHeader>
 
-  <div class="flex-grow-1 no-scrollbar">
+  <!-- Scrollable chat list with fixed height -->
+  <div class="flex-grow-1 no-scrollbar" style="height: calc(100% - 180px); overflow-y: auto;">
     @if (pinnedChats.Any())
     {
       <MudText Typo="Typo.subtitle1" Class="pa-2">Pinned Chats</MudText>
@@ -163,7 +165,8 @@
     </MudList>
   </div>
 
-  <div class="pa-2">
+  <!-- User section fixed at bottom -->
+  <div class="pa-2" style="flex-shrink: 0;">
     <MudText Typo="Typo.subtitle2" Class="mb-1">
       @UserEmail
     </MudText>
