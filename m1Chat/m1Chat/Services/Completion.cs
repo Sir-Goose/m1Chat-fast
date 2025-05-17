@@ -87,75 +87,80 @@ namespace m1Chat.Services
         }
 
         private async IAsyncEnumerable<string> StreamOpenRouterAsync(
-            List<ChatMessageDto> messages,
-            string               model
+    List<ChatMessageDto> messages,
+    string model
+)
+{
+    var requestBody = new
+    {
+        model,
+        messages = messages
+            .Select(m => new { role = m.Role, content = m.Content }),
+        stream = true
+    };
+
+    var json = JsonSerializer.Serialize(requestBody);
+    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+    _httpClient.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
+
+    // any other headers you need...
+    _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
+    _httpClient.DefaultRequestHeaders.Add(
+        "HTTP-Referer",
+        "https://chat.mattdev.im"
+    );
+    _httpClient.DefaultRequestHeaders.Remove("X-Title");
+    _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+
+    using var response = await _httpClient.SendAsync(
+        new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://openrouter.ai/api/v1/chat/completions"
         )
         {
-            var requestBody = new
-            {
-                model,
-                messages = messages
-                    .Select(m => new { role = m.Role, content = m.Content }),
-                stream = true
-            };
+            Content = content
+        },
+        HttpCompletionOption.ResponseHeadersRead
+    );
 
-            var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8,
-                                            "application/json");
+    Console.WriteLine(
+        $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
+    );
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer",
-                                              _openRouterApiKey);
+    if (!response.IsSuccessStatusCode)
+    {
+        var error = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"Error response content: {error}"); // Added logging
+        throw new Exception(
+            $"OpenRouter API error: {response.StatusCode} - {error}"
+        );
+    }
 
-            // any other headers you need...
-            _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
-            _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+    // Log successful response content
+    var responseContent = await response.Content.ReadAsStringAsync();
+    Console.WriteLine($"Response content: {responseContent}");
 
-            using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(
-                    HttpMethod.Post,
-                    "https://openrouter.ai/api/v1/chat/completions"
-                )
-                {
-                    Content = content
-                },
-                HttpCompletionOption.ResponseHeadersRead
-            );
+    // Reset the stream for reading
+    using var stream = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+    using var reader = new StreamReader(stream);
+    
+    while (!reader.EndOfStream)
+    {
+        var line = await reader.ReadLineAsync();
+        if (string.IsNullOrWhiteSpace(line)) continue;
 
-            Console.WriteLine(
-              $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception(
-                    $"OpenRouter API error: {response.StatusCode} - {error}"
-                );
-            }
-
-            using var stream  = await response.Content.ReadAsStreamAsync();
-            using var reader  = new StreamReader(stream);
-            while (!reader.EndOfStream)
-            {
-                var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line)) continue;
-
-                if (line.StartsWith("data: "))
-                {
-                    var jsonData = line["data: ".Length..].Trim();
-                    if (jsonData == "[DONE]") break;
-                    var chunk = TryParseContentChunk(jsonData);
-                    if (!string.IsNullOrEmpty(chunk))
-                        yield return chunk;
-                }
-            }
+        if (line.StartsWith("data: "))
+        {
+            var jsonData = line["data: ".Length..].Trim();
+            if (jsonData == "[DONE]") break;
+            var chunk = TryParseContentChunk(jsonData);
+            if (!string.IsNullOrEmpty(chunk))
+                yield return chunk;
         }
+    }
+}
 
         private string? TryParseContentChunk(string jsonData)
         {
