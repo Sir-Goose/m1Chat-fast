@@ -12,6 +12,7 @@
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
 @inject UserService UserService
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <MudLayout>
   <ChatDrawer @bind-DrawerOpen="_drawerOpen"
@@ -460,8 +461,18 @@
   private void HandleEditMessage(ChatMessage m) =>
     Console.WriteLine($"Edit message: {m.Id}");
 
-  private async Task HandleCopyMessage(ChatMessage m) =>
-    await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
+  private async Task HandleCopyMessage(ChatMessage m)
+  {
+    try
+    {
+      await JS.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
+      Snackbar.Add("Message copied to clipboard", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add($"Failed to copy: {ex.Message}", Severity.Error);
+    }
+  }
 
   private void HandleBranchMessage(ChatMessage m) =>
     Console.WriteLine($"Branch message: {m.Id}");
