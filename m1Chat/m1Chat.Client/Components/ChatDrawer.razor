@@ -42,13 +42,17 @@
             TransformOrigin="Origin.TopLeft"
           >
             <ActivatorContent>
-              <div
-                class="sidebar-chat-row"
-                @onclick="() => HandleSelectChat(chat)"
+              <MudListItem
+                Class="sidebar-chat-row"
+                Style="display: flex; align-items: center; justify-content: space-between;"
+                OnClick="() => HandleSelectChat(chat)"
                 @oncontextmenu:preventDefault
-                style="display: flex; align-items: center; justify-content: space-between;"
+                Selected="@(ActiveChatId == chat.Id)"
               >
-                <MudText Class="chat-name-text">
+                <MudText
+                  Typo="Typo.body1"
+                  Class="chat-name-text"
+                  Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   @chat.Name
                 </MudText>
                 <span class="chat-actions" style="display: flex; gap: 2px;">
@@ -71,7 +75,7 @@
                     />
                   </span>
                 </span>
-              </div>
+              </MudListItem>
             </ActivatorContent>
             <ChildContent>
               <MudMenuItem
@@ -109,13 +113,17 @@
           TransformOrigin="Origin.TopLeft"
         >
           <ActivatorContent>
-            <div
-              class="sidebar-chat-row"
-              @onclick="() => HandleSelectChat(chat)"
+            <MudListItem
+              Class="sidebar-chat-row"
+              Style="display: flex; align-items: center; justify-content: space-between;"
+              OnClick="() => HandleSelectChat(chat)"
               @oncontextmenu:preventDefault
-              style="display: flex; align-items: center; justify-content: space-between;"
+              Selected="@(ActiveChatId == chat.Id)"
             >
-              <MudText Class="chat-name-text">
+              <MudText
+                Typo="Typo.body1"
+                Class="chat-name-text"
+                Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 @chat.Name
               </MudText>
               <span class="chat-actions" style="display: flex; gap: 2px;">
@@ -138,7 +146,7 @@
                   />
                 </span>
               </span>
-            </div>
+            </MudListItem>
           </ActivatorContent>
           <ChildContent>
             <MudMenuItem
