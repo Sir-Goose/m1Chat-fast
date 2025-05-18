@@ -169,12 +169,13 @@ namespace m1Chat.Services
             }
 
             // Log successful response content
-            var responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"Response content: {responseContent}");
+            // var responseContent = await response.Content.ReadAsStringAsync();
+            // Console.WriteLine($"Response content: {responseContent}");
 
             // Reset the stream for reading
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-            using var reader = new StreamReader(stream);
+            //using var stream = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+            await using var stream  = await response.Content.ReadAsStreamAsync();
+            using var reader  = new StreamReader(stream);
 
             while (!reader.EndOfStream)
             {
