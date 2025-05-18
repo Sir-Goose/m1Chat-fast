@@ -48,8 +48,10 @@
                 OnClick="() => HandleSelectChat(chat)"
                 @oncontextmenu:preventDefault
                 Selected="@(ActiveChatId == chat.Id)"
+                
               >
                 <MudText
+                  Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
                   Typo="Typo.body1"
                   Class="chat-name-text"
                   Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -119,8 +121,10 @@
               OnClick="() => HandleSelectChat(chat)"
               @oncontextmenu:preventDefault
               Selected="@(ActiveChatId == chat.Id)"
+              
             >
               <MudText
+                Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
                 Typo="Typo.body1"
                 Class="chat-name-text"
                 Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
