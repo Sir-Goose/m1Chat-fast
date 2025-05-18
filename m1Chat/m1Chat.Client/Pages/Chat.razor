@@ -322,6 +322,7 @@
 
   private async Task SendMessage()
 {
+    var time = DateTime.Now;
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend))
         return;
@@ -401,6 +402,7 @@
     try
     {
         int chunkCount = 0;
+        var lastUpdate = DateTime.UtcNow;
         // Use the selected model for the actual response (not llama)
         await foreach (var chunk in CompletionService.StreamCompletionAsync(
                            ToSharedMessages(),
@@ -410,8 +412,17 @@
             aiMessage.Text += chunk;
             chunkCount++;
             _needsScroll = true;
-            await InvokeAsync(StateHasChanged);
+
+            var now = DateTime.UtcNow;
+            if ((now - lastUpdate).TotalMilliseconds >= 100)
+            {
+                lastUpdate = now;
+                await InvokeAsync(StateHasChanged);
+            }
         }
+
+        // Ensure final state is rendered
+        await InvokeAsync(StateHasChanged);
 
         if (chunkCount == 0)
         {
