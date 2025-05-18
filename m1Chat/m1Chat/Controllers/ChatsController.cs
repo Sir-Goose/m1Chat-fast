@@ -36,13 +36,15 @@ namespace m1Chat.Controllers
             if (user == null) return NotFound();
 
             var list = user.Chats
-                .OrderByDescending(c => c.LastUpdatedAt)
+                .OrderByDescending(c => c.IsPinned)
+                .ThenByDescending(c => c.LastUpdatedAt)
                 .Select(c => new ChatSummaryDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Model = c.Model,
-                    LastUpdatedAt = c.LastUpdatedAt
+                    LastUpdatedAt = c.LastUpdatedAt,
+                    IsPinned = c.IsPinned
                 })
                 .ToList();
 
@@ -69,7 +71,8 @@ namespace m1Chat.Controllers
                 Id = chat.Id,
                 Name = chat.Name,
                 Model = chat.Model,
-                Messages = messages
+                Messages = messages,
+                IsPinned = chat.IsPinned
             };
             return Ok(resp);
         }
@@ -89,7 +92,8 @@ namespace m1Chat.Controllers
                 UserId = user.Id,
                 Name = dto.Name,
                 Model = dto.Model,
-                HistoryJson = JsonSerializer.Serialize(dto.Messages)
+                HistoryJson = JsonSerializer.Serialize(dto.Messages),
+                IsPinned = dto.IsPinned
             };
             _db.Chats.Add(chat);
             await _db.SaveChangesAsync();
@@ -113,9 +117,32 @@ namespace m1Chat.Controllers
             chat.Model = dto.Model;
             chat.HistoryJson = JsonSerializer.Serialize(dto.Messages);
             chat.LastUpdatedAt = DateTime.UtcNow;
+            chat.IsPinned = dto.IsPinned;
 
             await _db.SaveChangesAsync();
             return NoContent();
+        }
+        
+        [HttpPatch("{id:guid}/pin")]
+        public async Task<IActionResult> PinChat(Guid id, [FromBody] PinChatDto dto)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email == null) return Unauthorized();
+
+            var chat = await _db.Chats
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == id && c.User.Email == email);
+            if (chat == null) return NotFound();
+
+            chat.IsPinned = dto.IsPinned;
+            await _db.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        public record PinChatDto
+        {
+            public bool IsPinned { get; init; }
         }
         
         // DELETE api/chats/{id}
@@ -147,6 +174,7 @@ namespace m1Chat.Controllers
             public string Name { get; init; }
             public string Model { get; init; }
             public DateTime LastUpdatedAt { get; init; }
+            public bool IsPinned { get; init; }
         }
 
         public record ChatHistoryDto
@@ -155,6 +183,7 @@ namespace m1Chat.Controllers
             public string Name { get; init; }
             public string Model { get; init; }
             public List<ChatMessageDto> Messages { get; init; }
+            public bool IsPinned { get; init; }
         }
 
         public record CreateChatDto
@@ -162,6 +191,7 @@ namespace m1Chat.Controllers
             public string Name { get; init; }
             public string Model { get; init; }
             public ChatMessageDto[] Messages { get; init; }
+            public bool IsPinned { get; init; }
         }
 
         public record UpdateChatDto
@@ -169,6 +199,7 @@ namespace m1Chat.Controllers
             public string Name { get; init; }
             public string Model { get; init; }
             public ChatMessageDto[] Messages { get; init; }
+            public bool IsPinned { get; init; }
         }
     }
 }

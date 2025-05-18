@@ -36,6 +36,8 @@ namespace m1Chat.Data
 
         public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
 
+        public bool IsPinned { get; set; } = false;
+
         // Foreign key
         [Required]
         public Guid UserId { get; set; }
