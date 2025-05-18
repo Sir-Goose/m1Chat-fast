@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider  IsDarkMode="true" />
+<MudThemeProvider Theme="@M1ChatTheme" IsDarkMode="true" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudPopoverProvider />
@@ -309,7 +309,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background-color: var(--mud-palette-appbar-background, #27272f);
+        background-color: var(--mud-palette-surface);
         color: var(--mud-palette-appbar-text, #fff);
         padding: 0.4rem 0.75rem;
         border: 1px solid var(--mud-palette-divider);
@@ -328,7 +328,7 @@
 
     .ai-message pre,
     .user-message pre {
-        background: var(--mud-palette-code-background, var(--mud-palette-background));
+        background: var(--mud-palette-background-grey) !important;
         border: 1px solid var(--mud-palette-divider);
         border-left: 3px solid var(--mud-palette-primary);
         padding: 0.75rem;
@@ -686,3 +686,17 @@
 </script>
 
 @Body
+@code{
+    MudTheme M1ChatTheme = new MudTheme()
+    {
+        PaletteDark = new PaletteDark()
+        {
+            Surface = "#1a1a27",
+            DrawerBackground = "#1a1a27",
+            Background = "#1a1a27",
+            BackgroundGray = "#151521",
+            
+        }
+
+    };
+}
