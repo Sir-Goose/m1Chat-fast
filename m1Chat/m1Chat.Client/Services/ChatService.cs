@@ -76,18 +76,25 @@ namespace m1Chat.Client.Services
             var resp = await _http.DeleteAsync($"api/chats/{id}");
             resp.EnsureSuccessStatusCode();
         }
+        
+        public async Task PinChatAsync(Guid id, bool isPinned)
+        {
+            var resp = await _http.PatchAsJsonAsync($"api/chats/{id}/pin", new PinChatRequest(isPinned));
+            resp.EnsureSuccessStatusCode();
+        }
 
         // ---- DTOs / Models ----
-        public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt);
+        public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt, bool IsPinned);
 
         public record ChatMessageDto(string Role, string Content);
 
-        public record ChatHistory(Guid Id, string Name, string Model, ChatMessageDto[] Messages);
+        public record ChatHistory(Guid Id, string Name, string Model, ChatMessageDto[] Messages, bool IsPinned);
 
-        public record CreateChatRequest(string Name, string Model, ChatMessageDto[] Messages);
+        public record CreateChatRequest(string Name, string Model, ChatMessageDto[] Messages, bool IsPinned = false);
 
         public record CreateChatResponse(Guid id);
 
-        public record UpdateChatRequest(string Name, string Model, ChatMessageDto[] Messages);
+        public record UpdateChatRequest(string Name, string Model, ChatMessageDto[] Messages, bool IsPinned);
+        public record PinChatRequest(bool IsPinned);
     }
 }

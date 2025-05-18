@@ -240,6 +240,7 @@
   private string? ChatId;
   private string ChatName = "New Chat";
   private List<ChatMessage> ChatHistory = new();
+  private bool ChatIsPinned = false;
 
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
@@ -253,7 +254,9 @@
   {
     var list = await ChatService.GetChatsAsync();
     SidebarChats = list
-      .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model))
+      .OrderByDescending(c => c.IsPinned)
+      .ThenByDescending(c => c.LastUpdatedAt)
+      .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model, c.IsPinned))
       .ToList();
   }
 
@@ -271,6 +274,7 @@
     ChatId = full.Id.ToString();
     ChatName = full.Name;
     ChatSelectedOption = full.Model;
+    ChatIsPinned = full.IsPinned;
     ChatHistory = full.Messages
       .Select(m => new ChatMessage
       {
@@ -321,11 +325,11 @@
   }
 
   private async Task SendMessage()
-{
+  {
     var time = DateTime.Now;
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend))
-        return;
+      return;
 
     // Add user message
     ChatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
@@ -339,58 +343,58 @@
     // If new chat, create on server and generate name
     if (isNewChat)
     {
-        // Generate initial temporary name (will be replaced)
-        ChatName = "New Chat";
+      // Generate initial temporary name (will be replaced)
+      ChatName = "New Chat";
 
-        // Create the chat with temporary name first
-        var createReq = new ChatService.CreateChatRequest(
-            ChatName,
-            "llama-3.1-8b-instant", // Use llama for name generation
-            new[]
-            {
-                new ChatService.ChatMessageDto("user",
-                    $"Generate a brief, relevant chat name (under 5 words) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}")
-            }
-        );
-        var newId = await ChatService.CreateChatAsync(createReq);
-        ChatId = newId.ToString();
-
-        // Immediately refresh sidebar so the new chat appears
-        await LoadSidebarChatsAsync();
-
-        try
+      // Create the chat with temporary name first
+      var createReq = new ChatService.CreateChatRequest(
+        ChatName,
+        "llama-3.1-8b-instant", // Use llama for name generation
+        new[]
         {
-            // Get the generated name from llama model
-            string generatedName = "";
-            await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                             new List<ServiceChatMessage>
-                             {
-                                 new()
-                                 {
-                                     Role = "user",
-                                     Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}"
-                                 }
-                             },
-                             "llama-3.1-8b-instant" // Use llama specifically for naming
-                           ))
-            {
-                generatedName += chunk;
-            }
+          new ChatService.ChatMessageDto("user",
+            $"Generate a brief, relevant chat name (under 5 words) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}")
+        }
+      );
+      var newId = await ChatService.CreateChatAsync(createReq);
+      ChatId = newId.ToString();
 
-            // Clean up the generated name and ensure it's not empty
-            ChatName = !string.IsNullOrWhiteSpace(generatedName)
-                ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
-                : textToSend.Length <= 20
-                    ? textToSend
-                    : textToSend[..20] + "...";
-        }
-        catch
+      // Immediately refresh sidebar so the new chat appears
+      await LoadSidebarChatsAsync();
+
+      try
+      {
+        // Get the generated name from llama model
+        string generatedName = "";
+        await foreach (var chunk in CompletionService.StreamCompletionAsync(
+                         new List<ServiceChatMessage>
+                         {
+                           new()
+                           {
+                             Role = "user",
+                             Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}"
+                           }
+                         },
+                         "llama-3.1-8b-instant" // Use llama specifically for naming
+                       ))
         {
-            // Fallback if name generation fails
-            ChatName = textToSend.Length <= 20
-                ? textToSend
-                : textToSend[..20] + "...";
+          generatedName += chunk;
         }
+
+        // Clean up the generated name and ensure it's not empty
+        ChatName = !string.IsNullOrWhiteSpace(generatedName)
+          ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
+          : textToSend.Length <= 20
+            ? textToSend
+            : textToSend[..20] + "...";
+      }
+      catch
+      {
+        // Fallback if name generation fails
+        ChatName = textToSend.Length <= 20
+          ? textToSend
+          : textToSend[..20] + "...";
+      }
     }
 
     // Placeholder for AI response
@@ -401,66 +405,67 @@
 
     try
     {
-        int chunkCount = 0;
-        var lastUpdate = DateTime.UtcNow;
-        // Use the selected model for the actual response (not llama)
-        await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                           ToSharedMessages(),
-                           ChatSelectedOption // Use the user-selected model for the response
-                         ))
+      int chunkCount = 0;
+      var lastUpdate = DateTime.UtcNow;
+      // Use the selected model for the actual response (not llama)
+      await foreach (var chunk in CompletionService.StreamCompletionAsync(
+                       ToSharedMessages(),
+                       ChatSelectedOption // Use the user-selected model for the response
+                     ))
+      {
+        aiMessage.Text += chunk;
+        chunkCount++;
+        _needsScroll = true;
+
+        var now = DateTime.UtcNow;
+        if ((now - lastUpdate).TotalMilliseconds >= 100)
         {
-            aiMessage.Text += chunk;
-            chunkCount++;
-            _needsScroll = true;
-
-            var now = DateTime.UtcNow;
-            if ((now - lastUpdate).TotalMilliseconds >= 100)
-            {
-                lastUpdate = now;
-                await InvokeAsync(StateHasChanged);
-            }
+          lastUpdate = now;
+          await InvokeAsync(StateHasChanged);
         }
+      }
 
-        // Ensure final state is rendered
+      // Ensure final state is rendered
+      await InvokeAsync(StateHasChanged);
+
+      if (chunkCount == 0)
+      {
+        aiMessage.Text = "[No response received from AI]";
         await InvokeAsync(StateHasChanged);
-
-        if (chunkCount == 0)
-        {
-            aiMessage.Text = "[No response received from AI]";
-            await InvokeAsync(StateHasChanged);
-        }
+      }
     }
     catch (Exception ex)
     {
-        aiMessage.Text = $"[Error: {ex.Message}]";
-        await InvokeAsync(StateHasChanged);
+      aiMessage.Text = $"[Error: {ex.Message}]";
+      await InvokeAsync(StateHasChanged);
     }
 
     // Update chat on server with final name and messages
     if (Guid.TryParse(ChatId, out var cId))
     {
-        var updateReq = new ChatService.UpdateChatRequest(
-            ChatName,
-            ChatSelectedOption, // Update with user-selected model, not llama
-            ToSharedMessages()
-                .Select(m => new ChatService.ChatMessageDto(m.Role, m.Content))
-                .ToArray()
-        );
-        await ChatService.UpdateChatAsync(cId, updateReq);
-
-        // Refresh sidebar again to update name and last message
-        await LoadSidebarChatsAsync();
+      var updateReq = new ChatService.UpdateChatRequest(
+        ChatName,
+        ChatSelectedOption,
+        ToSharedMessages()
+          .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
+          .ToArray(),
+        ChatIsPinned // <-- pass the pinned state here
+      );
+      await ChatService.UpdateChatAsync(cId, updateReq);
+      await LoadSidebarChatsAsync();
     }
-}
+  }
 
   private void AttachFile() => Console.WriteLine("Attach file clicked.");
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
-    var updatedChat = chat with { IsPinned = true };
-    SidebarChats.Remove(chat);
-    SidebarChats.Insert(0, updatedChat);
-    StateHasChanged();
+    if (Guid.TryParse(chat.Id, out var chatId))
+    {
+      await ChatService.PinChatAsync(chatId, !chat.IsPinned);
+      await LoadSidebarChatsAsync();
+      StateHasChanged();
+    }
   }
 
   private async Task DeleteChat(ChatDrawer.SidebarChat chat)
@@ -476,10 +481,12 @@
 
   private async Task HandleChatRenamed(ChatDrawer.SidebarChat updatedChat)
   {
+    var fullChat = await ChatService.GetChatAsync(Guid.Parse(updatedChat.Id));
     var updateReq = new ChatService.UpdateChatRequest(
       updatedChat.Name,
       updatedChat.Model,
-      (await ChatService.GetChatAsync(Guid.Parse(updatedChat.Id))).Messages
+      fullChat.Messages,
+      updatedChat.IsPinned
     );
     await ChatService.UpdateChatAsync(Guid.Parse(updatedChat.Id), updateReq);
     await LoadSidebarChatsAsync();
@@ -488,145 +495,149 @@
   }
 
   private async void HandleRegenerateMessage(ChatMessage m)
-{
+  {
     // Find the index of the message to regenerate
     var idx = ChatHistory.IndexOf(m);
     if (idx == -1)
-        return;
+      return;
 
     // If it's a user message, regenerate the next AI message
     if (m.IsUser)
     {
-        // Remove the next AI message if it exists
-        if (idx + 1 < ChatHistory.Count && !ChatHistory[idx + 1].IsUser)
+      // Remove the next AI message if it exists
+      if (idx + 1 < ChatHistory.Count && !ChatHistory[idx + 1].IsUser)
+      {
+        ChatHistory.RemoveAt(idx + 1);
+      }
+
+      // Insert a new placeholder AI message
+      var aiMessage = new ChatMessage { IsUser = false, Text = "" };
+      ChatHistory.Insert(idx + 1, aiMessage);
+      _needsScroll = true;
+      StateHasChanged();
+
+      // Prepare messages up to and including this user message
+      var messagesToSend = ChatHistory.Take(idx + 1)
+        .Select(x => new ServiceChatMessage
         {
-            ChatHistory.RemoveAt(idx + 1);
-        }
-        // Insert a new placeholder AI message
-        var aiMessage = new ChatMessage { IsUser = false, Text = "" };
-        ChatHistory.Insert(idx + 1, aiMessage);
-        _needsScroll = true;
-        StateHasChanged();
+          Role = x.IsUser ? "user" : "assistant",
+          Content = x.Text
+        }).ToList();
 
-        // Prepare messages up to and including this user message
-        var messagesToSend = ChatHistory.Take(idx + 1)
-            .Select(x => new ServiceChatMessage
-            {
-                Role = x.IsUser ? "user" : "assistant",
-                Content = x.Text
-            }).ToList();
-
-        try
+      try
+      {
+        int chunkCount = 0;
+        var lastUpdate = DateTime.UtcNow;
+        await foreach (var chunk in CompletionService.StreamCompletionAsync(
+                         messagesToSend,
+                         ChatSelectedOption
+                       ))
         {
-            int chunkCount = 0;
-            var lastUpdate = DateTime.UtcNow;
-            await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                messagesToSend,
-                ChatSelectedOption
-            ))
-            {
-                aiMessage.Text += chunk;
-                chunkCount++;
-                _needsScroll = true;
+          aiMessage.Text += chunk;
+          chunkCount++;
+          _needsScroll = true;
 
-                var now = DateTime.UtcNow;
-                if ((now - lastUpdate).TotalMilliseconds >= 100)
-                {
-                    lastUpdate = now;
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
+          var now = DateTime.UtcNow;
+          if ((now - lastUpdate).TotalMilliseconds >= 100)
+          {
+            lastUpdate = now;
             await InvokeAsync(StateHasChanged);
+          }
+        }
 
-            if (chunkCount == 0)
-            {
-                aiMessage.Text = "[No response received from AI]";
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception ex)
+        await InvokeAsync(StateHasChanged);
+
+        if (chunkCount == 0)
         {
-            aiMessage.Text = $"[Error: {ex.Message}]";
-            await InvokeAsync(StateHasChanged);
+          aiMessage.Text = "[No response received from AI]";
+          await InvokeAsync(StateHasChanged);
         }
+      }
+      catch (Exception ex)
+      {
+        aiMessage.Text = $"[Error: {ex.Message}]";
+        await InvokeAsync(StateHasChanged);
+      }
     }
     // If it's an AI message, regenerate it based on the previous user message
     else
     {
-        // Find the previous user message
-        int userIdx = idx - 1;
-        while (userIdx >= 0 && !ChatHistory[userIdx].IsUser)
-            userIdx--;
+      // Find the previous user message
+      int userIdx = idx - 1;
+      while (userIdx >= 0 && !ChatHistory[userIdx].IsUser)
+        userIdx--;
 
-        if (userIdx < 0)
-            return; // No user message found before this AI message
+      if (userIdx < 0)
+        return; // No user message found before this AI message
 
-        // Remove this AI message
-        ChatHistory.RemoveAt(idx);
+      // Remove this AI message
+      ChatHistory.RemoveAt(idx);
 
-        // Insert a new placeholder AI message at the same position
-        var aiMessage = new ChatMessage { IsUser = false, Text = "" };
-        ChatHistory.Insert(idx, aiMessage);
-        _needsScroll = true;
-        StateHasChanged();
+      // Insert a new placeholder AI message at the same position
+      var aiMessage = new ChatMessage { IsUser = false, Text = "" };
+      ChatHistory.Insert(idx, aiMessage);
+      _needsScroll = true;
+      StateHasChanged();
 
-        // Prepare messages up to and including the user message
-        var messagesToSend = ChatHistory.Take(userIdx + 1)
-            .Select(x => new ServiceChatMessage
-            {
-                Role = x.IsUser ? "user" : "assistant",
-                Content = x.Text
-            }).ToList();
-
-        try
+      // Prepare messages up to and including the user message
+      var messagesToSend = ChatHistory.Take(userIdx + 1)
+        .Select(x => new ServiceChatMessage
         {
-            int chunkCount = 0;
-            var lastUpdate = DateTime.UtcNow;
-            await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                messagesToSend,
-                ChatSelectedOption
-            ))
-            {
-                aiMessage.Text += chunk;
-                chunkCount++;
-                _needsScroll = true;
+          Role = x.IsUser ? "user" : "assistant",
+          Content = x.Text
+        }).ToList();
 
-                var now = DateTime.UtcNow;
-                if ((now - lastUpdate).TotalMilliseconds >= 100)
-                {
-                    lastUpdate = now;
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
-            await InvokeAsync(StateHasChanged);
-
-            if (chunkCount == 0)
-            {
-                aiMessage.Text = "[No response received from AI]";
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception ex)
+      try
+      {
+        int chunkCount = 0;
+        var lastUpdate = DateTime.UtcNow;
+        await foreach (var chunk in CompletionService.StreamCompletionAsync(
+                         messagesToSend,
+                         ChatSelectedOption
+                       ))
         {
-            aiMessage.Text = $"[Error: {ex.Message}]";
+          aiMessage.Text += chunk;
+          chunkCount++;
+          _needsScroll = true;
+
+          var now = DateTime.UtcNow;
+          if ((now - lastUpdate).TotalMilliseconds >= 100)
+          {
+            lastUpdate = now;
             await InvokeAsync(StateHasChanged);
+          }
         }
+
+        await InvokeAsync(StateHasChanged);
+
+        if (chunkCount == 0)
+        {
+          aiMessage.Text = "[No response received from AI]";
+          await InvokeAsync(StateHasChanged);
+        }
+      }
+      catch (Exception ex)
+      {
+        aiMessage.Text = $"[Error: {ex.Message}]";
+        await InvokeAsync(StateHasChanged);
+      }
     }
 
     // Optionally, update the chat on the server
     if (Guid.TryParse(ChatId, out var cId))
     {
-        var updateReq = new ChatService.UpdateChatRequest(
-            ChatName,
-            ChatSelectedOption,
-            ToSharedMessages()
-                .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
-                .ToArray()
-        );
-        await ChatService.UpdateChatAsync(cId, updateReq);
-        await LoadSidebarChatsAsync();
+      var updateReq = new ChatService.UpdateChatRequest(
+        ChatName,
+        ChatSelectedOption,
+        ToSharedMessages()
+          .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
+          .ToArray(),
+        ChatIsPinned // <-- pass the pinned state here
+      );
+      await ChatService.UpdateChatAsync(cId, updateReq);
+      await LoadSidebarChatsAsync();
     }
-}
+  }
 
   private void HandleEditMessage(ChatMessage m) =>
     Console.WriteLine($"Edit message: {m.Id}");
