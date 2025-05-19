@@ -31,8 +31,8 @@
   <div class="flex-grow-1 no-scrollbar" style="height: calc(100% - 180px); overflow-y: auto;">
     @if (pinnedChats.Any())
     {
-      <MudText Typo="Typo.h6" Class="pa-2">Pinned Chats</MudText>
-      <MudList T="SidebarChat" Clickable="false">
+      <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">Pinned Chats</MudText>
+      <MudList T="SidebarChat" Clickable="false" Dense="true">
         @foreach (var chat in pinnedChats)
         {
           <MudMenu
@@ -43,6 +43,7 @@
           >
             <ActivatorContent>
               <MudListItem
+                Dense="true"
                 Class="sidebar-chat-row"
                 Style="display: flex; align-items: center; justify-content: space-between;"
                 OnClick="() => HandleSelectChat(chat)"
@@ -52,7 +53,7 @@
               >
                 <MudText
                   Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
-                  Typo="Typo.body1"
+                  Typo="Typo.body2"
                   Class="chat-name-text"
                   Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   @chat.Name
@@ -104,8 +105,8 @@
       </MudList>
     }
 
-    <MudText Typo="Typo.h6" Class="pa-2">All Chats</MudText>
-    <MudList T="SidebarChat" Clickable="false">
+    <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">All Chats</MudText>
+    <MudList T="SidebarChat" Clickable="false" Dense="true">
       @foreach (var chat in otherChats)
       {
         <MudMenu
@@ -116,6 +117,7 @@
         >
           <ActivatorContent>
             <MudListItem
+              Dense="true"
               Class="sidebar-chat-row"
               Style="display: flex; align-items: center; justify-content: space-between;"
               OnClick="() => HandleSelectChat(chat)"
@@ -125,7 +127,7 @@
             >
               <MudText
                 Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
-                Typo="Typo.body1"
+                Typo="Typo.body2"
                 Class="chat-name-text"
                 Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 @chat.Name
