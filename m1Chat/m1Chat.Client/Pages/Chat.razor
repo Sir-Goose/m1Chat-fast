@@ -140,12 +140,10 @@
                 @bind-Value="MessageText"
                 Label="Enter your message"
                 Variant="Variant.Outlined"
-                Lines="2"
                 AutoGrow="true"
                 MaxLines="10"
                 Class="flex-grow-1"
-                Immediate="true"
-                @onkeyup="HandleKeyUp"
+                Immediate="false"
               />
             </div>
             <div
@@ -315,15 +313,24 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
-    if (args.Key == "Enter" && !args.ShiftKey)
+    if (args.Key == "Enter" && args.CtrlKey)
+    {
+      Console.WriteLine(("awe1"));
+      await Task.Delay(100);
       await SendMessage();
+    }
+      
   }
 
   private async Task SendMessage()
   {
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend))
+    {
+      Console.WriteLine("awe");
       return;
+    }
+      
 
     // Add user message
     _chatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
