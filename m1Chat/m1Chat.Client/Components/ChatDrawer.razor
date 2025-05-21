@@ -5,7 +5,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 
-<MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1" 
+<MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1"
            Variant="DrawerVariant.Persistent" Class="d-flex flex-column">
   <MudDrawerHeader Class="d-flex flex-column pa-2" Style="flex-shrink: 0;">
     <div class="d-flex align-center justify-space-between">
@@ -28,10 +28,14 @@
   </MudDrawerHeader>
 
   <!-- Scrollable chat list with fixed height -->
-  <div class="flex-grow-1 no-scrollbar" style="height: calc(100% - 180px); overflow-y: auto;">
+  <div class="flex-grow-1 no-scrollbar"
+       style="height: calc(100% - 180px); overflow-y: auto;">
     @if (pinnedChats.Any())
     {
-      <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">Pinned Chats</MudText>
+      <MudText Typo="Typo.subtitle2"
+               Align="Align.Center"
+               Color="Color.Primary"
+               Class="py-2">Pinned Chats</MudText>
       <ChatList TItem="SidebarChat"
                 Items="pinnedChats"
                 ActiveItemId="ActiveChatId"
@@ -41,20 +45,80 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"/>
+                GetItemName="chat => chat.Name" />
     }
 
-    <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">All Chats</MudText>
-    <ChatList TItem="SidebarChat"
-              Items="otherChats"
-              ActiveItemId="ActiveChatId"
-              OnItemSelected="@(chat => HandleSelectChat(chat))"
-              OnItemPinned="@(chat => HandlePinChat(chat))"
-              OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-              OnItemRenamed="@(chat => HandleRenameChat(chat))"
-              OnItemExported="@(chat => HandleExportChat(chat))"
-              GetItemId="chat => chat.Id"
-              GetItemName="chat => chat.Name"/>
+    @if (todayChats.Any())
+    {
+      <MudText Typo="Typo.subtitle2"
+               Align="Align.Center"
+               Color="Color.Primary"
+               Class="py-2">Today</MudText>
+      <ChatList TItem="SidebarChat"
+                Items="todayChats"
+                ActiveItemId="ActiveChatId"
+                OnItemSelected="@(chat => HandleSelectChat(chat))"
+                OnItemPinned="@(chat => HandlePinChat(chat))"
+                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                OnItemExported="@(chat => HandleExportChat(chat))"
+                GetItemId="chat => chat.Id"
+                GetItemName="chat => chat.Name" />
+    }
+
+    @if (yesterdayChats.Any())
+    {
+      <MudText Typo="Typo.subtitle2"
+               Align="Align.Center"
+               Color="Color.Primary"
+               Class="py-2">Yesterday</MudText>
+      <ChatList TItem="SidebarChat"
+                Items="yesterdayChats"
+                ActiveItemId="ActiveChatId"
+                OnItemSelected="@(chat => HandleSelectChat(chat))"
+                OnItemPinned="@(chat => HandlePinChat(chat))"
+                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                OnItemExported="@(chat => HandleExportChat(chat))"
+                GetItemId="chat => chat.Id"
+                GetItemName="chat => chat.Name" />
+    }
+
+    @if (last7DaysChats.Any())
+    {
+      <MudText Typo="Typo.subtitle2"
+               Align="Align.Center"
+               Color="Color.Primary"
+               Class="py-2">Last 7 Days</MudText>
+      <ChatList TItem="SidebarChat"
+                Items="last7DaysChats"
+                ActiveItemId="ActiveChatId"
+                OnItemSelected="@(chat => HandleSelectChat(chat))"
+                OnItemPinned="@(chat => HandlePinChat(chat))"
+                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                OnItemExported="@(chat => HandleExportChat(chat))"
+                GetItemId="chat => chat.Id"
+                GetItemName="chat => chat.Name" />
+    }
+
+    @if (olderChats.Any())
+    {
+      <MudText Typo="Typo.subtitle2"
+               Align="Align.Center"
+               Color="Color.Primary"
+               Class="py-2">Older</MudText>
+      <ChatList TItem="SidebarChat"
+                Items="olderChats"
+                ActiveItemId="ActiveChatId"
+                OnItemSelected="@(chat => HandleSelectChat(chat))"
+                OnItemPinned="@(chat => HandlePinChat(chat))"
+                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                OnItemExported="@(chat => HandleExportChat(chat))"
+                GetItemId="chat => chat.Id"
+                GetItemName="chat => chat.Name" />
+    }
   </div>
 
   <!-- User section fixed at bottom -->
@@ -104,8 +168,40 @@
   [Parameter]
   public EventCallback<SidebarChat> OnChatRenamed { get; set; }
 
-  private List<SidebarChat> pinnedChats => SidebarChats.Where(c => c.IsPinned).ToList();
-  private List<SidebarChat> otherChats => SidebarChats.Where(c => !c.IsPinned).ToList();
+  // Filtered chat lists
+  private List<SidebarChat> pinnedChats =>
+    SidebarChats.Where(c => c.IsPinned).OrderByDescending(c => c.LastUpdatedAt).ToList();
+
+  private List<SidebarChat> nonPinnedChats =>
+    SidebarChats.Where(c => !c.IsPinned).ToList();
+
+  private List<SidebarChat> todayChats =>
+    nonPinnedChats
+      .Where(c => c.LastUpdatedAt.Date == DateTime.Today)
+      .OrderByDescending(c => c.LastUpdatedAt)
+      .ToList();
+
+  private List<SidebarChat> yesterdayChats =>
+    nonPinnedChats
+      .Where(c => c.LastUpdatedAt.Date == DateTime.Today.AddDays(-1))
+      .OrderByDescending(c => c.LastUpdatedAt)
+      .ToList();
+
+  private List<SidebarChat> last7DaysChats =>
+    nonPinnedChats
+      .Where(
+        c =>
+          c.LastUpdatedAt.Date >= DateTime.Today.AddDays(-8)
+          && c.LastUpdatedAt.Date <= DateTime.Today.AddDays(-2)
+      )
+      .OrderByDescending(c => c.LastUpdatedAt)
+      .ToList();
+
+  private List<SidebarChat> olderChats =>
+    nonPinnedChats
+      .Where(c => c.LastUpdatedAt.Date < DateTime.Today.AddDays(-8))
+      .OrderByDescending(c => c.LastUpdatedAt)
+      .ToList();
 
   private async Task ToggleDrawer()
   {
@@ -115,22 +211,28 @@
 
   private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
 
-  private async Task HandleSelectChat(SidebarChat chat) => 
+  private async Task HandleSelectChat(SidebarChat chat) =>
     await OnChatSelected.InvokeAsync(chat);
 
-  private async Task HandlePinChat(SidebarChat chat) => 
+  private async Task HandlePinChat(SidebarChat chat) =>
     await OnChatPinned.InvokeAsync(chat);
 
-  private async Task HandleDeleteChat(SidebarChat chat) => 
+  private async Task HandleDeleteChat(SidebarChat chat) =>
     await OnChatDeleted.InvokeAsync(chat);
 
-  private async Task HandleExportChat(SidebarChat chat) => 
+  private async Task HandleExportChat(SidebarChat chat) =>
     Console.WriteLine($"Export chat: {chat.Name}");
 
   private async Task HandleRenameChat(SidebarChat chat)
   {
     var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
-    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    var options =
+      new DialogOptions
+      {
+        CloseButton = true,
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+      };
     var dialog = DialogService.Show<RenameChatDialog>("Rename Chat", parameters, options);
     var result = await dialog.Result;
 
