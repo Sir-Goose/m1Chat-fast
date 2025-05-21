@@ -249,7 +249,7 @@
     SidebarChats = list
       .OrderByDescending(c => c.IsPinned)
       .ThenByDescending(c => c.LastUpdatedAt)
-      .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model, c.IsPinned))
+      .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model, c.IsPinned, c.LastUpdatedAt))
       .ToList();
   }
 

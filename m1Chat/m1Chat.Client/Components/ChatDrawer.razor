@@ -265,5 +265,11 @@
 
   private void Logout() => NavigationManager.NavigateTo("/");
 
-  public record SidebarChat(string Id, string Name, string Model, bool IsPinned = false);
+  public record SidebarChat(
+    string Id,
+    string Name,
+    string Model,
+    bool IsPinned = false,
+    DateTime LastUpdatedAt = default
+  );
 }
