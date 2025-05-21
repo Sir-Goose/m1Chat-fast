@@ -32,151 +32,29 @@
     @if (pinnedChats.Any())
     {
       <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">Pinned Chats</MudText>
-      <MudList T="SidebarChat" Clickable="false" Dense="true">
-        @foreach (var chat in pinnedChats)
-        {
-          <MudMenu
-            Style="width:100%;"
-            ActivationEvent="@MouseEvent.RightClick"
-            AnchorOrigin="Origin.BottomLeft"
-            TransformOrigin="Origin.TopLeft"
-          >
-            <ActivatorContent>
-              <MudListItem
-                Dense="true"
-                Class="sidebar-chat-row"
-                Style="display: flex; align-items: center; justify-content: space-between;"
-                OnClick="() => HandleSelectChat(chat)"
-                @oncontextmenu:preventDefault
-                Selected="@(ActiveChatId == chat.Id)"
-                
-              >
-                <MudText
-                  Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
-                  Typo="Typo.body2"
-                  Class="chat-name-text"
-                  Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  @chat.Name
-                </MudText>
-                <span class="chat-actions" style="display: flex; gap: 2px;">
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.PushPin"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="() => HandlePinChat(chat)"
-                      aria-label="Pin chat"
-                    />
-                  </span>
-                  <span @onclick:stopPropagation="true">
-                    <MudIconButton
-                      Icon="@Icons.Material.Outlined.Delete"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      OnClick="() => HandleDeleteChat(chat)"
-                      aria-label="Delete chat"
-                    />
-                  </span>
-                </span>
-              </MudListItem>
-            </ActivatorContent>
-            <ChildContent>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                OnClick="() => HandleRenameChat(chat)"
-              >
-                Rename
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.Delete"
-                OnClick="() => HandleDeleteChat(chat)"
-              >
-                Delete
-              </MudMenuItem>
-              <MudMenuItem
-                Icon="@Icons.Material.Outlined.ArrowOutward"
-                OnClick="() => HandleExportChat(chat)"
-              >
-                Export
-              </MudMenuItem>
-            </ChildContent>
-          </MudMenu>
-        }
-      </MudList>
+      <ChatList TItem="SidebarChat"
+                Items="pinnedChats"
+                ActiveItemId="ActiveChatId"
+                OnItemSelected="@(chat => HandleSelectChat(chat))"
+                OnItemPinned="@(chat => HandlePinChat(chat))"
+                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                OnItemExported="@(chat => HandleExportChat(chat))"
+                GetItemId="chat => chat.Id"
+                GetItemName="chat => chat.Name"/>
     }
 
     <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary">All Chats</MudText>
-    <MudList T="SidebarChat" Clickable="false" Dense="true">
-      @foreach (var chat in otherChats)
-      {
-        <MudMenu
-          Style="width:100%;"
-          ActivationEvent="@MouseEvent.RightClick"
-          AnchorOrigin="Origin.BottomLeft"
-          TransformOrigin="Origin.TopLeft"
-        >
-          <ActivatorContent>
-            <MudListItem
-              Dense="true"
-              Class="sidebar-chat-row"
-              Style="display: flex; align-items: center; justify-content: space-between;"
-              OnClick="() => HandleSelectChat(chat)"
-              @oncontextmenu:preventDefault
-              Selected="@(ActiveChatId == chat.Id)"
-              
-            >
-              <MudText
-                Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
-                Typo="Typo.body2"
-                Class="chat-name-text"
-                Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                @chat.Name
-              </MudText>
-              <span class="chat-actions" style="display: flex; gap: 2px;">
-                <span @onclick:stopPropagation="true">
-                  <MudIconButton
-                    Icon="@Icons.Material.Outlined.PushPin"
-                    Color="Color.Default"
-                    Size="Size.Small"
-                    OnClick="() => HandlePinChat(chat)"
-                    aria-label="Pin chat"
-                  />
-                </span>
-                <span @onclick:stopPropagation="true">
-                  <MudIconButton
-                    Icon="@Icons.Material.Outlined.Delete"
-                    Color="Color.Default"
-                    Size="Size.Small"
-                    OnClick="() => HandleDeleteChat(chat)"
-                    aria-label="Delete chat"
-                  />
-                </span>
-              </span>
-            </MudListItem>
-          </ActivatorContent>
-          <ChildContent>
-            <MudMenuItem
-              Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-              OnClick="() => HandleRenameChat(chat)"
-            >
-              Rename
-            </MudMenuItem>
-            <MudMenuItem
-              Icon="@Icons.Material.Outlined.Delete"
-              OnClick="() => HandleDeleteChat(chat)"
-            >
-              Delete
-            </MudMenuItem>
-            <MudMenuItem
-              Icon="@Icons.Material.Outlined.ArrowOutward"
-              OnClick="() => HandleExportChat(chat)"
-            >
-              Export
-            </MudMenuItem>
-          </ChildContent>
-        </MudMenu>
-      }
-    </MudList>
+    <ChatList TItem="SidebarChat"
+              Items="otherChats"
+              ActiveItemId="ActiveChatId"
+              OnItemSelected="@(chat => HandleSelectChat(chat))"
+              OnItemPinned="@(chat => HandlePinChat(chat))"
+              OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+              OnItemRenamed="@(chat => HandleRenameChat(chat))"
+              OnItemExported="@(chat => HandleExportChat(chat))"
+              GetItemId="chat => chat.Id"
+              GetItemName="chat => chat.Name"/>
   </div>
 
   <!-- User section fixed at bottom -->

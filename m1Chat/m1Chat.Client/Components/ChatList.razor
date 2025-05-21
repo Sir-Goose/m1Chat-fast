@@ -1,0 +1,95 @@
+@using MudBlazor
+@typeparam TItem
+
+<MudList T="TItem" Clickable="false" Dense="true">
+    @foreach (var chat in Items)
+    {
+        <MudMenu
+            Style="width:100%;"
+            ActivationEvent="@MouseEvent.RightClick"
+            AnchorOrigin="Origin.BottomLeft"
+            TransformOrigin="Origin.TopLeft">
+            <ActivatorContent>
+                <MudListItem
+                    Dense="true"
+                    Class="sidebar-chat-row"
+                    Style="display: flex; align-items: center; justify-content: space-between;"
+                    OnClick="() => OnItemSelected.InvokeAsync(chat)"
+                    @oncontextmenu:preventDefault
+                    Selected="@(ActiveItemId == GetItemId(chat))">
+                    <MudText
+                        Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
+                        Typo="Typo.body2"
+                        Class="chat-name-text"
+                        Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        @GetItemName(chat)
+                    </MudText>
+                    <span class="chat-actions" style="display: flex; gap: 2px;">
+                        <span @onclick:stopPropagation="true">
+                            <MudIconButton
+                                Icon="@Icons.Material.Outlined.PushPin"
+                                Color="Color.Default"
+                                Size="Size.Small"
+                                OnClick="() => OnItemPinned.InvokeAsync(chat)"
+                                aria-label="Pin chat"/>
+                        </span>
+                        <span @onclick:stopPropagation="true">
+                            <MudIconButton
+                                Icon="@Icons.Material.Outlined.Delete"
+                                Color="Color.Default"
+                                Size="Size.Small"
+                                OnClick="() => OnItemDeleted.InvokeAsync(chat)"
+                                aria-label="Delete chat"/>
+                        </span>
+                    </span>
+                </MudListItem>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem
+                    Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+                    OnClick="() => OnItemRenamed.InvokeAsync(chat)">
+                    Rename
+                </MudMenuItem>
+                <MudMenuItem
+                    Icon="@Icons.Material.Outlined.Delete"
+                    OnClick="() => OnItemDeleted.InvokeAsync(chat)">
+                    Delete
+                </MudMenuItem>
+                <MudMenuItem
+                    Icon="@Icons.Material.Outlined.ArrowOutward"
+                    OnClick="() => OnItemExported.InvokeAsync(chat)">
+                    Export
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    }
+</MudList>
+
+@code {
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; } = new List<TItem>();
+
+    [Parameter]
+    public string? ActiveItemId { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnItemSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnItemPinned { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnItemDeleted { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnItemRenamed { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnItemExported { get; set; }
+
+    [Parameter]
+    public Func<TItem, string> GetItemId { get; set; } = item => item?.ToString() ?? string.Empty;
+
+    [Parameter]
+    public Func<TItem, string> GetItemName { get; set; } = item => item?.ToString() ?? string.Empty;
+}
