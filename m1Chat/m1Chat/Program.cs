@@ -122,6 +122,7 @@ app.UseMiddleware<CloudflareUserSyncMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
    .AddInteractiveWebAssemblyRenderMode()
