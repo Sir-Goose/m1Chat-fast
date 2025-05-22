@@ -22,8 +22,10 @@ namespace m1Chat.Services
         private readonly HttpClient _httpClient;
         private readonly string _openRouterApiKey;
         private readonly string _groqApiKey;
+        private readonly string _aiStudioApiKey;
         private readonly string _openRouterURI;
         private readonly string _groqURI;
+        private readonly string _aiStudioURI;
         private string _activeApiKey;
         private string _activeURI;
 
@@ -32,8 +34,11 @@ namespace m1Chat.Services
             _httpClient = new HttpClient();
             _openRouterApiKey = "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";
             _groqApiKey = "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";
+            _aiStudioApiKey = "AIzaSyDpr4nFieUgQ08NlnQOGyMQ4CYHnEm-7hw";
             _openRouterURI = "https://openrouter.ai/api/v1/chat/completions";
             _groqURI = "https://api.groq.com/openai/v1/chat/completions";
+            _aiStudioURI = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+            
 
             if (string.IsNullOrEmpty(_openRouterApiKey))
             {
@@ -73,9 +78,14 @@ namespace m1Chat.Services
                     _activeURI = _openRouterURI;
                     break;
                 case "Gemini 2.0 Flash":
-                    model = "google/gemini-2.0-flash-exp:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
+                    model = "gemini-2.0-flash";
+                    _activeApiKey = _aiStudioApiKey;
+                    _activeURI = _aiStudioURI;
+                    break;
+                case "Gemini 2.5 Flash":
+                    model = "gemini-2.5-flash-preview-05-20";
+                    _activeApiKey = _aiStudioApiKey;
+                    _activeURI = _aiStudioURI;
                     break;
                 case "Qwen3 235B":
                     model = "qwen/qwen3-235b-a22b:free";
