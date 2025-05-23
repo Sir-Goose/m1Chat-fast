@@ -1,3 +1,4 @@
+@* File: Chat.razor *@
 @page "/Chat"
 @using m1Chat.Client.Components
 @using m1Chat.Client.Services
@@ -8,6 +9,8 @@
 @using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
 @inject UserService UserService
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
 
 <MudLayout>
   <ChatDrawer @bind-DrawerOpen="_drawerOpen"
@@ -144,6 +147,7 @@
                 MaxLines="10"
                 Class="flex-grow-1"
                 Immediate="false"
+                OnKeyUp="HandleKeyUp"
               />
             </div>
             <div
@@ -203,6 +207,7 @@
                   EndIcon="@Icons.Material.Filled.Send"
                   OnClick="SendMessage"
                   aria-label="Send message"
+                  Disabled="@_isSendingMessage"
                 >
                   Send
                 </MudButton>
@@ -220,6 +225,8 @@
   private bool _searchEnabled;
   private bool _needsScroll;
   private bool _isAtBottom = true;
+  private bool _isSendingMessage = false;
+
 
   private ElementReference _chatContainerRef;
 
@@ -227,7 +234,7 @@
   private string MessageText { get; set; } = "";
 
   private string ChatSelectedOption { get; set; } = "DeepSeek v3";
-  private string ThinkingSelectedOption { get; set; } = "Medium"; // New binding for thinking selector
+  private string ThinkingSelectedOption { get; set; } = "Medium";
 
   private readonly List<string> _chatOptions = new()
   {
@@ -244,8 +251,9 @@
     "llama-3.1-8b-instant"
   };
 
-  private readonly List<string> _thinkingOptions = new() // New list for thinking options
+  private readonly List<string> _thinkingOptions = new()
   {
+    "None",
     "Low",
     "Medium",
     "High"
@@ -285,6 +293,9 @@
 
   private async Task LoadChat(ChatDrawer.SidebarChat chat)
   {
+    // OOEE
+    if (_chatId == chat.Id && _chatHistory.Any()) return; // Already loaded
+
     var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     _chatId = full.Id.ToString();
     _chatName = full.Name;
@@ -297,7 +308,6 @@
         Text = m.Content
       })
       .ToList();
-
     _needsScroll = true;
     StateHasChanged();
   }
@@ -335,92 +345,95 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
-    if (args.Key == "Enter" && args.CtrlKey)
+    if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) // Send on Enter unless Shift is pressed
     {
-      Console.WriteLine(("awe1"));
-      await Task.Delay(100);
-      await SendMessage();
+        if (!string.IsNullOrWhiteSpace(MessageText))
+        {
+            await SendMessage();
+        }
     }
-      
   }
 
   private async Task SendMessage()
   {
+    if (_isSendingMessage) return;
+
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend))
     {
-      Console.WriteLine("awe");
       return;
     }
-      
+    
+    _isSendingMessage = true;
+    StateHasChanged(); // Update UI to reflect disabled send button
 
-    // Add user message
     _chatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
+    var userMessageTextForName = textToSend; // Store before clearing
     MessageText = "";
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
 
     bool isNewChat = _chatId == null;
+    Guid newChatGuid = Guid.Empty;
 
-    // If new chat, create on server and generate name
     if (isNewChat)
     {
-      // Generate initial temporary name (will be replaced)
-      _chatName = "New Chat";
+      _chatName = "New Chat"; // Temporary name
+      // Create chat with a placeholder name and the first user message for context
+      // The actual first message (textToSend) will be part of the main conversation stream
+      var initialMessagesForName = new List<ServiceChatMessage> {
+          new() { Role = "user", Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation that starts with: \"{userMessageTextForName[..Math.Min(100, userMessageTextForName.Length)]}\"" }
+      };
+      
+      string tempName = userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...";
 
-      // Create the chat with temporary name first
+
       var createReq = new ChatService.CreateChatRequest(
-        _chatName,
-        "llama-3.1-8b-instant", // Use llama for name generation
-        new[]
-        {
-          new ChatService.ChatMessageDto("user",
-            $"Generate a brief, relevant chat name (under 5 words) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}")
-        }
+        tempName, // Use a temp name derived from the first message
+        ChatSelectedOption, // Use the currently selected model for the chat itself
+        new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName) }, // Store the first user message
+        _chatIsPinned
       );
-      var newId = await ChatService.CreateChatAsync(createReq);
-      _chatId = newId.ToString();
+      newChatGuid = await ChatService.CreateChatAsync(createReq);
+      _chatId = newChatGuid.ToString();
+      NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
 
-      // Immediately refresh sidebar so the new chat appears
-      await LoadSidebarChatsAsync();
 
+      // Generate name using a fast model (e.g., llama-3.1-8b-instant)
+      // This name generation is separate from the main chat flow.
+      string generatedName = "";
       try
       {
-        // Get the generated name from llama model
-        string generatedName = "";
-        await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                         new List<ServiceChatMessage>
-                         {
-                           new()
-                           {
-                             Role = "user",
-                             Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation:\n\n{textToSend[..Math.Min(100, textToSend.Length)]}"
-                           }
-                         },
-                         "llama-3.1-8b-instant" // Use llama specifically for naming
-                       ))
-        {
-          generatedName += chunk;
-        }
-
-        // Clean up the generated name and ensure it's not empty
-        _chatName = !string.IsNullOrWhiteSpace(generatedName)
-          ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
-          : textToSend.Length <= 20
-            ? textToSend
-            : textToSend[..20] + "...";
+          await foreach (var chunk in CompletionService.StreamCompletionAsync(
+                           initialMessagesForName,
+                           "llama-3.1-8b-instant", // Specific model for name generation
+                           "Low" // Specific reasoning for name generation
+                         ))
+          {
+            generatedName += chunk;
+          }
+          _chatName = !string.IsNullOrWhiteSpace(generatedName)
+            ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
+            : tempName;
       }
-      catch
+      catch(Exception ex)
       {
-        // Fallback if name generation fails
-        _chatName = textToSend.Length <= 20
-          ? textToSend
-          : textToSend[..20] + "...";
+          Console.WriteLine($"Name generation failed: {ex.Message}");
+          _chatName = tempName; // Fallback to temp name
       }
+      // Update the chat with the generated name (messages are already set)
+        var updateNameReq = new ChatService.UpdateChatRequest(
+            _chatName,
+            ChatSelectedOption,
+            new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName) },
+            _chatIsPinned
+        );
+        await ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
+        await LoadSidebarChatsAsync(); // Refresh sidebar
     }
 
-    // Placeholder for AI response
+
     var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     _chatHistory.Add(aiMessage);
     _needsScroll = true;
@@ -430,10 +443,11 @@
     {
       int chunkCount = 0;
       var lastUpdate = DateTime.UtcNow;
-      // Use the selected model for the actual response (not llama)
+      // Use ToSharedMessages() which now includes the latest user message
       await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                       ToSharedMessages(),
-                       ChatSelectedOption // Use the user-selected model for the response
+                       ToSharedMessages().Take(_chatHistory.Count -1).ToList(), // Send history *before* AI placeholder
+                       ChatSelectedOption,
+                       ThinkingSelectedOption // Pass selected thinking option
                      ))
       {
         aiMessage.Text += chunk;
@@ -441,17 +455,15 @@
         _needsScroll = true;
 
         var now = DateTime.UtcNow;
-        if ((now - lastUpdate).TotalMilliseconds >= 100)
+        if ((now - lastUpdate).TotalMilliseconds >= 100 || chunkCount <= 5) // More frequent updates for initial chunks
         {
           lastUpdate = now;
           await InvokeAsync(StateHasChanged);
         }
       }
+      await InvokeAsync(StateHasChanged); // Final update
 
-      // Ensure final state is rendered
-      await InvokeAsync(StateHasChanged);
-
-      if (chunkCount == 0)
+      if (chunkCount == 0 && string.IsNullOrWhiteSpace(aiMessage.Text))
       {
         aiMessage.Text = "[No response received from AI]";
         await InvokeAsync(StateHasChanged);
@@ -460,10 +472,15 @@
     catch (Exception ex)
     {
       aiMessage.Text = $"[Error: {ex.Message}]";
+      Console.WriteLine($"Error streaming completion: {ex}");
       await InvokeAsync(StateHasChanged);
     }
+    finally
+    {
+        _isSendingMessage = false;
+        StateHasChanged(); // Re-enable send button
+    }
 
-    // Update chat on server with final name and messages
     if (Guid.TryParse(_chatId, out var cId))
     {
       var updateReq = new ChatService.UpdateChatRequest(
@@ -472,11 +489,11 @@
         ToSharedMessages()
           .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
           .ToArray(),
-        _chatIsPinned // <-- pass the pinned state here
+        _chatIsPinned
       );
       await ChatService.UpdateChatAsync(cId, updateReq);
       await LoadSidebarChatsAsync();
-    }
+      }
   }
 
   private void AttachFile() => Console.WriteLine("Attach file clicked.");
@@ -486,7 +503,8 @@
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.PinChatAsync(chatId, !chat.IsPinned);
-      await LoadSidebarChatsAsync();
+      await LoadSidebarChatsAsync(); // This will re-sort and update UI
+      if (_chatId == chat.Id) _chatIsPinned = !chat.IsPinned; // Update current chat's pinned state
       StateHasChanged();
     }
   }
@@ -496,8 +514,15 @@
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.DeleteChatAsync(chatId);
-      SidebarChats.Remove(chat);
-      if (_chatId == chat.Id) await CreateNewChat();
+      SidebarChats.RemoveAll(c => c.Id == chat.Id); // Ensure correct removal
+      if (_chatId == chat.Id) {
+          // If active chat is deleted, load the next available or create new
+          if (SidebarChats.Any()) {
+              await LoadChat(SidebarChats.First());
+          } else {
+              await CreateNewChat();
+          }
+      }
       StateHasChanged();
     }
   }
@@ -517,153 +542,119 @@
     StateHasChanged();
   }
 
-  private async void HandleRegenerateMessage(ChatMessage m)
+  private async Task HandleRegenerateMessage(ChatMessage messageToRegen)
   {
-    // Find the index of the message to regenerate
-    var idx = _chatHistory.IndexOf(m);
-    if (idx == -1)
-      return;
+    if (_isSendingMessage) return;
+    _isSendingMessage = true;
+    StateHasChanged();
 
-    // If it's a user message, regenerate the next AI message
-    if (m.IsUser)
+    var idx = _chatHistory.IndexOf(messageToRegen);
+    if (idx == -1) {
+        _isSendingMessage = false;
+        StateHasChanged();
+        return;
+    }
+
+    List<ServiceChatMessage> messagesToSend;
+    ChatMessage targetAiMessage;
+
+    if (messageToRegen.IsUser) // Regenerate AI response for this user message
     {
-      // Remove the next AI message if it exists
-      if (idx + 1 < _chatHistory.Count && !_chatHistory[idx + 1].IsUser)
-      {
-        _chatHistory.RemoveAt(idx + 1);
-      }
-
-      // Insert a new placeholder AI message
-      var aiMessage = new ChatMessage { IsUser = false, Text = "" };
-      _chatHistory.Insert(idx + 1, aiMessage);
-      _needsScroll = true;
-      StateHasChanged();
-
-      // Prepare messages up to and including this user message
-      var messagesToSend = _chatHistory.Take(idx + 1)
-        .Select(x => new ServiceChatMessage
+        // Remove AI messages from this user message onwards
+        _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > idx && !m.IsUser);
+        // If the next message is an AI message, remove it.
+        if (idx + 1 < _chatHistory.Count && !_chatHistory[idx + 1].IsUser)
         {
-          Role = x.IsUser ? "user" : "assistant",
-          Content = x.Text
-        }).ToList();
+            _chatHistory.RemoveAt(idx + 1);
+        }
 
-      try
-      {
+        messagesToSend = _chatHistory.Take(idx + 1) // Messages up to and including the user message
+            .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
+            .ToList();
+        
+        targetAiMessage = new ChatMessage { IsUser = false, Text = "" };
+        if (idx + 1 < _chatHistory.Count) _chatHistory.Insert(idx + 1, targetAiMessage);
+        else _chatHistory.Add(targetAiMessage);
+    }
+    else // Regenerate this AI message (based on history up to the preceding user message)
+    {
+        _chatHistory[idx] = new ChatMessage { IsUser = false, Text = "" }; // Clear current AI message
+        targetAiMessage = _chatHistory[idx];
+
+        messagesToSend = _chatHistory.Take(idx) // Messages up to (but not including) this AI message
+            .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
+            .ToList();
+    }
+    
+    _needsScroll = true;
+    StateHasChanged();
+
+    try
+    {
         int chunkCount = 0;
         var lastUpdate = DateTime.UtcNow;
         await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                         messagesToSend,
-                         ChatSelectedOption
-                       ))
+                           messagesToSend,
+                           ChatSelectedOption,
+                           ThinkingSelectedOption // Pass selected thinking option
+                         ))
         {
-          aiMessage.Text += chunk;
-          chunkCount++;
-          _needsScroll = true;
+            targetAiMessage.Text += chunk;
+            chunkCount++;
+            _needsScroll = true;
 
-          var now = DateTime.UtcNow;
-          if ((now - lastUpdate).TotalMilliseconds >= 100)
-          {
-            lastUpdate = now;
+            var now = DateTime.UtcNow;
+            if ((now - lastUpdate).TotalMilliseconds >= 100 || chunkCount <= 5)
+            {
+                lastUpdate = now;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+
+        if (chunkCount == 0 && string.IsNullOrWhiteSpace(targetAiMessage.Text))
+        {
+            targetAiMessage.Text = "[No response received from AI for regeneration]";
             await InvokeAsync(StateHasChanged);
-          }
         }
-
-        await InvokeAsync(StateHasChanged);
-
-        if (chunkCount == 0)
-        {
-          aiMessage.Text = "[No response received from AI]";
-          await InvokeAsync(StateHasChanged);
-        }
-      }
-      catch (Exception ex)
-      {
-        aiMessage.Text = $"[Error: {ex.Message}]";
-        await InvokeAsync(StateHasChanged);
-      }
     }
-    // If it's an AI message, regenerate it based on the previous user message
-    else
+    catch (Exception ex)
     {
-      // Find the previous user message
-      int userIdx = idx - 1;
-      while (userIdx >= 0 && !_chatHistory[userIdx].IsUser)
-        userIdx--;
-
-      if (userIdx < 0)
-        return; // No user message found before this AI message
-
-      // Remove this AI message
-      _chatHistory.RemoveAt(idx);
-
-      // Insert a new placeholder AI message at the same position
-      var aiMessage = new ChatMessage { IsUser = false, Text = "" };
-      _chatHistory.Insert(idx, aiMessage);
-      _needsScroll = true;
-      StateHasChanged();
-
-      // Prepare messages up to and including the user message
-      var messagesToSend = _chatHistory.Take(userIdx + 1)
-        .Select(x => new ServiceChatMessage
-        {
-          Role = x.IsUser ? "user" : "assistant",
-          Content = x.Text
-        }).ToList();
-
-      try
-      {
-        int chunkCount = 0;
-        var lastUpdate = DateTime.UtcNow;
-        await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                         messagesToSend,
-                         ChatSelectedOption
-                       ))
-        {
-          aiMessage.Text += chunk;
-          chunkCount++;
-          _needsScroll = true;
-
-          var now = DateTime.UtcNow;
-          if ((now - lastUpdate).TotalMilliseconds >= 100)
-          {
-            lastUpdate = now;
-            await InvokeAsync(StateHasChanged);
-          }
-        }
-
+        targetAiMessage.Text = $"[Error regenerating: {ex.Message}]";
+        Console.WriteLine($"Error regenerating message: {ex}");
         await InvokeAsync(StateHasChanged);
-
-        if (chunkCount == 0)
-        {
-          aiMessage.Text = "[No response received from AI]";
-          await InvokeAsync(StateHasChanged);
-        }
-      }
-      catch (Exception ex)
-      {
-        aiMessage.Text = $"[Error: {ex.Message}]";
-        await InvokeAsync(StateHasChanged);
-      }
+    }
+    finally
+    {
+        _isSendingMessage = false;
+        StateHasChanged();
     }
 
-    // Optionally, update the chat on the server
     if (Guid.TryParse(_chatId, out var cId))
     {
-      var updateReq = new ChatService.UpdateChatRequest(
-        _chatName,
-        ChatSelectedOption,
-        ToSharedMessages()
-          .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
-          .ToArray(),
-        _chatIsPinned // <-- pass the pinned state here
-      );
-      await ChatService.UpdateChatAsync(cId, updateReq);
-      await LoadSidebarChatsAsync();
+        var updateReq = new ChatService.UpdateChatRequest(
+            _chatName,
+            ChatSelectedOption,
+            ToSharedMessages().Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content)).ToArray(),
+            _chatIsPinned
+        );
+        await ChatService.UpdateChatAsync(cId, updateReq);
+        // No need to reload all sidebar chats, just ensure current one is fine.
+        // If regeneration changes last update time, that could be handled.
     }
   }
 
-  private void HandleEditMessage(ChatMessage m) =>
-    Console.WriteLine($"Edit message: {m.Id}");
+  private void HandleEditMessage(ChatMessage m) {
+    // Basic implementation: set message text to input, allow resending.
+    // More advanced: allow editing in place, then decide how to handle history.
+    MessageText = m.Text; // Put text back in input
+    // Remove this message and subsequent ones if it's a user message?
+    // Or just allow editing and resending as a new message?
+    // For now, just populates input. User can modify and send as new.
+    Snackbar.Add("Message content copied to input field for editing.", Severity.Info);
+    StateHasChanged(); // To reflect MessageText update if input is bound
+  }
+
 
   private async Task HandleCopyMessage(ChatMessage m)
   {
@@ -678,54 +669,41 @@
     }
   }
 
-  private async void HandleBranchMessage(ChatMessage m)
+  private async Task HandleBranchMessage(ChatMessage messageToBranchFrom)
   {
-    // Find the index of the message to branch from
-    var idx = _chatHistory.IndexOf(m);
-    if (idx == -1)
-      return;
+    var idx = _chatHistory.IndexOf(messageToBranchFrom);
+    if (idx == -1) return;
 
-    // Copy messages up to and including the selected message
     var branchMessages = _chatHistory.Take(idx + 1)
-      .Select(x => new ServiceChatMessage
-      {
-        Role = x.IsUser ? "user" : "assistant",
-        Content = x.Text
-      }).ToList();
+      .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
+      .ToList();
 
-    // Create a new chat with the name "Branch: {CurrentName}"
-    var branchName = $"Branch: {_chatName}";
+    var branchName = $"Branch: {_chatName}".Truncate(50);
     var createReq = new ChatService.CreateChatRequest(
       branchName,
-      ChatSelectedOption,
-      branchMessages
-        .Select(m => new ChatService.ChatMessageDto(m.Role, m.Content))
-        .ToArray()
+      ChatSelectedOption, // Use current model for the new branch
+      branchMessages.Select(m => new ChatService.ChatMessageDto(m.Role, m.Content)).ToArray(),
+      false // New branches are not pinned by default
     );
     var newId = await ChatService.CreateChatAsync(createReq);
 
-    // Refresh sidebar and load the new chat
-    await LoadSidebarChatsAsync();
+    await LoadSidebarChatsAsync(); // Refresh sidebar to include the new chat
 
-    // Find the new chat in the sidebar (by id)
     var newSidebarChat = SidebarChats.FirstOrDefault(c => c.Id == newId.ToString());
     if (newSidebarChat != null)
     {
-      await LoadChat(newSidebarChat);
+      await LoadChat(newSidebarChat); // Load the newly created branched chat
       Snackbar.Add("Chat branched successfully", Severity.Success);
     }
     else
     {
-      // Fallback: just clear and set up the new chat
+      // Fallback if not found immediately (should be rare)
       _chatId = newId.ToString();
       _chatName = branchName;
-      _chatHistory = branchMessages
-        .Select(m => new ChatMessage
-        {
-          IsUser = m.Role == "user",
-          Text = m.Content
-        })
-        .ToList();
+      _chatHistory = branchMessages.Select(m => new ChatMessage { IsUser = m.Role == "user", Text = m.Content }).ToList();
+      _chatIsPinned = false;
+      NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
+      Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);
       StateHasChanged();
     }
   }
@@ -736,5 +714,4 @@
     public bool IsUser { get; init; }
     public string Text { get; set; } = "";
   }
-
 }
