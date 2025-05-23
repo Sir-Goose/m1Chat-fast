@@ -162,6 +162,19 @@
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
                 }
               </MudSelect>
+              <MudSelect
+                @bind-Value="ThinkingSelectedOption"
+                Label="Thinking"
+                Variant="Variant.Outlined"
+                Margin="Margin.Dense"
+                FitContent="true"
+                Class="mr-2"
+              >
+                @foreach (var opt in _thinkingOptions)
+                {
+                  <MudSelectItem Value="@opt">@opt</MudSelectItem>
+                }
+              </MudSelect>
               <MudToggleIconButton
                 @bind-Toggled="_searchEnabled"
                 Icon="@Icons.Material.Filled.Public"
@@ -213,8 +226,8 @@
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
-  // <-- your model selector binding
   private string ChatSelectedOption { get; set; } = "DeepSeek v3";
+  private string ThinkingSelectedOption { get; set; } = "Medium"; // New binding for thinking selector
 
   private readonly List<string> _chatOptions = new()
   {
@@ -229,6 +242,13 @@
     "Gemma 3 27B",
     "Qwen3 30B",
     "llama-3.1-8b-instant"
+  };
+
+  private readonly List<string> _thinkingOptions = new() // New list for thinking options
+  {
+    "Low",
+    "Medium",
+    "High"
   };
 
   private string? _chatId;
