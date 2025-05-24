@@ -173,8 +173,9 @@
                 Margin="Margin.Dense"
                 FitContent="true"
                 Class="mr-2"
+                Disabled="@_isThinkingSelectorDisabled"
               >
-                @foreach (var opt in _thinkingOptions)
+                @foreach (var opt in _currentThinkingOptions)
                 {
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
                 }
@@ -227,14 +228,40 @@
   private bool _isAtBottom = true;
   private bool _isSendingMessage = false;
 
-
   private ElementReference _chatContainerRef;
 
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
-  private string ChatSelectedOption { get; set; } = "DeepSeek v3";
-  private string ThinkingSelectedOption { get; set; } = "Medium";
+  private string _chatSelectedOption = "Gemini 2.5 Flash";
+  private string ChatSelectedOption
+  {
+    get => _chatSelectedOption;
+    set
+    {
+      if (_chatSelectedOption != value)
+      {
+        _chatSelectedOption = value;
+        ApplyThinkingOptionsForModel(value);
+        StateHasChanged();
+      }
+    }
+  }
+  private string ThinkingSelectedOption { get; set; } = "None";
+
+  // --- NEW/MODIFIED FIELDS FOR DYNAMIC THINKING OPTIONS ---
+  private bool _isThinkingSelectorDisabled = false;
+  private List<string> _currentThinkingOptions = new(); // This will hold the options for the *currently* selected model
+
+  // Predefined lists of thinking options
+  private static readonly List<string> ThinkingOptionsLowMediumHigh = new() { "Low", "Medium", "High" };
+  private static readonly List<string> ThinkingOptionsNoneLowMediumHigh = new() { "None", "Low", "Medium", "High" };
+  private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" }; // Used when disabled
+
+  // Map models to their allowed thinking options
+  private Dictionary<string, List<string>> _modelThinkingOptionsMap;
+  // --- END NEW/MODIFIED FIELDS ---
+
 
   private readonly List<string> _chatOptions = new()
   {
@@ -251,14 +278,6 @@
     "llama-3.1-8b-instant"
   };
 
-  private readonly List<string> _thinkingOptions = new()
-  {
-    "None",
-    "Low",
-    "Medium",
-    "High"
-  };
-
   private string? _chatId;
   private string _chatName = "New Chat";
   private List<ChatMessage> _chatHistory = new();
@@ -270,7 +289,77 @@
   {
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
     await LoadSidebarChatsAsync();
+
+    // Initialize the model-to-thinking-options map
+    _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
+    {
+      // Category 1: Low Medium High
+      { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly },
+      { "Gemini 2.5 Flash", ThinkingOptionsNoneLowMediumHigh },
+      { "Gemini 2.0 Flash", ThinkingOptionsNoneOnly },
+
+      // Category 2: None Low Medium High
+      { "DeepSeek v3", ThinkingOptionsNoneOnly },
+      { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh },
+      { "Deepseek r1", ThinkingOptionsLowMediumHigh },
+      { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh },
+      { "Qwen3 235B", ThinkingOptionsLowMediumHigh },
+      { "Qwen3 30B", ThinkingOptionsLowMediumHigh },
+      { "Gemma 3 27B", ThinkingOptionsNoneOnly },
+
+      // Category 3: Disabled and set to None
+      { "llama-3.1-8b-instant", ThinkingOptionsNoneOnly } // This list will be used, but the selector will be disabled.
+    };
+
+    // Apply thinking options based on the initial ChatSelectedOption
+    ApplyThinkingOptionsForModel(ChatSelectedOption);
   }
+
+  // --- NEW METHOD: Handles changes to the selected chat model ---
+  private void HandleChatModelChanged(string newModel)
+  {
+    ChatSelectedOption = newModel; // MudSelect's ValueChanged already sets the bound value, but explicit here.
+    ApplyThinkingOptionsForModel(newModel);
+    StateHasChanged(); // Re-render the UI to reflect changes
+  }
+
+  // --- NEW METHOD: Sets thinking options based on the model ---
+  private void ApplyThinkingOptionsForModel(string modelName)
+  {
+    if (_modelThinkingOptionsMap.TryGetValue(modelName, out var options))
+    {
+      _currentThinkingOptions = options;
+
+      // Rule 3: The thinking selector should be disabled and the value set to none.
+      if (modelName == "llama-3.1-8b-instant")
+      {
+        _isThinkingSelectorDisabled = true;
+        ThinkingSelectedOption = "None"; // Force "None"
+      }
+      else
+      {
+        _isThinkingSelectorDisabled = false;
+        // Ensure the current ThinkingSelectedOption is still valid for the new model.
+        // If not, default to "None" or the first available option.
+        if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
+        {
+          ThinkingSelectedOption = _currentThinkingOptions.FirstOrDefault() ?? "None";
+        }
+      }
+    }
+    else
+    {
+      // Fallback for models not explicitly mapped (e.g., if a new model is added to _chatOptions
+      // but not yet to _modelThinkingOptionsMap). Default to None/Low/Medium/High.
+      _currentThinkingOptions = ThinkingOptionsNoneLowMediumHigh;
+      _isThinkingSelectorDisabled = false;
+      if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
+      {
+        ThinkingSelectedOption = "None";
+      }
+    }
+  }
+  // --- END NEW METHODS ---
 
   private async Task LoadSidebarChatsAsync()
   {
@@ -300,6 +389,7 @@
     _chatId = full.Id.ToString();
     _chatName = full.Name;
     ChatSelectedOption = full.Model;
+    ApplyThinkingOptionsForModel(full.Model); // IMPORTANT: Apply thinking options when loading a chat
     _chatIsPinned = full.IsPinned;
     _chatHistory = full.Messages
       .Select(m => new ChatMessage
@@ -345,6 +435,7 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
+    // return; // Removed this return so Enter key works
     if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) // Send on Enter unless Shift is pressed
     {
         if (!string.IsNullOrWhiteSpace(MessageText))
