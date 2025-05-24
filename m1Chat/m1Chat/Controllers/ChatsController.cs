@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using m1Chat.Data;
+using m1Chat.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,10 +18,12 @@ namespace m1Chat.Controllers
     public class ChatsController : ControllerBase
     {
         private readonly ChatDbContext _db;
+        private readonly FileService _fileService;
 
-        public ChatsController(ChatDbContext db)
+        public ChatsController(ChatDbContext db, FileService fileService)
         {
             _db = db;
+            _fileService = fileService;
         }
 
         // GET api/chats
@@ -98,6 +101,16 @@ namespace m1Chat.Controllers
             _db.Chats.Add(chat);
             await _db.SaveChangesAsync();
 
+            // Attach files to messages if any
+            for (int i = 0; i < dto.Messages.Length; i++)
+            {
+                var message = dto.Messages[i];
+                if (message.FileIds != null && message.FileIds.Any())
+                {
+                    await _fileService.AttachFilesToMessageAsync(chat.Id, i, message.FileIds.ToList());
+                }
+            }
+
             return Ok(new { id = chat.Id });
         }
 
@@ -120,6 +133,17 @@ namespace m1Chat.Controllers
             chat.IsPinned = dto.IsPinned;
 
             await _db.SaveChangesAsync();
+
+            // Update file attachments for messages
+            for (int i = 0; i < dto.Messages.Length; i++)
+            {
+                var message = dto.Messages[i];
+                if (message.FileIds != null)
+                {
+                    await _fileService.AttachFilesToMessageAsync(chat.Id, i, message.FileIds.ToList());
+                }
+            }
+
             return NoContent();
         }
         
@@ -164,9 +188,26 @@ namespace m1Chat.Controllers
             return NoContent();
         }
 
+        [HttpPost("{id:guid}/attach-files")]
+        public async Task<IActionResult> AttachFilesToMessage(Guid id, [FromBody] AttachFilesRequest request)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email == null) return Unauthorized();
+
+            var chat = await _db.Chats
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == id && c.User.Email == email);
+            if (chat == null) return NotFound();
+
+            await _fileService.AttachFilesToMessageAsync(id, request.MessageIndex, request.FileIds);
+
+            return NoContent();
+        }
+
+        public record AttachFilesRequest(int MessageIndex, List<Guid> FileIds);
 
         // ---- DTOs ----
-        public record ChatMessageDto(string Role, string Content);
+        public record ChatMessageDto(string Role, string Content, List<Guid>? FileIds = null);
 
         public record ChatSummaryDto
         {

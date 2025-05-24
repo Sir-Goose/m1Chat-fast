@@ -1,12 +1,12 @@
-@* File: Chat.razor *@
 @page "/Chat"
 @using m1Chat.Client.Components
 @using m1Chat.Client.Services
 @inject IScrollManager ScrollManager
 @inject ChatCompletionService CompletionService
 @inject ChatService ChatService
+@inject FileUploadService FileUploadService
 @inject IJSRuntime Js
-@using ServiceChatMessage = m1Chat.Client.Services.ChatMessage
+@using ServiceChatMessage = m1Chat.Client.Services.ChatMessage 
 @inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
@@ -52,6 +52,19 @@
             {
               <MudStack JustifyContent="FlexEnd">
                 <div class="user-message-container">
+                  @if (m.FileIds != null && m.FileIds.Any())
+                  {
+                    <div class="attached-files-display mb-2">
+                      <MudText Typo="Typo.caption" Color="Color.Secondary">Attached Files:</MudText>
+                      @foreach (var fileId in m.FileIds)
+                      {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" 
+                                 Icon="@Icons.Material.Filled.AttachFile">
+                          File: @(fileId.ToString().Length > 8 ? fileId.ToString()[..8] + "..." : fileId.ToString())
+                        </MudChip>
+                      }
+                    </div>
+                  }
                   <MudChatBubble
                     Variant="Variant.Text"
                     Class="user-message"
@@ -138,6 +151,15 @@
       <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
+            
+            <!-- File Upload Component -->
+            @if (CurrentMessageFiles.Any()) // Conditionally show if there are files to display
+            {
+              <div class="mb-2"> 
+                <FileUploadComponent @bind-UploadedFiles="CurrentMessageFiles" />
+              </div>
+            }
+            
             <div style="display:flex;align-items:center;">
               <MudTextField
                 @bind-Value="MessageText"
@@ -147,20 +169,17 @@
                 MaxLines="10"
                 Class="flex-grow-1"
                 Immediate="false"
-                OnKeyUp="HandleKeyUp"
-              />
+                OnKeyUp="HandleKeyUp"/>
             </div>
             <div
-              style="display:flex;align-items:center;margin-top:8px;"
-            >
+              style="display:flex;align-items:center;margin-top:8px;">
               <MudSelect
                 @bind-Value="ChatSelectedOption"
                 Label="Select a model"
                 Variant="Variant.Outlined"
                 Margin="Margin.Dense"
                 FitContent="true"
-                Class="mr-2"
-              >
+                Class="mr-2">
                 @foreach (var opt in _chatOptions)
                 {
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
@@ -173,8 +192,7 @@
                 Margin="Margin.Dense"
                 FitContent="true"
                 Class="mr-2"
-                Disabled="@_isThinkingSelectorDisabled"
-              >
+                Disabled="@_isThinkingSelectorDisabled">
                 @foreach (var opt in _currentThinkingOptions)
                 {
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
@@ -187,29 +205,25 @@
                 Color="Color.Primary"
                 ToggledColor="Color.Secondary"
                 aria-label="Toggle search"
-                Class="ml-2"
-              />
+                Class="ml-2"/>
               <MudText Typo="Typo.body1" Class="ml-1">
                 Search
               </MudText>
               <div
-                style="margin-left:auto;display:flex;align-items:center;"
-              >
+                style="margin-left:auto;display:flex;align-items:center;">
                 <MudIconButton
                   Icon="@Icons.Material.Filled.AttachFile"
                   Color="Color.Primary"
-                  OnClick="AttachFile"
+                  OnClick="TriggerFileUpload" 
                   aria-label="Attach file"
-                  Class="mr-2"
-                />
+                  Class="mr-2"/>
                 <MudButton
                   Variant="Variant.Filled"
                   Color="Color.Primary"
                   EndIcon="@Icons.Material.Filled.Send"
                   OnClick="SendMessage"
                   aria-label="Send message"
-                  Disabled="@_isSendingMessage"
-                >
+                  Disabled="@_isSendingMessage">
                   Send
                 </MudButton>
               </div>
@@ -233,6 +247,9 @@
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
+  // File upload properties
+  private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
+
   private string _chatSelectedOption = "Gemini 2.5 Flash";
   private string ChatSelectedOption
   {
@@ -249,18 +266,14 @@
   }
   private string ThinkingSelectedOption { get; set; } = "None";
 
-  // --- NEW/MODIFIED FIELDS FOR DYNAMIC THINKING OPTIONS ---
   private bool _isThinkingSelectorDisabled = false;
-  private List<string> _currentThinkingOptions = new(); // This will hold the options for the *currently* selected model
+  private List<string> _currentThinkingOptions = new(); 
 
-  // Predefined lists of thinking options
   private static readonly List<string> ThinkingOptionsLowMediumHigh = new() { "Low", "Medium", "High" };
   private static readonly List<string> ThinkingOptionsNoneLowMediumHigh = new() { "None", "Low", "Medium", "High" };
-  private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" }; // Used when disabled
+  private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" }; 
 
-  // Map models to their allowed thinking options
   private Dictionary<string, List<string>> _modelThinkingOptionsMap;
-  // --- END NEW/MODIFIED FIELDS ---
 
 
   private readonly List<string> _chatOptions = new()
@@ -285,20 +298,20 @@
 
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
+  // To trigger file input from FileUploadComponent
+  private FileUploadComponent _fileUploadComponentRef;
+
+
   protected override async Task OnInitializedAsync()
   {
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
     await LoadSidebarChatsAsync();
 
-    // Initialize the model-to-thinking-options map
     _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
     {
-      // Category 1: Low Medium High
       { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly },
       { "Gemini 2.5 Flash", ThinkingOptionsNoneLowMediumHigh },
       { "Gemini 2.0 Flash", ThinkingOptionsNoneOnly },
-
-      // Category 2: None Low Medium High
       { "DeepSeek v3", ThinkingOptionsNoneOnly },
       { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh },
       { "Deepseek r1", ThinkingOptionsLowMediumHigh },
@@ -306,41 +319,32 @@
       { "Qwen3 235B", ThinkingOptionsLowMediumHigh },
       { "Qwen3 30B", ThinkingOptionsLowMediumHigh },
       { "Gemma 3 27B", ThinkingOptionsNoneOnly },
-
-      // Category 3: Disabled and set to None
-      { "llama-3.1-8b-instant", ThinkingOptionsNoneOnly } // This list will be used, but the selector will be disabled.
+      { "llama-3.1-8b-instant", ThinkingOptionsNoneOnly } 
     };
 
-    // Apply thinking options based on the initial ChatSelectedOption
     ApplyThinkingOptionsForModel(ChatSelectedOption);
   }
 
-  // --- NEW METHOD: Handles changes to the selected chat model ---
   private void HandleChatModelChanged(string newModel)
   {
-    ChatSelectedOption = newModel; // MudSelect's ValueChanged already sets the bound value, but explicit here.
+    ChatSelectedOption = newModel; 
     ApplyThinkingOptionsForModel(newModel);
-    StateHasChanged(); // Re-render the UI to reflect changes
+    StateHasChanged(); 
   }
 
-  // --- NEW METHOD: Sets thinking options based on the model ---
   private void ApplyThinkingOptionsForModel(string modelName)
   {
     if (_modelThinkingOptionsMap.TryGetValue(modelName, out var options))
     {
       _currentThinkingOptions = options;
-
-      // Rule 3: The thinking selector should be disabled and the value set to none.
       if (modelName == "llama-3.1-8b-instant")
       {
         _isThinkingSelectorDisabled = true;
-        ThinkingSelectedOption = "None"; // Force "None"
+        ThinkingSelectedOption = "None"; 
       }
       else
       {
         _isThinkingSelectorDisabled = false;
-        // Ensure the current ThinkingSelectedOption is still valid for the new model.
-        // If not, default to "None" or the first available option.
         if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
         {
           ThinkingSelectedOption = _currentThinkingOptions.FirstOrDefault() ?? "None";
@@ -349,8 +353,6 @@
     }
     else
     {
-      // Fallback for models not explicitly mapped (e.g., if a new model is added to _chatOptions
-      // but not yet to _modelThinkingOptionsMap). Default to None/Low/Medium/High.
       _currentThinkingOptions = ThinkingOptionsNoneLowMediumHigh;
       _isThinkingSelectorDisabled = false;
       if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
@@ -359,7 +361,6 @@
       }
     }
   }
-  // --- END NEW METHODS ---
 
   private async Task LoadSidebarChatsAsync()
   {
@@ -377,36 +378,39 @@
     _chatName = "New Chat";
     _chatHistory.Clear();
     _chatIsPinned = false;
+    CurrentMessageFiles.Clear(); 
     StateHasChanged();
   }
 
   private async Task LoadChat(ChatDrawer.SidebarChat chat)
   {
-    // OOEE
-    if (_chatId == chat.Id && _chatHistory.Any()) return; // Already loaded
+    if (_chatId == chat.Id && _chatHistory.Any()) return; 
 
-    var full = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
-    _chatId = full.Id.ToString();
-    _chatName = full.Name;
-    ChatSelectedOption = full.Model;
-    ApplyThinkingOptionsForModel(full.Model); // IMPORTANT: Apply thinking options when loading a chat
-    _chatIsPinned = full.IsPinned;
-    _chatHistory = full.Messages
-      .Select(m => new ChatMessage
+    var fullChat = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
+    _chatId = fullChat.Id.ToString();
+    _chatName = fullChat.Name;
+    ChatSelectedOption = fullChat.Model;
+    ApplyThinkingOptionsForModel(fullChat.Model); 
+    _chatIsPinned = fullChat.IsPinned;
+    _chatHistory = fullChat.Messages
+      .Select(m => new ChatMessage // m here is ChatService.ChatMessageDto
       {
         IsUser = m.Role == "user",
-        Text = m.Content
+        Text = m.Content, // Correct: DTO has Content, local record has Text
+        FileIds = m.FileIds?.ToList() ?? new List<Guid>()
       })
       .ToList();
+    CurrentMessageFiles.Clear(); 
     _needsScroll = true;
     StateHasChanged();
   }
 
-  private List<ServiceChatMessage> ToSharedMessages() =>
-    _chatHistory.Select(m => new ServiceChatMessage
+  private List<ServiceChatMessage> ToServiceChatMessages() => // Renamed for clarity
+    _chatHistory.Select(m => new ServiceChatMessage // This is m1Chat.Client.Services.ChatMessage
     {
       Role = m.IsUser ? "user" : "assistant",
-      Content = m.Text
+      Content = m.Text, // m is local ChatMessage record, which has Text
+      // FileIds are handled by ToSharedMessagesWithFilesForDb when saving
     }).ToList();
 
   [JSInvokable]
@@ -435,10 +439,9 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
-    // return; // Removed this return so Enter key works
-    if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) // Send on Enter unless Shift is pressed
+    if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) 
     {
-        if (!string.IsNullOrWhiteSpace(MessageText))
+        if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
         {
             await SendMessage();
         }
@@ -450,17 +453,24 @@
     if (_isSendingMessage) return;
 
     var textToSend = MessageText.Trim();
-    if (string.IsNullOrWhiteSpace(textToSend))
+    if (string.IsNullOrWhiteSpace(textToSend) && !CurrentMessageFiles.Any()) // Allow sending if only files are attached
     {
       return;
     }
     
     _isSendingMessage = true;
-    StateHasChanged(); // Update UI to reflect disabled send button
+    StateHasChanged(); 
 
-    _chatHistory.Add(new ChatMessage { IsUser = true, Text = textToSend });
-    var userMessageTextForName = textToSend; // Store before clearing
+    var fileIds = CurrentMessageFiles.Select(f => f.Id).ToList();
+
+    _chatHistory.Add(new ChatMessage { 
+      IsUser = true, 
+      Text = textToSend, 
+      FileIds = fileIds 
+    });
+    var userMessageTextForName = textToSend; 
     MessageText = "";
+    CurrentMessageFiles.Clear(); 
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
@@ -470,36 +480,30 @@
 
     if (isNewChat)
     {
-      _chatName = "New Chat"; // Temporary name
-      // Create chat with a placeholder name and the first user message for context
-      // The actual first message (textToSend) will be part of the main conversation stream
+      _chatName = "New Chat"; 
       var initialMessagesForName = new List<ServiceChatMessage> {
           new() { Role = "user", Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation that starts with: \"{userMessageTextForName[..Math.Min(100, userMessageTextForName.Length)]}\"" }
       };
       
-      string tempName = userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...";
-
+      string tempName = string.IsNullOrWhiteSpace(userMessageTextForName) ? "Chat with Files" : (userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...");
 
       var createReq = new ChatService.CreateChatRequest(
-        tempName, // Use a temp name derived from the first message
-        ChatSelectedOption, // Use the currently selected model for the chat itself
-        new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName) }, // Store the first user message
+        tempName, 
+        ChatSelectedOption, 
+        new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) }, 
         _chatIsPinned
       );
       newChatGuid = await ChatService.CreateChatAsync(createReq);
       _chatId = newChatGuid.ToString();
       NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
 
-
-      // Generate name using a fast model (e.g., llama-3.1-8b-instant)
-      // This name generation is separate from the main chat flow.
       string generatedName = "";
       try
       {
           await foreach (var chunk in CompletionService.StreamCompletionAsync(
                            initialMessagesForName,
-                           "llama-3.1-8b-instant", // Specific model for name generation
-                           "Low" // Specific reasoning for name generation
+                           "llama-3.1-8b-instant", 
+                           "Low" 
                          ))
           {
             generatedName += chunk;
@@ -511,19 +515,17 @@
       catch(Exception ex)
       {
           Console.WriteLine($"Name generation failed: {ex.Message}");
-          _chatName = tempName; // Fallback to temp name
+          _chatName = tempName; 
       }
-      // Update the chat with the generated name (messages are already set)
         var updateNameReq = new ChatService.UpdateChatRequest(
             _chatName,
             ChatSelectedOption,
-            new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName) },
+            new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
         );
         await ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
-        await LoadSidebarChatsAsync(); // Refresh sidebar
+        await LoadSidebarChatsAsync(); 
     }
-
 
     var aiMessage = new ChatMessage { IsUser = false, Text = "" };
     _chatHistory.Add(aiMessage);
@@ -534,11 +536,21 @@
     {
       int chunkCount = 0;
       var lastUpdate = DateTime.UtcNow;
-      // Use ToSharedMessages() which now includes the latest user message
+      
+      // Prepare messages for AI, including file content (handled by server-side CompletionService)
+      var messagesForAi = _chatHistory
+        .Take(_chatHistory.Count - 1) // Exclude the placeholder AI message
+        .Select(m => new ServiceChatMessage // Use m1Chat.Client.Services.ChatMessage
+        {
+            Role = m.IsUser ? "user" : "assistant",
+            Content = m.Text,
+            FileIds = m.FileIds // Pass FileIds to client-side service
+        }).ToList();
+
       await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                       ToSharedMessages().Take(_chatHistory.Count -1).ToList(), // Send history *before* AI placeholder
+                       messagesForAi, 
                        ChatSelectedOption,
-                       ThinkingSelectedOption // Pass selected thinking option
+                       ThinkingSelectedOption 
                      ))
       {
         aiMessage.Text += chunk;
@@ -546,13 +558,13 @@
         _needsScroll = true;
 
         var now = DateTime.UtcNow;
-        if ((now - lastUpdate).TotalMilliseconds >= 100 || chunkCount <= 5) // More frequent updates for initial chunks
+        if ((now - lastUpdate).TotalMilliseconds >= 100 || chunkCount <= 5) 
         {
           lastUpdate = now;
           await InvokeAsync(StateHasChanged);
         }
       }
-      await InvokeAsync(StateHasChanged); // Final update
+      await InvokeAsync(StateHasChanged); 
 
       if (chunkCount == 0 && string.IsNullOrWhiteSpace(aiMessage.Text))
       {
@@ -569,7 +581,7 @@
     finally
     {
         _isSendingMessage = false;
-        StateHasChanged(); // Re-enable send button
+        StateHasChanged(); 
     }
 
     if (Guid.TryParse(_chatId, out var cId))
@@ -577,9 +589,7 @@
       var updateReq = new ChatService.UpdateChatRequest(
         _chatName,
         ChatSelectedOption,
-        ToSharedMessages()
-          .Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content))
-          .ToArray(),
+        ToSharedMessagesWithFilesForDb().ToArray(),
         _chatIsPinned
       );
       await ChatService.UpdateChatAsync(cId, updateReq);
@@ -587,15 +597,44 @@
       }
   }
 
-  private void AttachFile() => Console.WriteLine("Attach file clicked.");
+  // Used for saving to DB via ChatService (expects DTOs with FileIds)
+  private List<ChatService.ChatMessageDto> ToSharedMessagesWithFilesForDb() =>
+    _chatHistory.Select(m => new ChatService.ChatMessageDto(
+      m.IsUser ? "user" : "assistant", 
+      m.Text, // Corrected: m is local ChatMessage, which has .Text
+      m.FileIds
+    )).ToList();
+
+  private async Task TriggerFileUpload()
+  {
+    // This is a bit of a hack to "click" the hidden file input
+    // The FileUploadComponent's <MudFileUpload> creates an <input type="file">
+    // We need to find its ID and click it.
+    // The ID is available via the 'context' in ButtonTemplate, which we named 'fileUploadId'
+    // However, we can't directly access that from here easily.
+    // A more robust way is to have the FileUploadComponent expose a method or use JS interop.
+
+    // For now, let's assume the user will click the "Upload Files" button within FileUploadComponent.
+    // If you want the "AttachFile" icon to also trigger it, you'd need a more complex setup.
+    // One way:
+    // 1. In FileUploadComponent, add a public method: public void TriggerClick() { JS.InvokeVoidAsync("clickElementById", _internalInputId); }
+    // 2. Get a @ref to FileUploadComponent here: <FileUploadComponent @ref="_fileUploadComponentRef" ... />
+    // 3. Call _fileUploadComponentRef.TriggerClick();
+    // This requires FileUploadComponent to store its input's ID.
+
+    // Simpler: just show the component if it's not already visible.
+    // The actual upload is handled by FileUploadComponent.
+    Snackbar.Add("Use the 'Upload Files' button to select files.", Severity.Info);
+  }
+
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.PinChatAsync(chatId, !chat.IsPinned);
-      await LoadSidebarChatsAsync(); // This will re-sort and update UI
-      if (_chatId == chat.Id) _chatIsPinned = !chat.IsPinned; // Update current chat's pinned state
+      await LoadSidebarChatsAsync(); 
+      if (_chatId == chat.Id) _chatIsPinned = !chat.IsPinned; 
       StateHasChanged();
     }
   }
@@ -605,9 +644,8 @@
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.DeleteChatAsync(chatId);
-      SidebarChats.RemoveAll(c => c.Id == chat.Id); // Ensure correct removal
+      SidebarChats.RemoveAll(c => c.Id == chat.Id); 
       if (_chatId == chat.Id) {
-          // If active chat is deleted, load the next available or create new
           if (SidebarChats.Any()) {
               await LoadChat(SidebarChats.First());
           } else {
@@ -624,7 +662,7 @@
     var updateReq = new ChatService.UpdateChatRequest(
       updatedChat.Name,
       updatedChat.Model,
-      fullChat.Messages,
+      fullChat.Messages, // These are ChatService.ChatMessageDto
       updatedChat.IsPinned
     );
     await ChatService.UpdateChatAsync(Guid.Parse(updatedChat.Id), updateReq);
@@ -646,34 +684,40 @@
         return;
     }
 
-    List<ServiceChatMessage> messagesToSend;
-    ChatMessage targetAiMessage;
+    List<ServiceChatMessage> messagesToSendForAi; // Use m1Chat.Client.Services.ChatMessage
+    ChatMessage targetAiMessage; // Local Chat.razor ChatMessage
 
-    if (messageToRegen.IsUser) // Regenerate AI response for this user message
+    if (messageToRegen.IsUser) 
     {
-        // Remove AI messages from this user message onwards
         _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > idx && !m.IsUser);
-        // If the next message is an AI message, remove it.
         if (idx + 1 < _chatHistory.Count && !_chatHistory[idx + 1].IsUser)
         {
             _chatHistory.RemoveAt(idx + 1);
         }
 
-        messagesToSend = _chatHistory.Take(idx + 1) // Messages up to and including the user message
-            .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
+        messagesToSendForAi = _chatHistory.Take(idx + 1) 
+            .Select(x => new ServiceChatMessage { 
+                Role = x.IsUser ? "user" : "assistant", 
+                Content = x.Text,
+                FileIds = x.FileIds // Pass FileIds
+            })
             .ToList();
         
         targetAiMessage = new ChatMessage { IsUser = false, Text = "" };
         if (idx + 1 < _chatHistory.Count) _chatHistory.Insert(idx + 1, targetAiMessage);
         else _chatHistory.Add(targetAiMessage);
     }
-    else // Regenerate this AI message (based on history up to the preceding user message)
+    else 
     {
-        _chatHistory[idx] = new ChatMessage { IsUser = false, Text = "" }; // Clear current AI message
+        _chatHistory[idx] = new ChatMessage { IsUser = false, Text = "" }; 
         targetAiMessage = _chatHistory[idx];
 
-        messagesToSend = _chatHistory.Take(idx) // Messages up to (but not including) this AI message
-            .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
+        messagesToSendForAi = _chatHistory.Take(idx) 
+            .Select(x => new ServiceChatMessage { 
+                Role = x.IsUser ? "user" : "assistant", 
+                Content = x.Text,
+                FileIds = x.FileIds // Pass FileIds
+            })
             .ToList();
     }
     
@@ -685,9 +729,9 @@
         int chunkCount = 0;
         var lastUpdate = DateTime.UtcNow;
         await foreach (var chunk in CompletionService.StreamCompletionAsync(
-                           messagesToSend,
+                           messagesToSendForAi,
                            ChatSelectedOption,
-                           ThinkingSelectedOption // Pass selected thinking option
+                           ThinkingSelectedOption 
                          ))
         {
             targetAiMessage.Text += chunk;
@@ -726,24 +770,21 @@
         var updateReq = new ChatService.UpdateChatRequest(
             _chatName,
             ChatSelectedOption,
-            ToSharedMessages().Select(msg => new ChatService.ChatMessageDto(msg.Role, msg.Content)).ToArray(),
+            ToSharedMessagesWithFilesForDb().ToArray(),
             _chatIsPinned
         );
         await ChatService.UpdateChatAsync(cId, updateReq);
-        // No need to reload all sidebar chats, just ensure current one is fine.
-        // If regeneration changes last update time, that could be handled.
     }
   }
 
   private void HandleEditMessage(ChatMessage m) {
-    // Basic implementation: set message text to input, allow resending.
-    // More advanced: allow editing in place, then decide how to handle history.
-    MessageText = m.Text; // Put text back in input
-    // Remove this message and subsequent ones if it's a user message?
-    // Or just allow editing and resending as a new message?
-    // For now, just populates input. User can modify and send as new.
-    Snackbar.Add("Message content copied to input field for editing.", Severity.Info);
-    StateHasChanged(); // To reflect MessageText update if input is bound
+    MessageText = m.Text; 
+    // Restore files for editing if they were part of this message
+    CurrentMessageFiles = m.FileIds
+        .Select(fid => new FileUploadService.UploadedFileInfo { Id = fid, OriginalFileName = $"File_{fid.ToString()[..4]}..." }) // Placeholder name, real info not stored here
+        .ToList();
+    Snackbar.Add("Message content and associated files (if any) restored for editing.", Severity.Info);
+    StateHasChanged(); 
   }
 
 
@@ -765,44 +806,48 @@
     var idx = _chatHistory.IndexOf(messageToBranchFrom);
     if (idx == -1) return;
 
-    var branchMessages = _chatHistory.Take(idx + 1)
-      .Select(x => new ServiceChatMessage { Role = x.IsUser ? "user" : "assistant", Content = x.Text })
-      .ToList();
+    var branchChatHistory = _chatHistory.Take(idx + 1).ToList(); // List of local ChatMessage
 
     var branchName = $"Branch: {_chatName}".Truncate(50);
     var createReq = new ChatService.CreateChatRequest(
       branchName,
-      ChatSelectedOption, // Use current model for the new branch
-      branchMessages.Select(m => new ChatService.ChatMessageDto(m.Role, m.Content)).ToArray(),
-      false // New branches are not pinned by default
+      ChatSelectedOption, 
+      branchChatHistory.Select(m => new ChatService.ChatMessageDto(
+          m.IsUser ? "user" : "assistant", 
+          m.Text, 
+          m.FileIds)
+      ).ToArray(),
+      false 
     );
     var newId = await ChatService.CreateChatAsync(createReq);
 
-    await LoadSidebarChatsAsync(); // Refresh sidebar to include the new chat
+    await LoadSidebarChatsAsync(); 
 
     var newSidebarChat = SidebarChats.FirstOrDefault(c => c.Id == newId.ToString());
     if (newSidebarChat != null)
     {
-      await LoadChat(newSidebarChat); // Load the newly created branched chat
+      await LoadChat(newSidebarChat); 
       Snackbar.Add("Chat branched successfully", Severity.Success);
     }
     else
     {
-      // Fallback if not found immediately (should be rare)
       _chatId = newId.ToString();
       _chatName = branchName;
-      _chatHistory = branchMessages.Select(m => new ChatMessage { IsUser = m.Role == "user", Text = m.Content }).ToList();
+      _chatHistory = branchChatHistory; // Assign the branched history
       _chatIsPinned = false;
+      CurrentMessageFiles.Clear(); // Clear any pending files for the new branch
       NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
       Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);
       StateHasChanged();
     }
   }
 
+  // This is the local record for UI state in Chat.razor
   private record ChatMessage
   {
     public string Id { get; init; } = Guid.NewGuid().ToString();
     public bool IsUser { get; init; }
-    public string Text { get; set; } = "";
+    public string Text { get; set; } = ""; // Property is 'Text'
+    public List<Guid> FileIds { get; init; } = new();
   }
 }

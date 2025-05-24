@@ -11,5 +11,6 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatCompletionService>();
+builder.Services.AddScoped<FileUploadService>();
 
 await builder.Build().RunAsync();

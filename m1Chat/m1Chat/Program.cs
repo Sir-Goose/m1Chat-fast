@@ -22,6 +22,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ChatCompletionService>();
+builder.Services.AddScoped<FileService>();
+builder.Services.AddScoped<FileUploadService>();
 
 // 3) Our dynamic‐BaseAddress HttpClient
 builder.Services.AddScoped<HttpClient>(sp =>

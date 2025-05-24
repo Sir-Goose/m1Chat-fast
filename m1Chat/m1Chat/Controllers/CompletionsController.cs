@@ -1,20 +1,18 @@
-// File: m1Chat.Controllers/CompletionsController.cs
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using m1Chat.Services; // ChatMessageDto & Completion live here
-using Microsoft.AspNetCore.Http; // Required for Response.WriteAsync
+using m1Chat.Services;
+using m1Chat.Data;
+using Microsoft.AspNetCore.Http;
 
 namespace m1Chat.Controllers
 {
-    // DTO for binding model + messages
     public class ChatHistoryRequest
     {
         public string Model { get; set; } = string.Empty;
-        public string ReasoningEffort { get; set; } = "Medium"; // Added, with default
-        public ChatMessageDto[] Messages { get; set; } =
-            Array.Empty<ChatMessageDto>();
+        public string ReasoningEffort { get; set; } = "Medium";
+        public ChatMessageDto[] Messages { get; set; } = Array.Empty<ChatMessageDto>();
     }
 
     [ApiController]
@@ -22,10 +20,12 @@ namespace m1Chat.Controllers
     public class CompletionsController : ControllerBase
     {
         private readonly Completion _completion;
+        private readonly ChatDbContext _db;
 
-        public CompletionsController(Completion completion)
+        public CompletionsController(Completion completion, ChatDbContext db)
         {
             _completion = completion;
+            _db = db;
         }
 
         [HttpPost("stream")]
@@ -33,7 +33,7 @@ namespace m1Chat.Controllers
         {
             Response.ContentType = "application/json"; 
             Response.Headers.Append("Cache-Control", "no-cache");
-            Response.Headers.Append("X-Accel-Buffering", "no"); // Useful for Nginx
+            Response.Headers.Append("X-Accel-Buffering", "no");
 
             try
             {
@@ -42,11 +42,12 @@ namespace m1Chat.Controllers
                     var chunk in _completion.CompleteAsync(
                         dtoList,
                         request.Model,
-                        request.ReasoningEffort
-                    ) // Pass ReasoningEffort
+                        request.ReasoningEffort,
+                        _db // Pass database context for file handling
+                    )
                 )
                 {
-                    if (!string.IsNullOrEmpty(chunk)) // Ensure chunk is not null or empty before serializing
+                    if (!string.IsNullOrEmpty(chunk))
                     {
                         var json = System.Text.Json.JsonSerializer.Serialize(
                             new { content = chunk }
@@ -61,8 +62,6 @@ namespace m1Chat.Controllers
                 Console.WriteLine(
                     $"Error in CompletionsController.Stream: {ex.Message}\n{ex.StackTrace}"
                 );
-                // Consider how to report this error back to the client if the stream has already started.
-                // If headers not sent, can send a 500. Otherwise, might need a special error object in the stream.
                 if (!Response.HasStarted)
                 {
                     Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -74,7 +73,6 @@ namespace m1Chat.Controllers
                 }
                 else
                 {
-                    // Stream already started, try to send an error object if possible
                     try
                     {
                         var errorJson = System.Text.Json.JsonSerializer.Serialize(

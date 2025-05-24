@@ -86,7 +86,7 @@ namespace m1Chat.Client.Services
         // ---- DTOs / Models ----
         public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt, bool IsPinned);
 
-        public record ChatMessageDto(string Role, string Content);
+        public record ChatMessageDto(string Role, string Content, List<Guid>? FileIds = null);
 
         public record ChatHistory(Guid Id, string Name, string Model, ChatMessageDto[] Messages, bool IsPinned);
 

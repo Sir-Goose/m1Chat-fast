@@ -1,0 +1,91 @@
+@using m1Chat.Client.Services
+@inject IJSRuntime JS
+@inject FileUploadService FileUploadService
+@inject ISnackbar Snackbar
+
+<div class="file-upload-container">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>" 
+                   FilesChanged="OnFilesChanged" 
+                   Multiple="true"
+                   Accept=".txt,.cs,.js,.ts,.html,.css,.json,.xml,.md,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift,.kt,.scala,.sh,.bat,.sql">
+        <ButtonTemplate>
+            <MudButton HtmlTag="label"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                       Size="Size.Small">
+                Upload Files
+            </MudButton>
+        </ButtonTemplate>
+    </MudFileUpload>
+
+    @if (UploadedFiles.Any())
+    {
+        <MudText Typo="Typo.subtitle2" Class="mt-2">Attached Files:</MudText>
+        <MudList T="FileUploadService.UploadedFileInfo" Dense="true">
+            @foreach (var file in UploadedFiles)
+            {
+                <MudListItem T="FileUploadService.UploadedFileInfo" Dense="true">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div>
+                            <MudText Typo="Typo.body2">@file.OriginalFileName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@FormatFileSize(file.FileSize)</MudText>
+                        </div>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       OnClick="() => RemoveFile(file)"
+                                       Color="Color.Error" />
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    }
+</div>
+
+@code {
+    [Parameter] public List<FileUploadService.UploadedFileInfo> UploadedFiles { get; set; } = new();
+    [Parameter] public EventCallback<List<FileUploadService.UploadedFileInfo>> UploadedFilesChanged { get; set; }
+
+    private async Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
+    {
+        foreach (var file in files)
+        {
+            if (file.Size > 10 * 1024 * 1024) // 10MB limit
+            {
+                Snackbar.Add($"File {file.Name} is too large (max 10MB)", Severity.Warning);
+                continue;
+            }
+
+            try
+            {
+                var uploadedFile = await FileUploadService.UploadFileAsync(file);
+                UploadedFiles.Add(uploadedFile);
+                await UploadedFilesChanged.InvokeAsync(UploadedFiles);
+                Snackbar.Add($"File {file.Name} uploaded successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to upload {file.Name}: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task RemoveFile(FileUploadService.UploadedFileInfo file)
+    {
+        UploadedFiles.Remove(file);
+        await UploadedFilesChanged.InvokeAsync(UploadedFiles);
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB" };
+        int counter = 0;
+        decimal number = bytes;
+        while (Math.Round(number / 1024) >= 1)
+        {
+            number /= 1024;
+            counter++;
+        }
+        return string.Format("{0:n1}{1}", number, suffixes[counter]);
+    }
+}

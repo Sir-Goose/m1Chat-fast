@@ -11,6 +11,7 @@ namespace m1Chat.Client.Services
     {
         public string Role { get; set; }
         public string Content { get; set; }
+        public List<Guid>? FileIds { get; set; }
     }
 
     public class ChatCompletionService

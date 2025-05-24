@@ -1,4 +1,3 @@
-// File: m1Chat.Services/Completion.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +7,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using m1Chat.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace m1Chat.Services
 {
@@ -16,6 +17,7 @@ namespace m1Chat.Services
     {
         public string Role { get; set; }
         public string Content { get; set; }
+        public List<Guid>? FileIds { get; set; }
     }
 
     public class Completion
@@ -56,9 +58,59 @@ namespace m1Chat.Services
         public async IAsyncEnumerable<string> CompleteAsync(
             List<ChatMessageDto> messages,
             string model,
-            string reasoningEffort // This parameter was already here
+            string reasoningEffort,
+            ChatDbContext db = null
         )
         {
+            // Process messages and include file content if database context is provided
+            var processedMessages = new List<ChatMessageDto>();
+            
+            if (db != null)
+            {
+                foreach (var message in messages)
+                {
+                    var content = message.Content;
+                    
+                    // If message has files, prepend their content
+                    if (message.FileIds != null && message.FileIds.Any())
+                    {
+                        var fileContents = new List<string>();
+                        foreach (var fileId in message.FileIds)
+                        {
+                            try
+                            {
+                                var file = await db.UploadedFiles.FindAsync(fileId);
+                                if (file != null && File.Exists(file.FilePath))
+                                {
+                                    var fileContent = await File.ReadAllTextAsync(file.FilePath);
+                                    fileContents.Add($"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error reading file {fileId}: {ex.Message}");
+                            }
+                        }
+                        
+                        if (fileContents.Any())
+                        {
+                            content = string.Join("\n", fileContents) + "\n" + content;
+                        }
+                    }
+                    
+                    processedMessages.Add(new ChatMessageDto { Role = message.Role, Content = content });
+                }
+            }
+            else
+            {
+                // No database context, use messages as-is but strip file IDs
+                processedMessages = messages.Select(m => new ChatMessageDto 
+                { 
+                    Role = m.Role, 
+                    Content = m.Content 
+                }).ToList();
+            }
+
             reasoningEffort = reasoningEffort.ToLower();
             switch (model)
             {
@@ -90,13 +142,13 @@ namespace m1Chat.Services
                     model = "gemini-2.0-flash";
                     _activeApiKey = _aiStudioApiKey;
                     _activeURI = _aiStudioURI;
-                    _provider = "aistudio"; // Corrected provider
+                    _provider = "aistudio";
                     break;
                 case "Gemini 2.5 Flash":
                     model = "gemini-2.5-flash-preview-05-20";
                     _activeApiKey = _aiStudioApiKey;
                     _activeURI = _aiStudioURI;
-                    _provider = "aistudio"; // Corrected provider
+                    _provider = "aistudio";
                     break;
                 case "Qwen3 235B":
                     model = "qwen/qwen3-235b-a22b:free";
@@ -126,10 +178,10 @@ namespace m1Chat.Services
                     model = "llama-3.1-8b-instant";
                     _activeApiKey = _groqApiKey;
                     _activeURI = _groqURI;
-                    _provider = "groq"; // Corrected provider
+                    _provider = "groq";
                     break;
                 default:
-                    model = "google/gemma-3-27b-it:free"; // Default model
+                    model = "google/gemma-3-27b-it:free";
                     _activeApiKey = _openRouterApiKey;
                     _activeURI = _openRouterURI;
                     _provider = "openrouter";
@@ -141,7 +193,7 @@ namespace m1Chat.Services
                 case "openrouter":
                     await foreach (
                         var chunk in StreamOpenRouterAsync(
-                            messages,
+                            processedMessages,
                             model,
                             reasoningEffort
                         )
@@ -153,7 +205,7 @@ namespace m1Chat.Services
                 case "aistudio":
                     await foreach (
                         var chunk in StreamAiStudioAsync(
-                            messages,
+                            processedMessages,
                             model,
                             reasoningEffort
                         )
@@ -164,16 +216,16 @@ namespace m1Chat.Services
                     break;
                 case "groq":
                     await foreach (
-                        var chunk in StreamGroqAsync(messages, model)
-                    ) // Groq might not use reasoningEffort
+                        var chunk in StreamGroqAsync(processedMessages, model)
+                    )
                     {
                         yield return chunk;
                     }
                     break;
-                default: // Fallback to openrouter if provider is unknown
+                default:
                     await foreach (
                         var chunk in StreamOpenRouterAsync(
-                            messages,
+                            processedMessages,
                             model,
                             reasoningEffort
                         )
@@ -194,7 +246,7 @@ namespace m1Chat.Services
             var requestBody = new
             {
                 model,
-                reasoningEffort, // Included
+                reasoningEffort,
                 messages = messages.Select(
                     m => new { role = m.Role, content = m.Content }
                 ),
@@ -264,7 +316,6 @@ namespace m1Chat.Services
             var requestBody = new
             {
                 model,
-                // reasoningEffort is not included here as Groq might not support it
                 messages = messages.Select(
                     m => new { role = m.Role, content = m.Content }
                 ),
@@ -335,7 +386,7 @@ namespace m1Chat.Services
             var requestBody = new
             {
                 model,
-                reasoningEffort, // Included
+                reasoningEffort,
                 messages = messages.Select(
                     m => new { role = m.Role, content = m.Content }
                 ),
@@ -419,12 +470,10 @@ namespace m1Chat.Services
             catch (JsonException ex)
             {
                 Console.WriteLine($"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}");
-                // ignore and continue
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Generic error parsing chunk: {ex.Message}. Data: {jsonData}");
-                // ignore and continue
             }
             return null;
         }
