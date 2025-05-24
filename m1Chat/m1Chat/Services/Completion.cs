@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using m1Chat.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace m1Chat.Services
 {
@@ -70,10 +71,11 @@ namespace m1Chat.Services
                 foreach (var message in messages)
                 {
                     var content = message.Content;
-                    
+                    Console.WriteLine(message.FileIds);
                     // If message has files, prepend their content
                     if (message.FileIds != null && message.FileIds.Any())
                     {
+                        Console.WriteLine("File detected");
                         var fileContents = new List<string>();
                         foreach (var fileId in message.FileIds)
                         {

@@ -7,7 +7,7 @@ using Microsoft.JSInterop;
 
 namespace m1Chat.Client.Services
 {
-    public class ChatMessage // This was already defined here
+    public class ChatMessage
     {
         public string Role { get; set; }
         public string Content { get; set; }
@@ -26,7 +26,7 @@ namespace m1Chat.Client.Services
         public IAsyncEnumerable<string> StreamCompletionAsync(
             List<ChatMessage> messages,
             string model,
-            string reasoningEffort // Added reasoningEffort parameter
+            string reasoningEffort
         )
         {
             var channel = Channel.CreateUnbounded<string>();
@@ -38,9 +38,9 @@ namespace m1Chat.Client.Services
             var payload = new
             {
                 model,
-                reasoningEffort, // Added to payload
+                reasoningEffort,
                 messages = messages
-                    .Select(m => new { role = m.Role, content = m.Content })
+                    .Select(m => new { role = m.Role, content = m.Content, fileIds = m.FileIds })
                     .ToArray()
             };
 
@@ -73,7 +73,7 @@ namespace m1Chat.Client.Services
                 _writer.TryComplete();
             }
 
-            [JSInvokable("Error")] // Optional: if your JS can call this
+            [JSInvokable("Error")]
             public void Error(string errorMessage)
             {
                 _writer.TryComplete(new Exception(errorMessage));
