@@ -4,7 +4,8 @@
 @inject ISnackbar Snackbar
 
 <div class="file-upload-container">
-    <MudFileUpload T="IReadOnlyList<IBrowserFile>" 
+    <MudFileUpload @ref="_mudFileUpload"
+                   T="IReadOnlyList<IBrowserFile>" 
                    FilesChanged="OnFilesChanged" 
                    Multiple="true"
                    Accept=".txt,.cs,.js,.ts,.html,.css,.json,.xml,.md,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift,.kt,.scala,.sh,.bat,.sql">
@@ -45,6 +46,17 @@
 @code {
     [Parameter] public List<FileUploadService.UploadedFileInfo> UploadedFiles { get; set; } = new();
     [Parameter] public EventCallback<List<FileUploadService.UploadedFileInfo>> UploadedFilesChanged { get; set; }
+
+    private MudFileUpload<IReadOnlyList<IBrowserFile>> _mudFileUpload;
+
+    // Public method to trigger file upload from parent component
+    public async Task TriggerUploadAsync()
+    {
+        if (_mudFileUpload != null)
+        {
+            await _mudFileUpload.OpenFilePickerAsync();
+        }
+    }
 
     private async Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
     {

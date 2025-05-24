@@ -152,13 +152,10 @@
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
             
-            <!-- File Upload Component -->
-            @if (CurrentMessageFiles.Any()) // Conditionally show if there are files to display
-            {
-              <div class="mb-2"> 
-                <FileUploadComponent @bind-UploadedFiles="CurrentMessageFiles" />
-              </div>
-            }
+            <!-- File Upload Component - Always show -->
+            <div class="mb-2"> 
+              <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles" />
+            </div>
             
             <div style="display:flex;align-items:center;">
               <MudTextField
@@ -249,6 +246,7 @@
 
   // File upload properties
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
+  private FileUploadComponent _fileUploadComponentRef;
 
   private string _chatSelectedOption = "Gemini 2.5 Flash";
   private string ChatSelectedOption
@@ -297,10 +295,6 @@
   private bool _chatIsPinned;
 
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
-
-  // To trigger file input from FileUploadComponent
-  private FileUploadComponent _fileUploadComponentRef;
-
 
   protected override async Task OnInitializedAsync()
   {
@@ -439,6 +433,7 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
+    return;
     if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) 
     {
         if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
@@ -607,26 +602,15 @@
 
   private async Task TriggerFileUpload()
   {
-    // This is a bit of a hack to "click" the hidden file input
-    // The FileUploadComponent's <MudFileUpload> creates an <input type="file">
-    // We need to find its ID and click it.
-    // The ID is available via the 'context' in ButtonTemplate, which we named 'fileUploadId'
-    // However, we can't directly access that from here easily.
-    // A more robust way is to have the FileUploadComponent expose a method or use JS interop.
-
-    // For now, let's assume the user will click the "Upload Files" button within FileUploadComponent.
-    // If you want the "AttachFile" icon to also trigger it, you'd need a more complex setup.
-    // One way:
-    // 1. In FileUploadComponent, add a public method: public void TriggerClick() { JS.InvokeVoidAsync("clickElementById", _internalInputId); }
-    // 2. Get a @ref to FileUploadComponent here: <FileUploadComponent @ref="_fileUploadComponentRef" ... />
-    // 3. Call _fileUploadComponentRef.TriggerClick();
-    // This requires FileUploadComponent to store its input's ID.
-
-    // Simpler: just show the component if it's not already visible.
-    // The actual upload is handled by FileUploadComponent.
-    Snackbar.Add("Use the 'Upload Files' button to select files.", Severity.Info);
+    if (_fileUploadComponentRef != null)
+    {
+        await _fileUploadComponentRef.TriggerUploadAsync();
+    }
+    else
+    {
+        Snackbar.Add("File upload component not ready. Please try again.", Severity.Warning);
+    }
   }
-
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
