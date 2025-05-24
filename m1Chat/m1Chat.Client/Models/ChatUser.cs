@@ -1,5 +1,7 @@
 namespace m1Chat.Client.Models;
 
+// i'm pretty sure this is unused
+
 public class ClientChatUser
 {
     public string Id { get; set; } = string.Empty;
