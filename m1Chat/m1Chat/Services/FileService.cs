@@ -48,7 +48,8 @@ namespace m1Chat.Services
             // Generate unique file ID and path
             var fileId = Guid.NewGuid();
             var extension = Path.GetExtension(file.FileName);
-            var fileName = $"{fileId}{extension}";
+            //var fileName = $"{fileId}{extension}";
+            var fileName = $"{fileId}";
             var filePath = Path.Combine(_uploadPath, fileName);
 
             // Save file to disk
