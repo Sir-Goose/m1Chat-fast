@@ -53,6 +53,180 @@
         rel="manifest"
         href="site.webmanifest"/>
 
+    <!-- Loading Screen Styles -->
+    <style>
+        #blazor-loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a27 0%, #151521 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        #blazor-loading-screen.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 400px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .loading-logo {
+            max-width: 200px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            margin-bottom: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 4px 20px rgba(89, 74, 226, 0.3));
+        }
+
+        .loading-title {
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #594ae2, #7c4dff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .loading-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-family: 'Roboto', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            min-height: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .loading-progress-container {
+            width: 100%;
+            max-width: 280px;
+            margin-bottom: 1.5rem;
+        }
+
+        .loading-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #594ae2, #7c4dff);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .loading-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid #594ae2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-dots {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @@keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @@keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        /* Hide scrollbar during loading */
+        body.loading {
+            overflow: hidden;
+        }
+
+        /* Responsive adjustments */
+        @@media (max-width: 480px) {
+            .loading-container {
+                padding: 1rem;
+            }
+
+            .loading-logo {
+                max-width: 150px;
+                max-height: 150px;
+                margin-bottom: 1.5rem;
+            }
+
+            .loading-title {
+                font-size: 1.5rem;
+            }
+
+            .loading-text {
+                font-size: 1rem;
+            }
+        }
+    </style>
+
     <!-- JetBrains Mono font-faces -->
     <style>
         @@font-face {
@@ -79,7 +253,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-ExtraLightItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 200;
             font-style: italic;
             font-display: swap;
@@ -94,7 +268,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-LightItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 300;
             font-style: italic;
             font-display: swap;
@@ -123,7 +297,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-MediumItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 500;
             font-style: italic;
             font-display: swap;
@@ -138,7 +312,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-SemiBoldItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 600;
             font-style: italic;
             font-display: swap;
@@ -153,7 +327,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-BoldItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 700;
             font-style: italic;
             font-display: swap;
@@ -161,7 +335,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-ExtraBold.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 800;
             font-style: normal;
             font-display: swap;
@@ -169,7 +343,7 @@
         @@font-face {
             font-family: 'JetBrains Mono';
             src: url('/fonts/JetBrainsMono-ExtraBoldItalic.woff2')
-                format('woff2');
+            format('woff2');
             font-weight: 800;
             font-style: italic;
             font-display: swap;
@@ -179,10 +353,192 @@
     <HeadOutlet @rendermode="InteractiveWebAssembly"/>
 </head>
 
-<body>
-    <Routes @rendermode="InteractiveWebAssembly"/>
-    <script src="_framework/blazor.web.js"></script>
-    <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
+<body class="loading">
+<!-- Enhanced Loading Screen -->
+<div id="blazor-loading-screen">
+    <div class="loading-container">
+        <img src="m1chat.png" alt="M1 Chat" class="loading-logo" />
+        <div class="loading-title">M1 Chat</div>
+        <div class="loading-text" id="loading-status">Initializing application...</div>
+
+        <div class="loading-progress-container">
+            <div class="loading-progress-bar">
+                <div class="loading-progress-fill" id="loading-progress"></div>
+            </div>
+        </div>
+
+        <div class="loading-spinner"></div>
+        <div class="loading-dots">Loading</div>
+    </div>
+</div>
+
+<Routes @rendermode="InteractiveWebAssembly"/>
+
+<script src="_framework/blazor.web.js"></script>
+<script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
+
+<!-- Simplified and More Reliable Loading Screen Script -->
+<script>
+    (function() {
+        console.log('[Loading] Script started');
+        let isHidden = false;
+        let currentStep = 0;
+        let progressInterval;
+
+        const loadingScreen = document.getElementById('blazor-loading-screen');
+        const loadingText = document.getElementById('loading-status');
+        const progressFill = document.getElementById('loading-progress');
+
+        const progressSteps = [
+            { text: 'Initializing application...', progress: 15 },
+            { text: 'Loading WebAssembly...', progress: 35 },
+            { text: 'Starting Blazor runtime...', progress: 55 },
+            { text: 'Loading components...', progress: 75 },
+            { text: 'Finalizing setup...', progress: 90 },
+            { text: 'Ready!', progress: 100 }
+        ];
+
+        function updateProgress(step, immediate = false) {
+            if (step < progressSteps.length && loadingText && progressFill) {
+                const stepData = progressSteps[step];
+                loadingText.textContent = stepData.text;
+
+                if (immediate) {
+                    progressFill.style.transition = 'none';
+                } else {
+                    progressFill.style.transition = 'width 0.6s ease';
+                }
+
+                setTimeout(() => {
+                    progressFill.style.width = stepData.progress + '%';
+                }, immediate ? 0 : 50);
+            }
+        }
+
+        function hideLoadingScreen() {
+            if (isHidden) return;
+            isHidden = true;
+
+            console.log('[Loading] Hiding loading screen');
+
+            // Complete progress first
+            updateProgress(progressSteps.length - 1);
+
+            setTimeout(() => {
+                if (loadingScreen) {
+                    loadingScreen.classList.add('fade-out');
+                    document.body.classList.remove('loading');
+
+                    setTimeout(() => {
+                        if (loadingScreen && loadingScreen.parentNode) {
+                            loadingScreen.parentNode.removeChild(loadingScreen);
+                            console.log('[Loading] Loading screen removed');
+                        }
+                    }, 500);
+                }
+
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                }
+            }, 300);
+        }
+
+        // Start progress simulation
+        updateProgress(0, true);
+        progressInterval = setInterval(() => {
+            currentStep++;
+            if (currentStep < progressSteps.length - 1) {
+                updateProgress(currentStep);
+            } else {
+                clearInterval(progressInterval);
+            }
+        }, 800);
+
+        // Multiple detection methods for .NET 9 Blazor WebAssembly
+
+        // Method 1: Check for interactive elements
+        function checkForInteractiveElements() {
+            const interactiveElements = document.querySelectorAll('[data-enhanced-nav]');
+            if (interactiveElements.length > 0) {
+                console.log('[Loading] Interactive elements detected');
+                hideLoadingScreen();
+                return true;
+            }
+            return false;
+        }
+
+        // Method 2: Listen for Blazor events
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[Loading] DOM Content Loaded');
+            setTimeout(() => {
+                if (checkForInteractiveElements()) return;
+                hideLoadingScreen();
+            }, 1000);
+        });
+
+        // Method 3: Check when MudBlazor is ready (since you're using it)
+        function checkMudBlazorReady() {
+            if (window.MudBlazor || document.querySelector('.mud-theme-provider')) {
+                console.log('[Loading] MudBlazor detected');
+                hideLoadingScreen();
+                return true;
+            }
+            return false;
+        }
+
+        // Method 4: Enhanced navigation events
+        document.addEventListener('blazor:enhancedload', function() {
+            console.log('[Loading] Enhanced load event');
+            setTimeout(hideLoadingScreen, 200);
+        });
+
+        // Method 5: Check for WASM loaded
+        function checkWasmLoaded() {
+            if (window.Module || window.BINDING || document.querySelector('script[src*="_framework"]')) {
+                console.log('[Loading] WASM indicators detected');
+                return true;
+            }
+            return false;
+        }
+
+        // Method 6: Polling approach - check every 500ms
+        const pollInterval = setInterval(() => {
+            if (isHidden) {
+                clearInterval(pollInterval);
+                return;
+            }
+
+            if (checkForInteractiveElements() || checkMudBlazorReady() || checkWasmLoaded()) {
+                clearInterval(pollInterval);
+            }
+        }, 500);
+
+        // Method 7: Window load as fallback
+        window.addEventListener('load', function() {
+            console.log('[Loading] Window load event');
+            setTimeout(() => {
+                if (!isHidden) hideLoadingScreen();
+            }, 1500);
+        });
+
+        // Safety net - force hide after 8 seconds
+        setTimeout(() => {
+            console.log('[Loading] Safety timeout triggered');
+            hideLoadingScreen();
+            clearInterval(pollInterval);
+        }, 8000);
+
+        // Additional safety for interaction
+        document.addEventListener('click', function() {
+            if (!isHidden) {
+                console.log('[Loading] User interaction detected');
+                setTimeout(hideLoadingScreen, 500);
+            }
+        });
+
+        console.log('[Loading] All event listeners set up');
+    })();
+</script>
 </body>
 
 </html>
