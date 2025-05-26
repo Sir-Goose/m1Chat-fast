@@ -182,6 +182,12 @@ namespace m1Chat.Services
                     _activeURI = _groqURI;
                     _provider = "groq";
                     break;
+                case "Devstral Small":
+                    model = "mistralai/devstral-small:free";
+                    _activeApiKey = _openRouterApiKey;
+                    _activeURI = _openRouterURI;
+                    _provider = "openrouter";
+                    break;
                 default:
                     model = "google/gemma-3-27b-it:free";
                     _activeApiKey = _openRouterApiKey;
