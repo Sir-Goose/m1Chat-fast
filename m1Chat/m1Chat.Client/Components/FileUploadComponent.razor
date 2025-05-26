@@ -1,36 +1,76 @@
 @using m1Chat.Client.Services
+
 @inject IJSRuntime JS
 @inject FileUploadService FileUploadService
 @inject ISnackbar Snackbar
 
 <div class="file-upload-container">
     <MudFileUpload @ref="_mudFileUpload"
-                   T="IReadOnlyList<IBrowserFile>" 
-                   FilesChanged="OnFilesChanged" 
-                   Multiple="true"
-                   Accept=".txt,.cs,.js,.ts,.html,.css,.json,.xml,.md,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift,.kt,.scala,.sh,.bat,.sql">
-        <ButtonTemplate>
-            <MudButton HtmlTag="label"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.CloudUpload"
-                       Size="Size.Small">
-                Upload Files
-            </MudButton>
-        </ButtonTemplate>
+                   T="IReadOnlyList<IBrowserFile>"
+                   OnFilesChanged="OnFilesChanged"
+                   AppendMultipleFiles
+                   Hidden="@false"
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                   InputStyle="opacity:0"
+                   Accept=".txt,.cs,.js,.ts,.html,.css,.json,.xml,.md,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift,.kt,.scala,.sh,.bat,.sql"
+                   tabindex="-1"
+                   @ondrop="@ClearDragClass"
+                   @ondragenter="@SetDragClass"
+                   @ondragleave="@ClearDragClass"
+                   @ondragend="@ClearDragClass">
+        <ActivatorContent>
+            <MudPaper Height="200px"
+                      Outlined="true"
+                      Class="@_dragClass">
+                <MudStack AlignItems="AlignItems.Center" 
+                          Justify="Justify.Center" 
+                          Class="mud-height-full">
+                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" 
+                             Size="Size.Large" 
+                             Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        Drag and drop files here or click to browse
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Max file size: 10MB
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        </ActivatorContent>
     </MudFileUpload>
 
     @if (UploadedFiles.Any())
     {
-        <MudText Typo="Typo.subtitle2" Class="mt-2">Attached Files:</MudText>
-        <MudList T="FileUploadService.UploadedFileInfo" Dense="true">
+        <MudStack Row Class="mt-2 justify-space-between align-center">
+            <MudText Typo="Typo.subtitle2">
+                Attached Files (@UploadedFiles.Count):
+            </MudText>
+            <MudButton Color="Color.Error"
+                       OnClick="@ClearAllFiles"
+                       Variant="Variant.Outlined"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Clear">
+                Clear All
+            </MudButton>
+        </MudStack>
+        
+        <MudList T="FileUploadService.UploadedFileInfo" Dense="true" Class="mt-2">
             @foreach (var file in UploadedFiles)
             {
                 <MudListItem T="FileUploadService.UploadedFileInfo" Dense="true">
                     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                        <div>
-                            <MudText Typo="Typo.body2">@file.OriginalFileName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@FormatFileSize(file.FileSize)</MudText>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <MudIcon Icon="@GetFileIcon(file.OriginalFileName)" 
+                                     Size="Size.Small" 
+                                     Color="Color.Primary" />
+                            <div>
+                                <MudText Typo="Typo.body2">
+                                    @file.OriginalFileName
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @FormatFileSize(file.FileSize)
+                                </MudText>
+                            </div>
                         </div>
                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                        Size="Size.Small"
@@ -47,24 +87,36 @@
     [Parameter] public List<FileUploadService.UploadedFileInfo> UploadedFiles { get; set; } = new();
     [Parameter] public EventCallback<List<FileUploadService.UploadedFileInfo>> UploadedFilesChanged { get; set; }
 
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full d-flex align-center justify-center";
+    private string _dragClass = DefaultDragClass;
     private MudFileUpload<IReadOnlyList<IBrowserFile>> _mudFileUpload;
 
     // Public method to trigger file upload from parent component
     public async Task TriggerUploadAsync()
     {
-        if (_mudFileUpload != null)
-        {
-            await _mudFileUpload.OpenFilePickerAsync();
-        }
+        await OpenFilePickerAsync();
     }
 
-    private async Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
+    private Task OpenFilePickerAsync()
+        => _mudFileUpload?.OpenFilePickerAsync() ?? Task.CompletedTask;
+
+    private async Task OnFilesChanged(InputFileChangeEventArgs e)
     {
+        ClearDragClass();
+        var files = e.GetMultipleFiles();
+        
         foreach (var file in files)
         {
             if (file.Size > 10 * 1024 * 1024) // 10MB limit
             {
                 Snackbar.Add($"File {file.Name} is too large (max 10MB)", Severity.Warning);
+                continue;
+            }
+
+            // Check if file is already uploaded
+            if (UploadedFiles.Any(f => f.OriginalFileName == file.Name))
+            {
+                Snackbar.Add($"File {file.Name} is already uploaded", Severity.Info);
                 continue;
             }
 
@@ -86,7 +138,22 @@
     {
         UploadedFiles.Remove(file);
         await UploadedFilesChanged.InvokeAsync(UploadedFiles);
+        Snackbar.Add($"Removed {file.OriginalFileName}", Severity.Info);
     }
+
+    private async Task ClearAllFiles()
+    {
+        UploadedFiles.Clear();
+        await UploadedFilesChanged.InvokeAsync(UploadedFiles);
+        await (_mudFileUpload?.ClearAsync() ?? Task.CompletedTask);
+        Snackbar.Add("All files cleared", Severity.Info);
+    }
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary mud-theme-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
 
     private string FormatFileSize(long bytes)
     {
@@ -99,5 +166,20 @@
             counter++;
         }
         return string.Format("{0:n1}{1}", number, suffixes[counter]);
+    }
+
+    private string GetFileIcon(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".txt" or ".md" => Icons.Material.Filled.TextSnippet,
+            ".cs" or ".js" or ".ts" or ".py" or ".java" or ".cpp" or ".c" or ".h" or ".php" or ".rb" or ".go" or ".rs" or ".swift" or ".kt" or ".scala" => Icons.Material.Filled.Code,
+            ".html" or ".css" => Icons.Material.Filled.Web,
+            ".json" or ".xml" => Icons.Material.Filled.DataObject,
+            ".sh" or ".bat" => Icons.Material.Filled.Terminal,
+            ".sql" => Icons.Material.Filled.Storage,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
     }
 }
