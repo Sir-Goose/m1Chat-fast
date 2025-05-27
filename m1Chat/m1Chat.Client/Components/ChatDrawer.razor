@@ -4,6 +4,7 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1"
            Variant="DrawerVariant.Persistent" Class="d-flex flex-column">
@@ -220,8 +221,13 @@
   private async Task HandleDeleteChat(SidebarChat chat) =>
     await OnChatDeleted.InvokeAsync(chat);
 
-  private async Task HandleExportChat(SidebarChat chat) =>
+  private async Task HandleExportChat(SidebarChat chat)
+  {
+    await Task.Delay(1);
+    Snackbar.Add("Feature not yet implemented", Severity.Warning);
     Console.WriteLine($"Export chat: {chat.Name}");
+  }
+    
 
   private async Task HandleRenameChat(SidebarChat chat)
   {
