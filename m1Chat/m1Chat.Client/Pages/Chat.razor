@@ -180,7 +180,7 @@
                 AutoGrow="true"
                 MaxLines="10"
                 Class="flex-grow-1"
-                Immediate="false"
+                Immediate="true"
                 OnKeyUp="HandleKeyUp"/>
             </div>
             <div
@@ -466,7 +466,7 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
-    return;
+    //return;
     if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) 
     {
         if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
