@@ -50,10 +50,10 @@ namespace m1Chat.Client.Services
         public class UploadedFileInfo
         {
             public Guid Id { get; set; }
-            public string OriginalFileName { get; set; }
+            public required string OriginalFileName { get; set; }
             public long FileSize { get; set; }
             public DateTime UploadedAt { get; set; }
-            public string Url { get; set; }
+            public string? Url { get; set; }
         }
     }
 }
