@@ -1,4 +1,5 @@
 @* UserMarkdown.razor *@
+@using System.ComponentModel.DataAnnotations
 @using Markdig
 @inject IJSRuntime JS
 @using Ganss.Xss
@@ -7,7 +8,7 @@
 <div @ref="userDiv"></div>
 
 @code {
-    [Parameter] public string Markdown { get; set; }
+    [Parameter] public required string Markdown { get; set; }
 
     private ElementReference userDiv;
     private string _lastMarkdown;
