@@ -270,6 +270,7 @@
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
+  private ChatMessage _messageBeingEdited; // New state variable to track the message being edited
   // File upload properties
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
   private FileUploadComponent _fileUploadComponentRef;
@@ -402,6 +403,7 @@
     _chatIsPinned = false;
     CurrentMessageFiles.Clear();
     _showFileUpload = false; // Hide file upload when creating new chat
+    _messageBeingEdited = null; // Clear editing state
     StateHasChanged();
   }
 
@@ -425,6 +427,7 @@
       .ToList();
     CurrentMessageFiles.Clear();
     _showFileUpload = false; // Hide file upload when loading chat
+    _messageBeingEdited = null; // Clear editing state
     _needsScroll = true;
     StateHasChanged();
   }
@@ -487,13 +490,34 @@
     StateHasChanged(); 
 
     var fileIds = CurrentMessageFiles.Select(f => f.Id).ToList();
+    var userMessageTextForName = textToSend; // Capture before clearing MessageText
 
-    _chatHistory.Add(new ChatMessage { 
-      IsUser = true, 
-      Text = textToSend, 
-      FileIds = fileIds 
-    });
-    var userMessageTextForName = textToSend; 
+    // Check if we are editing an existing message
+    if (_messageBeingEdited != null)
+    {
+      var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
+      if (originalMessageIndex != -1)
+      {
+        // Update the existing user message
+        _chatHistory[originalMessageIndex] = _messageBeingEdited with { Text = textToSend, FileIds = fileIds };
+        // If the edited message was a user message, remove subsequent AI messages
+        if (_messageBeingEdited.IsUser)
+        {
+          _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > originalMessageIndex && !m.IsUser);
+        }
+      }
+      _messageBeingEdited = null; // Clear editing state
+    }
+    else
+    {
+      // Add a new user message
+      _chatHistory.Add(new ChatMessage { 
+        IsUser = true, 
+        Text = textToSend, 
+        FileIds = fileIds 
+      });
+    }
+
     MessageText = "";
     CurrentMessageFiles.Clear();
     _showFileUpload = false; // Hide file upload after sending
@@ -563,6 +587,9 @@
       int chunkCount = 0;
       var lastUpdate = DateTime.UtcNow;
       
+      // If we just edited a user message, we need to regenerate the AI response from that point.
+      // Otherwise, we regenerate based on the full history.
+      var messagesForAiStartIdx = _messageBeingEdited != null ? _chatHistory.IndexOf(_messageBeingEdited) : 0;
       // Prepare messages for AI, including file content (handled by server-side CompletionService)
       var messagesForAi = _chatHistory
         .Take(_chatHistory.Count - 1) // Exclude the placeholder AI message
@@ -571,7 +598,7 @@
             Role = m.IsUser ? "user" : "assistant",
             Content = m.Text,
             FileIds = m.FileIds // Pass FileIds to client-side service
-        }).ToList();
+        }).Skip(messagesForAiStartIdx).ToList(); // Start from the edited message if applicable
 
       await foreach (var chunk in CompletionService.StreamCompletionAsync(
                        messagesForAi, 
@@ -799,6 +826,7 @@
   }
 
   private void HandleEditMessage(ChatMessage m) {
+    _messageBeingEdited = m; // Set the message being edited
     MessageText = m.Text; 
     // Restore files for editing if they were part of this message
     CurrentMessageFiles = m.FileIds
