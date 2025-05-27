@@ -1,24 +1,24 @@
 @* UserMarkdown.razor *@
 @using System.ComponentModel.DataAnnotations
 @using Markdig
-@inject IJSRuntime JS
+@inject IJSRuntime Js
 @using Ganss.Xss
 
 @* Render the content inside a simple div. The parent MudChatBubble will handle the bubble styling and alignment. *@
-<div @ref="userDiv"></div>
+<div @ref="_userDiv"></div>
 
 @code {
-    [Parameter] public required string Markdown { get; set; }
+    [Parameter] public string Markdown { get; set; } = "";
 
-    private ElementReference userDiv;
-    private string _lastMarkdown;
+    private ElementReference _userDiv;
+    private string _lastMarkdown = "";
 
     // Use the same pipeline configuration as AiMarkdown for consistency
-    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
 
-    private static readonly HtmlSanitizer _htmlSanitizer = new HtmlSanitizer();
+    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -27,11 +27,11 @@
         {
             _lastMarkdown = Markdown;
             // 1. Convert Markdown to HTML
-            var unsafeHtml = Markdig.Markdown.ToHtml(Markdown ?? "", _pipeline);
+            var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
             // 2. SANITIZE THE HTML OUTPUT
-            var safeHtml = _htmlSanitizer.Sanitize(unsafeHtml);
+            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
             // Use the same JS interop function as AiMarkdown
-            await JS.InvokeVoidAsync("setInnerHtmlAndRenderMath", userDiv, safeHtml);
+            await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _userDiv, safeHtml);
         }
     }
 }

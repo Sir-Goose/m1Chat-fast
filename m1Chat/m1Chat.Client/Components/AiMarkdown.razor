@@ -1,26 +1,33 @@
 @using Markdig
-@inject IJSRuntime JS
+@inject IJSRuntime Js
+@using Ganss.Xss
 
-<div @ref="aiDiv" class="mud-typography-body1 ai-message"></div>
+<div @ref="_aiDiv" class="mud-typography-body1 ai-message"></div>
 
 @code {
-    [Parameter] public string Markdown { get; set; }
+    [Parameter] public string Markdown { get; set; } = "";
 
-    private ElementReference aiDiv;
-    private string _lastMarkdown;
+    private ElementReference _aiDiv;
+    private string _lastMarkdown = "";
 
     // pipeline with table support, fenced code, lists, footnotes, etc.
-    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
 
+    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Markdown != _lastMarkdown)
         {
             _lastMarkdown = Markdown;
-            var html = Markdig.Markdown.ToHtml(Markdown ?? "", _pipeline);
-            await JS.InvokeVoidAsync("setInnerHtmlAndRenderMath", aiDiv, html);
+            // 1. Convert Markdown to HTML
+            var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
+            // 2. SANITIZE THE HTML OUTPUT
+            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+            // Use the same JS interop function as AiMarkdown
+            await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml);
         }
     }
 }
