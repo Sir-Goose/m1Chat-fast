@@ -3,6 +3,7 @@
 @using Markdig
 @inject IJSRuntime Js
 @using Ganss.Xss
+@using Markdig.SyntaxHighlighting
 
 @* Render the content inside a simple div. The parent MudChatBubble will handle the bubble styling and alignment. *@
 <div @ref="_userDiv"></div>
@@ -18,10 +19,15 @@
         .UseAdvancedExtensions()
         .Build();
 
-    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    private static readonly HtmlSanitizer _htmlSanitizer = new HtmlSanitizer();
+    
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _htmlSanitizer.AllowedTags.Add("pre");
+        _htmlSanitizer.AllowedTags.Add("code");
+        _htmlSanitizer.AllowedTags.Add("span");;
+        _htmlSanitizer.AllowedAttributes.Add("class");
         // Check if the markdown content has actually changed to avoid unnecessary JS calls
         if (Markdown != _lastMarkdown)
         {
@@ -29,7 +35,7 @@
             // 1. Convert Markdown to HTML
             var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
             // 2. SANITIZE THE HTML OUTPUT
-            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+            var safeHtml = _htmlSanitizer.Sanitize(unsafeHtml);
             // Use the same JS interop function as AiMarkdown
             await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _userDiv, safeHtml);
         }

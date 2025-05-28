@@ -1,6 +1,7 @@
 @using Markdig
 @inject IJSRuntime Js
 @using Ganss.Xss
+@using Markdig.SyntaxHighlighting
 
 <div @ref="_aiDiv" class="mud-typography-body1 ai-message"></div>
 
@@ -15,17 +16,21 @@
         .UseAdvancedExtensions()
         .Build();
 
-    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    private static readonly HtmlSanitizer _htmlSanitizer = new HtmlSanitizer();
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _htmlSanitizer.AllowedTags.Add("pre");
+        _htmlSanitizer.AllowedTags.Add("code");
+        _htmlSanitizer.AllowedTags.Add("span");;
+        _htmlSanitizer.AllowedAttributes.Add("class");
         if (Markdown != _lastMarkdown)
         {
             _lastMarkdown = Markdown;
             // 1. Convert Markdown to HTML
             var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
             // 2. SANITIZE THE HTML OUTPUT
-            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+            var safeHtml = _htmlSanitizer.Sanitize(unsafeHtml);
             // Use the same JS interop function as AiMarkdown
             await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml);
         }

@@ -1,7 +1,7 @@
 @using MudBlazor
 @typeparam TItem
 
-<MudList T="TItem" Clickable="false" Dense="true">
+<MudList T="TItem" Dense="true">
     @foreach (var chat in Items)
     {
         <MudMenu
@@ -15,8 +15,7 @@
                     Class="sidebar-chat-row"
                     Style="display: flex; align-items: center; justify-content: space-between;"
                     OnClick="() => OnItemSelected.InvokeAsync(chat)"
-                    @oncontextmenu:preventDefault
-                    Selected="@(ActiveItemId == GetItemId(chat))">
+                    @oncontextmenu:preventDefault>
                     <MudText
                         Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
                         Typo="Typo.body2"
