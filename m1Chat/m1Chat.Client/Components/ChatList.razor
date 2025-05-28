@@ -20,14 +20,14 @@
                         Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
                         Typo="Typo.body2"
                         Class="chat-name-text"
-                        Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color:#b2b0bf">
                         @GetItemName(chat)
                     </MudText>
                     <span class="chat-actions" style="display: flex; gap: 2px;">
                         <span @onclick:stopPropagation="true">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.PushPin"
-                                Color="Color.Default"
+                                Color="Color.Primary"
                                 Size="Size.Small"
                                 OnClick="() => OnItemPinned.InvokeAsync(chat)"
                                 aria-label="Pin chat"/>
