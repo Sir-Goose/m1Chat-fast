@@ -11,7 +11,6 @@
     <ItemGroup>
         <PackageReference Include="HtmlSanitizer" Version="9.0.884" />
         <PackageReference Include="Markdig" Version="0.41.1" />
-        <PackageReference Include="Markdig.SyntaxHighlighting" Version="1.1.7" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.*"/>
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.4" />
         <PackageReference Include="MudBlazor" Version="8.*"/>
