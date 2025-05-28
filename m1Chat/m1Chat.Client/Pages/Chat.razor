@@ -1,4 +1,5 @@
 @page "/Chat"
+@using System.Numerics
 @using m1Chat.Client.Components
 @using m1Chat.Client.Services
 @inject IScrollManager ScrollManager
@@ -50,7 +51,7 @@
           {
             if (m.IsUser)
             {
-              <MudStack JustifyContent="FlexEnd">
+              <MudStack>
                 <div class="user-message-container">
                   @if (m.FileIds != null && m.FileIds.Any())
                   {
@@ -174,14 +175,17 @@
             
             <div style="display:flex;align-items:center;">
               <MudTextField
+                @ref="_messageTextField"
                 @bind-Value="MessageText"
                 Label="Enter your message"
                 Variant="Variant.Outlined"
                 AutoGrow="true"
+                AutoFocus="true"
                 MaxLines="10"
                 Class="flex-grow-1"
-                Immediate="true"
-                OnKeyUp="HandleKeyUp"/>
+                Immediate="false"
+                OnKeyUp="HandleKeyUp"
+                />
             </div>
             <div
               style="display:flex;align-items:center;margin-top:8px;">
@@ -321,7 +325,7 @@
   private string _chatName = "New Chat";
   private List<ChatMessage> _chatHistory = new();
   private bool _chatIsPinned;
-
+  private MudTextField<string> _messageTextField;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
   protected override async Task OnInitializedAsync()
@@ -348,6 +352,16 @@
     ApplyThinkingOptionsForModel(ChatSelectedOption);
   }
 
+  private int EstimateTokens()
+  {
+    var characters = MessageText.Length;
+    var tokens = characters / 4.2; 
+    return (int)Math.Round(tokens); 
+  }
+  
+  
+
+  
   private void HandleChatModelChanged(string newModel)
   {
     ChatSelectedOption = newModel; 
@@ -466,12 +480,16 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
+    
     //return;
-    if (args.Key == "Enter" && !args.ShiftKey && !args.CtrlKey && !args.AltKey) 
+    if (args.Key == "Enter" && !args.ShiftKey)
     {
-        if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
+      await _messageTextField.BlurAsync();
+      await _messageTextField.FocusAsync();
+      if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
         {
             await SendMessage();
+            
         }
     }
   }
