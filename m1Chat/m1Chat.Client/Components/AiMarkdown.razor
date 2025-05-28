@@ -16,21 +16,21 @@
         .UseAdvancedExtensions()
         .Build();
 
-    private static readonly HtmlSanitizer _htmlSanitizer = new HtmlSanitizer();
+    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _htmlSanitizer.AllowedTags.Add("pre");
-        _htmlSanitizer.AllowedTags.Add("code");
-        _htmlSanitizer.AllowedTags.Add("span");;
-        _htmlSanitizer.AllowedAttributes.Add("class");
+        HtmlSanitizer.AllowedTags.Add("pre");
+        HtmlSanitizer.AllowedTags.Add("code");
+        HtmlSanitizer.AllowedTags.Add("span");;
+        HtmlSanitizer.AllowedAttributes.Add("class");
         if (Markdown != _lastMarkdown)
         {
             _lastMarkdown = Markdown;
             // 1. Convert Markdown to HTML
             var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
             // 2. SANITIZE THE HTML OUTPUT
-            var safeHtml = _htmlSanitizer.Sanitize(unsafeHtml);
+            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
             // Use the same JS interop function as AiMarkdown
             await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml);
         }
