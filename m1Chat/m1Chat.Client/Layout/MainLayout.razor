@@ -596,10 +596,10 @@
             element.innerHTML = html;
             // Render math (KaTeX)
             if (window.renderMathInElement) {
-                window.renderMathInElement(element, {
+                window.renderMathInRenderElement(element, {
                     delimiters: [
                         { left: "$$", right: "$$", display: true }, // For display math $$...$$
-                        { left: "$", right: "$", display: false }, // For inline math $...$
+                        { left: "\\(", right: "\\)", display: false }, // For inline math \(...\)
                     ],
                     throwOnError: false, // Prevents KaTeX from stopping on errors
                 });
@@ -696,6 +696,7 @@
         }
     };
 </script>
+
 
 @Body
 @code{
