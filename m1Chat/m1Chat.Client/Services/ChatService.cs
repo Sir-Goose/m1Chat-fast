@@ -23,9 +23,9 @@ namespace m1Chat.Client.Services
                 var response = await _http.GetAsync("api/chats");
                 var raw = await response.Content.ReadAsStringAsync();
 
-                Console.WriteLine("----- RAW RESPONSE FROM api/chats -----");
-                Console.WriteLine(raw);
-                Console.WriteLine("----- END RAW RESPONSE -----");
+                //Console.WriteLine("----- RAW RESPONSE FROM api/chats -----");
+                //Console.WriteLine(raw);
+                //Console.WriteLine("----- END RAW RESPONSE -----");
 
                 if (!response.IsSuccessStatusCode)
                 {
