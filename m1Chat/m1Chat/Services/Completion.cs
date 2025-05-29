@@ -65,7 +65,7 @@ namespace m1Chat.Services
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
-            
+
             if (db != null)
             {
                 foreach (var message in messages)
@@ -85,7 +85,8 @@ namespace m1Chat.Services
                                 if (file != null && File.Exists(file.FilePath))
                                 {
                                     var fileContent = await File.ReadAllTextAsync(file.FilePath);
-                                    fileContents.Add($"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
+                                    fileContents.Add(
+                                        $"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
                                 }
                             }
                             catch (Exception ex)
@@ -93,23 +94,23 @@ namespace m1Chat.Services
                                 Console.WriteLine($"Error reading file {fileId}: {ex.Message}");
                             }
                         }
-                        
+
                         if (fileContents.Any())
                         {
                             content = string.Join("\n", fileContents) + "\n" + content;
                         }
                     }
-                    
+
                     processedMessages.Add(new ChatMessageDto { Role = message.Role, Content = content });
                 }
             }
             else
             {
                 // No database context, use messages as-is but strip file IDs
-                processedMessages = messages.Select(m => new ChatMessageDto 
-                { 
-                    Role = m.Role, 
-                    Content = m.Content 
+                processedMessages = messages.Select(m => new ChatMessageDto
+                {
+                    Role = m.Role,
+                    Content = m.Content
                 }).ToList();
             }
 
@@ -209,6 +210,7 @@ namespace m1Chat.Services
                     {
                         yield return chunk;
                     }
+
                     break;
                 case "aistudio":
                     await foreach (
@@ -221,6 +223,7 @@ namespace m1Chat.Services
                     {
                         yield return chunk;
                     }
+
                     break;
                 case "groq":
                     await foreach (
@@ -229,6 +232,7 @@ namespace m1Chat.Services
                     {
                         yield return chunk;
                     }
+
                     break;
                 default:
                     await foreach (
@@ -241,6 +245,7 @@ namespace m1Chat.Services
                     {
                         yield return chunk;
                     }
+
                     break;
             }
         }
@@ -255,8 +260,7 @@ namespace m1Chat.Services
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(
-                    m => new { role = m.Role, content = m.Content }
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }
                 ),
                 stream = true
             };
@@ -298,21 +302,45 @@ namespace m1Chat.Services
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
+            bool inReasoningBlock = false;
+
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
                 if (line.StartsWith("data: "))
                 {
                     var jsonData = line["data: ".Length..].Trim();
-                    if (jsonData == "[DONE]")
-                        break;
-                    var chunk = TryParseContentChunk(jsonData);
-                    if (!string.IsNullOrEmpty(chunk))
-                        yield return chunk;
+                    if (jsonData == "[DONE]") break;
+
+                    var (contentChunk, reasoning) = TryParseContentChunkOpenrouter(jsonData);
+                    if (!string.IsNullOrEmpty(reasoning))
+                    {
+                        if (!inReasoningBlock)
+                        {
+                            yield return "```Thinking ";
+                            inReasoningBlock = true;
+                        }
+
+                        yield return reasoning;
+                    }
+                    else if (!string.IsNullOrEmpty(contentChunk))
+                    {
+                        if (inReasoningBlock)
+                        {
+                            yield return "```\n";
+                            inReasoningBlock = false;
+                        }
+
+                        yield return contentChunk;
+                    }
                 }
+            }
+
+            if (inReasoningBlock)
+            {
+                yield return "```\n";
             }
         }
 
@@ -324,8 +352,7 @@ namespace m1Chat.Services
             var requestBody = new
             {
                 model,
-                messages = messages.Select(
-                    m => new { role = m.Role, content = m.Content }
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }
                 ),
                 stream = true
             };
@@ -395,10 +422,9 @@ namespace m1Chat.Services
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(
-                    m => new { role = m.Role, content = m.Content }
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }
                 ),
-                stream = true
+                stream = true,
             };
 
             var json = JsonSerializer.Serialize(requestBody);
@@ -449,6 +475,7 @@ namespace m1Chat.Services
                     var jsonData = line["data: ".Length..].Trim();
                     if (jsonData == "[DONE]")
                         break;
+                    //Console.WriteLine($"Raw chunk: {jsonData}");
                     var chunk = TryParseContentChunk(jsonData);
                     if (!string.IsNullOrEmpty(chunk))
                         yield return chunk;
@@ -483,7 +510,44 @@ namespace m1Chat.Services
             {
                 Console.WriteLine($"Generic error parsing chunk: {ex.Message}. Data: {jsonData}");
             }
+
             return null;
+        }
+
+        private (string? content, string? reasoning) TryParseContentChunkOpenrouter(string jsonData)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(jsonData);
+                var root = doc.RootElement;
+                var choices = root.GetProperty("choices");
+                if (choices.GetArrayLength() > 0)
+                {
+                    var delta = choices[0].GetProperty("delta");
+                    string? content = null;
+                    string? reasoning = null;
+
+                    // Extract content if present
+                    if (delta.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.String)
+                    {
+                        content = c.GetString();
+                    }
+
+                    // Extract reasoning if present
+                    if (delta.TryGetProperty("reasoning", out var r) && r.ValueKind == JsonValueKind.String)
+                    {
+                        reasoning = r.GetString();
+                    }
+
+                    return (content, reasoning);
+                }
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}");
+            }
+
+            return (null, null);
         }
     }
 }
