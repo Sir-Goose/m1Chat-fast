@@ -141,6 +141,12 @@ namespace m1Chat.Services
                     _activeURI = _openRouterURI;
                     _provider = "openrouter";
                     break;
+                case "Deepseek R1 0528":
+                    model = "deepseek/deepseek-r1-0528:free";
+                    _activeApiKey = _openRouterApiKey;
+                    _activeURI = _openRouterURI;
+                    _provider = "openrouter";
+                    break;
                 case "Gemini 2.0 Flash":
                     model = "gemini-2.0-flash";
                     _activeApiKey = _aiStudioApiKey;
