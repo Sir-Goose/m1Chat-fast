@@ -27,9 +27,11 @@ namespace m1Chat.Services
         private readonly string _openRouterApiKey;
         private readonly string _groqApiKey;
         private readonly string _aiStudioApiKey;
+        private readonly string _chutesApiKey;
         private readonly string _openRouterURI;
         private readonly string _groqURI;
         private readonly string _aiStudioURI;
+        private readonly string _chutesUri;
         private string _activeApiKey;
         private string _activeURI;
         private string _provider;
@@ -42,10 +44,13 @@ namespace m1Chat.Services
             _groqApiKey =
                 "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";
             _aiStudioApiKey = "AIzaSyDpr4nFieUgQ08NlnQOGyMQ4CYHnEm-7hw";
+            _chutesApiKey =
+                "cpk_d1c9605d36354f7697c33b118005c996.ec62a91ca96e58f8a6d6ddc854bfd71b.DG1hrwmJ1Q2BekstSUJruw2v7wMAWAhm";
             _openRouterURI = "https://openrouter.ai/api/v1/chat/completions";
             _groqURI = "https://api.groq.com/openai/v1/chat/completions";
             _aiStudioURI =
                 "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+            _chutesUri = "https://llm.chutes.ai/v1/chat/completions";
             _provider = "openrouter"; // Default provider
 
             if (string.IsNullOrEmpty(_openRouterApiKey))
@@ -142,10 +147,10 @@ namespace m1Chat.Services
                     _provider = "openrouter";
                     break;
                 case "Deepseek R1 0528":
-                    model = "deepseek/deepseek-r1-0528:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    model = "deepseek-ai/DeepSeek-R1-0528";
+                    _activeApiKey = _chutesApiKey;
+                    _activeURI = _chutesUri;
+                    _provider = "chutes";
                     break;
                 case "Gemini 2.0 Flash":
                     model = "gemini-2.0-flash";
@@ -234,6 +239,15 @@ namespace m1Chat.Services
                 case "groq":
                     await foreach (
                         var chunk in StreamGroqAsync(processedMessages, model)
+                    )
+                    {
+                        yield return chunk;
+                    }
+
+                    break;
+                case "chutes":
+                    await foreach (
+                        var chunk in StreamChutesAsync(processedMessages, model)
                     )
                     {
                         yield return chunk;
@@ -348,6 +362,97 @@ namespace m1Chat.Services
             {
                 yield return "```\n";
             }
+        }
+        
+        private async IAsyncEnumerable<string> StreamChutesAsync(
+            List<ChatMessageDto> messages,
+            string model
+        )
+        {
+            var requestBody = new
+            {
+                model,
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }
+                ),
+                stream = true
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _activeApiKey);
+            _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
+            _httpClient.DefaultRequestHeaders.Add(
+                "HTTP-Referer",
+                "https://chat.mattdev.im"
+            );
+            _httpClient.DefaultRequestHeaders.Remove("X-Title");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+
+            using var response = await _httpClient.SendAsync(
+                new HttpRequestMessage(HttpMethod.Post, _activeURI)
+                {
+                    Content = content
+                },
+                HttpCompletionOption.ResponseHeadersRead
+            );
+
+            Console.WriteLine(
+                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response content: {error}");
+                throw new Exception(
+                    $"OpenRouter API error: {response.StatusCode} - {error}"
+                );
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+            bool inReasoningBlock = false;
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                if (line.StartsWith("data: "))
+                {
+                    var jsonData = line["data: ".Length..].Trim();
+                    if (jsonData == "[DONE]") break;
+                    Console.WriteLine(jsonData);
+                    var contentChunk = TryParseContentChunk(jsonData);
+                    if (!string.IsNullOrEmpty(contentChunk))
+                    {
+                        if (contentChunk == "<think>")
+                        {
+                            if (!inReasoningBlock)
+                            {
+                                yield return "```Thinking ";
+                                inReasoningBlock = true;
+                            }
+                        }
+                        else if (contentChunk == "</think>")
+                        {
+                            if (inReasoningBlock)
+                            {
+                                yield return "```\n";
+                                inReasoningBlock = false;
+                            }
+                        }
+                        else
+                        {
+                            yield return contentChunk;
+                        }
+                    }
+                }
+            }
+
         }
 
         private async IAsyncEnumerable<string> StreamGroqAsync(
