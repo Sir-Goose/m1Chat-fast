@@ -601,7 +601,7 @@
             element.innerHTML = html;
             // Render math (KaTeX)
             if (window.renderMathInElement) {
-                window.renderMathInRenderElement(element, {
+                window.renderMathInElement(element, {
                     delimiters: [
                         { left: "$$", right: "$$", display: true }, // For display math $$...$$
                         { left: "\\(", right: "\\)", display: false }, // For inline math \(...\)
