@@ -534,14 +534,23 @@
     window.chatScroll = {
         onScroll: function (element, dotNetHelper) {
             element.addEventListener('scroll', function () {
-                const atBottom =
-                    element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+                // Get the computed line height of the chat content
+                const sampleElement = element.querySelector('.message') || element;
+                const lineHeight = parseFloat(getComputedStyle(sampleElement).lineHeight) || 20;
+                
+                // Calculate threshold as 2 lines (with 10px buffer)
+                const threshold = (4 * lineHeight) + 10;
+                
+                // Check if near bottom
+                const atBottom = 
+                    element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
+                    
                 dotNetHelper.invokeMethodAsync('SetAtBottom', atBottom);
             });
         }
     };
-
 </script>
+
 
 <script>
     window.streamChatCompletion = async (url, payload, dotnetRef) => {
