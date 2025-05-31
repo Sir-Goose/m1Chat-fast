@@ -110,7 +110,7 @@
             {
               <MudStack @key="m.Id" JustifyContent="FlexStart">
                 <div class="ai-message-container">
-                  <AiMarkdown Markdown="@m.Text"/>
+                  <AiMarkdown Markdown="@m.Text" IsStreaming="@m.IsStreaming" />
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
@@ -507,9 +507,9 @@
     {
         return;
     }
-    
+
     _isSendingMessage = true;
-    StateHasChanged(); 
+    StateHasChanged();
 
     var fileIds = CurrentMessageFiles.Select(f => f.Id).ToList();
     var userMessageTextForName = textToSend;
@@ -519,7 +519,10 @@
         var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
         if (originalMessageIndex != -1)
         {
-            _chatHistory[originalMessageIndex] = _messageBeingEdited with { Text = textToSend, FileIds = fileIds };
+            _chatHistory[originalMessageIndex] = _messageBeingEdited with { 
+                Text = textToSend, 
+                FileIds = fileIds 
+            };
             if (_messageBeingEdited.IsUser)
             {
                 _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > originalMessageIndex && !m.IsUser);
@@ -595,7 +598,12 @@
         await LoadSidebarChatsAsync(); 
     }
 
-    var aiMessage = new ChatMessage { IsUser = false, Text = "" };
+    // Create new AI message with streaming enabled
+    var aiMessage = new ChatMessage { 
+        IsUser = false, 
+        Text = "", 
+        IsStreaming = true // Enable streaming state
+    };
     _chatHistory.Add(aiMessage);
     _needsScroll = true;
     StateHasChanged();
@@ -667,6 +675,7 @@
                 if (toAdd != null)
                 {
                     aiMessage.Text += toAdd;
+                    aiMessage.IsStreaming = true; // Maintain streaming state
                     lastUpdate = DateTime.UtcNow;
                     _needsScroll = true;
                     await InvokeAsync(StateHasChanged);
@@ -678,6 +687,7 @@
         if (buffer.Length > 0)
         {
             aiMessage.Text += buffer.ToString();
+            aiMessage.IsStreaming = true; // Maintain streaming state
             _needsScroll = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -685,17 +695,21 @@
         if (chunkCount == 0 && string.IsNullOrWhiteSpace(aiMessage.Text))
         {
             aiMessage.Text = "[No response received from AI]";
+            aiMessage.IsStreaming = true; // Maintain streaming state
             await InvokeAsync(StateHasChanged);
         }
     }
     catch (Exception ex)
     {
         aiMessage.Text = $"[Error: {ex.Message}]";
+        aiMessage.IsStreaming = true; // Maintain streaming state
         Console.WriteLine($"Error streaming completion: {ex}");
         await InvokeAsync(StateHasChanged);
     }
     finally
     {
+        // Mark streaming as complete
+        aiMessage.IsStreaming = false;
         _isSendingMessage = false;
         StateHasChanged(); 
     }
@@ -712,6 +726,7 @@
         await LoadSidebarChatsAsync();
     }
 }
+
 
 
   // Used for saving to DB via ChatService (expects DTOs with FileIds)
@@ -970,5 +985,6 @@
     public bool IsUser { get; init; }
     public string Text { get; set; } = ""; // Property is 'Text'
     public List<Guid> FileIds { get; init; } = new();
+    public bool IsStreaming { get; set; }
   }
 }
