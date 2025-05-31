@@ -436,7 +436,8 @@ namespace m1Chat.Services
                         }
                         else if (contentChunk == "</think>")
                         {
-                            yield return "```\n";
+                            yield return "```\n" +
+                                         "\n";
                             inReasoningBlock = false;
                         }
                         else
