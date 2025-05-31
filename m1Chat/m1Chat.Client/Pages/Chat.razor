@@ -51,7 +51,7 @@
           {
             if (m.IsUser)
             {
-              <MudStack>
+              <MudStack @key="m.Id">
                 <div class="user-message-container">
                   @if (m.FileIds != null && m.FileIds.Any())
                   {
@@ -107,7 +107,7 @@
             }
             else
             {
-              <MudStack JustifyContent="FlexStart">
+              <MudStack @key="m.Id" JustifyContent="FlexStart">
                 <div class="ai-message-container">
                   <AiMarkdown Markdown="@m.Text"/>
                   <div class="message-actions">
@@ -628,15 +628,16 @@
       {
         aiMessage.Text += chunk;
         chunkCount++;
-        _needsScroll = true;
-
+        
         var now = DateTime.UtcNow;
-        if ((now - lastUpdate).TotalMilliseconds >= 100 || chunkCount <= 5) 
+        if ((now - lastUpdate).TotalMilliseconds >= 100) 
         {
           lastUpdate = now;
+          _needsScroll = true;
           await InvokeAsync(StateHasChanged);
         }
       }
+      _needsScroll = true;
       await InvokeAsync(StateHasChanged); 
 
       if (chunkCount == 0 && string.IsNullOrWhiteSpace(aiMessage.Text))
