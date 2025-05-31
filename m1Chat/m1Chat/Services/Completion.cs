@@ -425,7 +425,7 @@ namespace m1Chat.Services
                 {
                     var jsonData = line["data: ".Length..].Trim();
                     if (jsonData == "[DONE]") break;
-                    Console.WriteLine(jsonData);
+                    //Console.WriteLine(jsonData);
                     var contentChunk = TryParseContentChunk(jsonData);
                     if (!string.IsNullOrEmpty(contentChunk))
                     {
@@ -447,7 +447,14 @@ namespace m1Chat.Services
                         }
                         else
                         {
-                            yield return contentChunk;
+                            if (!inReasoningBlock)
+                            {
+                                yield return contentChunk;
+                            }
+                            else
+                            {
+                                yield return contentChunk.Replace("```", "");
+                            }
                         }
                     }
                 }
