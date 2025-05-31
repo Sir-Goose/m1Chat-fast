@@ -453,7 +453,7 @@ namespace m1Chat.Services
                             }
                             else
                             {
-                                yield return contentChunk.Replace("```", "");
+                                yield return contentChunk.Replace("```", "'''");
                             }
                         }
                     }
