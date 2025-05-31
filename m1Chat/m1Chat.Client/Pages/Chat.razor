@@ -471,7 +471,7 @@
       );
     }
 
-    if (_needsScroll && !_isAtBottom)
+    if (_needsScroll && _isAtBottom)
     {
       await ScrollManager.ScrollToBottomAsync(
         ".chat-container",
