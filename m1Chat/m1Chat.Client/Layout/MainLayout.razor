@@ -535,7 +535,7 @@
         onScroll: function (element, dotNetHelper) {
             element.addEventListener('scroll', function () {
                 // Get the computed line height of the chat content
-                const sampleElement = element.querySelector('.message') || element;
+                const sampleElement = element.querySelector('.ai-message') || element;
                 const lineHeight = parseFloat(getComputedStyle(sampleElement).lineHeight) || 20;
                 
                 // Calculate threshold as 2 lines (with 10px buffer)
