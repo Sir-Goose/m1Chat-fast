@@ -268,6 +268,7 @@
   private bool _isAtBottom = true;
   private bool _isSendingMessage = false;
   private bool _showFileUpload = false; // New state for showing/hiding file upload
+  private bool _isAutoScrolling = true;
 
   private ElementReference _chatContainerRef;
 
@@ -630,7 +631,7 @@
         chunkCount++;
         
         var now = DateTime.UtcNow;
-        if ((now - lastUpdate).TotalMilliseconds >= 100) 
+        if ((now - lastUpdate).TotalMilliseconds >= 200) 
         {
           lastUpdate = now;
           _needsScroll = true;
