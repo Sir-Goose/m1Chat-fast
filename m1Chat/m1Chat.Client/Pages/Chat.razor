@@ -429,7 +429,7 @@
   private async Task LoadChat(ChatDrawer.SidebarChat chat)
   {
     if (_chatId == chat.Id && _chatHistory.Any()) return;
-
+    _chatHistory.Clear();
     var fullChat = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     _chatId = fullChat.Id.ToString();
     _chatName = fullChat.Name;
