@@ -195,13 +195,14 @@
             <div
               style="display:flex;align-items:center;margin-top:8px;">
               <MudSelect
-                @bind-Value="ChatSelectedOption"
+                @bind-Value="ChatSelectedModel"
                 Variant="Variant.Text"
                 Margin="Margin.None"
                 Underline="false"
                 FitContent="true"
+                Typo="Typo.body1"
                 Class="mr-2">
-                @foreach (var opt in _chatOptions)
+                @foreach (var opt in _aiModelOptions)
                 {
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
                 }
@@ -275,16 +276,16 @@
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
   private FileUploadComponent _fileUploadComponentRef;
 
-  private string _chatSelectedOption = "Gemini 2.5 Flash";
+  private string _chatSelectedModel = "Gemini 2.5 Flash";
 
-  private string ChatSelectedOption
+  private string ChatSelectedModel
   {
-    get => _chatSelectedOption;
+    get => _chatSelectedModel;
     set
     {
-      if (_chatSelectedOption != value)
+      if (_chatSelectedModel != value)
       {
-        _chatSelectedOption = value;
+        _chatSelectedModel = value;
         ApplyThinkingOptionsForModel(value);
         StateHasChanged();
       }
@@ -303,7 +304,7 @@
   private Dictionary<string, List<string>> _modelThinkingOptionsMap;
 
 
-  private readonly List<string> _chatOptions = new()
+  private readonly List<string> _aiModelOptions = new()
   {
     "DeepSeek v3",
     //"DeepSeek Prover v2",
@@ -349,7 +350,7 @@
       { "llama-3.1-8b-instant", ThinkingOptionsNoneOnly }
     };
 
-    ApplyThinkingOptionsForModel(ChatSelectedOption);
+    ApplyThinkingOptionsForModel(ChatSelectedModel);
   }
 
   private int EstimateTokens()
@@ -362,7 +363,7 @@
 
   private void HandleChatModelChanged(string newModel)
   {
-    ChatSelectedOption = newModel;
+    ChatSelectedModel = newModel;
     ApplyThinkingOptionsForModel(newModel);
     StateHasChanged();
   }
@@ -426,7 +427,7 @@
     var fullChat = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     _chatId = fullChat.Id.ToString();
     _chatName = fullChat.Name;
-    ChatSelectedOption = fullChat.Model;
+    ChatSelectedModel = fullChat.Model;
     ApplyThinkingOptionsForModel(fullChat.Model);
     _chatIsPinned = fullChat.IsPinned;
     _chatHistory = fullChat.Messages
@@ -556,7 +557,7 @@
 
         var createReq = new ChatService.CreateChatRequest(
             tempName,
-            ChatSelectedOption,
+            ChatSelectedModel,
             new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
         );
@@ -588,7 +589,7 @@
 
         var updateNameReq = new ChatService.UpdateChatRequest(
             _chatName,
-            ChatSelectedOption,
+            ChatSelectedModel,
             new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
         );
@@ -626,7 +627,7 @@
 
         await foreach (var chunk in CompletionService.StreamCompletionAsync(
                          messagesForAi,
-                         ChatSelectedOption,
+                         ChatSelectedModel,
                          ThinkingSelectedOption
                        ))
         {
@@ -678,7 +679,7 @@
     {
         var updateReq = new ChatService.UpdateChatRequest(
             _chatName,
-            ChatSelectedOption,
+            ChatSelectedModel,
             ToSharedMessagesWithFilesForDb().ToArray(),
             _chatIsPinned
         );
@@ -826,7 +827,7 @@
       var lastUpdate = DateTime.UtcNow;
       await foreach (var chunk in CompletionService.StreamCompletionAsync(
                        messagesToSendForAi,
-                       ChatSelectedOption,
+                       ChatSelectedModel,
                        ThinkingSelectedOption
                      ))
       {
@@ -866,7 +867,7 @@
     {
       var updateReq = new ChatService.UpdateChatRequest(
         _chatName,
-        ChatSelectedOption,
+        ChatSelectedModel,
         ToSharedMessagesWithFilesForDb().ToArray(),
         _chatIsPinned
       );
@@ -917,7 +918,7 @@
     var branchName = $"Branch: {_chatName}".Truncate(50);
     var createReq = new ChatService.CreateChatRequest(
       branchName,
-      ChatSelectedOption,
+      ChatSelectedModel,
       branchChatHistory.Select(m => new ChatService.ChatMessageDto(
         m.IsUser ? "user" : "assistant",
         m.Text,
