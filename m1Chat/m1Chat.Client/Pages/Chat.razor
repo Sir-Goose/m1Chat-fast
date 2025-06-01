@@ -108,7 +108,7 @@
             }
             else
             {
-              <MudStack @key="m.Id" JustifyContent="FlexStart">
+              <MudStack @key="m.Id">
                 <div class="ai-message-container">
                   <AiMarkdown Markdown="@m.Text" IsStreaming="@m.IsStreaming"/>
                   <div class="message-actions">
@@ -269,14 +269,13 @@
   private bool _isAtBottom = true;
   private bool _isSendingMessage = false;
   private bool _showFileUpload = false; // New state for showing/hiding file upload
-  private bool _isAutoScrolling = true;
 
   private ElementReference _chatContainerRef;
 
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
 
-  private ChatMessage _messageBeingEdited; // New state variable to track the message being edited
+  private ChatMessage? _messageBeingEdited; // New state variable to track the message being edited
 
   // File upload properties
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
@@ -329,7 +328,7 @@
 
   private string? _chatId;
   private string _chatName = "New Chat";
-  private List<ChatMessage> _chatHistory = new();
+  private List<ChatMessage?> _chatHistory = new();
   private bool _chatIsPinned;
   private MudTextField<string> _messageTextField;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
@@ -640,49 +639,14 @@
             buffer.Append(chunk);
             chunkCount++;
 
-            // Process buffer to find spaces for word separation
-            while (buffer.Length > 0)
+            // Update UI every 200ms with entire buffer
+            if ((DateTime.UtcNow - lastUpdate).TotalMilliseconds >= 300)
             {
-                int spaceIndex = -1;
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    if (buffer[i] == ' ')
-                    {
-                        spaceIndex = i;
-                        break;
-                    }
-                }
-
-                // Process based on space found or timeout
-                if (spaceIndex >= 0)
-                {
-                    // Extract content up to and including the space
-                    string toAdd = buffer.ToString(0, spaceIndex + 1);
-                    buffer.Remove(0, spaceIndex + 1);
-                    
-                    aiMessage.Text += toAdd;
-                    aiMessage.IsStreaming = true;
-                    lastUpdate = DateTime.UtcNow;
-                    _needsScroll = true;
-                    await InvokeAsync(StateHasChanged);
-                }
-                else if ((DateTime.UtcNow - lastUpdate).TotalMilliseconds >= 200)
-                {
-                    // Timeout reached, add entire buffer
-                    string toAdd = buffer.ToString();
-                    buffer.Clear();
-                    
-                    aiMessage.Text += toAdd;
-                    aiMessage.IsStreaming = true;
-                    lastUpdate = DateTime.UtcNow;
-                    _needsScroll = true;
-                    await InvokeAsync(StateHasChanged);
-                }
-                else
-                {
-                    // No space found and timeout not reached, wait for more data
-                    break;
-                }
+                aiMessage.Text += buffer.ToString();
+                buffer.Clear();
+                lastUpdate = DateTime.UtcNow;
+                _needsScroll = true;
+                await InvokeAsync(StateHasChanged);
             }
         }
 
@@ -690,7 +654,6 @@
         if (buffer.Length > 0)
         {
             aiMessage.Text += buffer.ToString();
-            aiMessage.IsStreaming = true;
             _needsScroll = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -729,6 +692,7 @@
         await LoadSidebarChatsAsync();
     }
 }
+
 
 
 
@@ -806,7 +770,7 @@
     StateHasChanged();
   }
 
-  private async Task HandleRegenerateMessage(ChatMessage messageToRegen)
+  private async Task HandleRegenerateMessage(ChatMessage? messageToRegen)
   {
     if (_isSendingMessage) return;
     _isSendingMessage = true;
@@ -821,7 +785,7 @@
     }
 
     List<ServiceChatMessage> messagesToSendForAi; // Use m1Chat.Client.Services.ChatMessage
-    ChatMessage targetAiMessage; // Local Chat.razor ChatMessage
+    ChatMessage? targetAiMessage; // Local Chat.razor ChatMessage
 
     if (messageToRegen.IsUser)
     {
@@ -916,7 +880,7 @@
     }
   }
 
-  private void HandleEditMessage(ChatMessage m)
+  private void HandleEditMessage(ChatMessage? m)
   {
     _messageBeingEdited = m; // Set the message being edited
     MessageText = m.Text;
@@ -936,7 +900,7 @@
   }
 
 
-  private async Task HandleCopyMessage(ChatMessage m)
+  private async Task HandleCopyMessage(ChatMessage? m)
   {
     try
     {
@@ -949,7 +913,7 @@
     }
   }
 
-  private async Task HandleBranchMessage(ChatMessage messageToBranchFrom)
+  private async Task HandleBranchMessage(ChatMessage? messageToBranchFrom)
   {
     var idx = _chatHistory.IndexOf(messageToBranchFrom);
     if (idx == -1) return;
