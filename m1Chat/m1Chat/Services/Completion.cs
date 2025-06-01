@@ -123,10 +123,10 @@ namespace m1Chat.Services
             switch (model)
             {
                 case "DeepSeek v3":
-                    model = "deepseek/deepseek-chat-v3-0324:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    model = "deepseek-ai/DeepSeek-V3-0324";
+                    _activeApiKey = _chutesApiKey;
+                    _activeURI = _chutesUri;
+                    _provider = "chutes";
                     break;
                 case "DeepSeek Prover v2":
                     model = "deepseek/deepseek-prover-v2:free";
