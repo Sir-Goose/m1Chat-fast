@@ -150,7 +150,8 @@
     </div>
 
     <div class="input-area-container">
-      <MudPaper Elevation="0" Class="pa-2 flex-shrink-0">
+      <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl 
+        px-4 pt-4">
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
 
@@ -179,9 +180,12 @@
                 @ref="_messageTextField"
                 @bind-Value="MessageText"
                 Label="Enter your message"
-                Variant="Variant.Outlined"
+                Margin="Margin.None"
+                Variant="Variant.Text"
                 AutoGrow="true"
                 AutoFocus="true"
+                Underline="false"
+                Lines="2"
                 MaxLines="10"
                 Class="flex-grow-1"
                 Immediate="false"
@@ -192,9 +196,9 @@
               style="display:flex;align-items:center;margin-top:8px;">
               <MudSelect
                 @bind-Value="ChatSelectedOption"
-                Label="Select a model"
-                Variant="Variant.Outlined"
-                Margin="Margin.Dense"
+                Variant="Variant.Text"
+                Margin="Margin.None"
+                Underline="false"
                 FitContent="true"
                 Class="mr-2">
                 @foreach (var opt in _chatOptions)
@@ -204,28 +208,19 @@
               </MudSelect>
               <MudSelect
                 @bind-Value="ThinkingSelectedOption"
-                Label="Thinking"
-                Variant="Variant.Outlined"
-                Margin="Margin.Dense"
+                Variant="Variant.Text"
+                Margin="Margin.None"
+                Underline="false"
+                AdornmentIcon="@Icons.Material.Filled.BlurCircular"
+                AdornmentColor="Color.Primary"
                 FitContent="true"
-                Class="mr-2"
+                Class="border-hidden"
                 Disabled="@_isThinkingSelectorDisabled">
                 @foreach (var opt in _currentThinkingOptions)
                 {
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
                 }
               </MudSelect>
-              <MudToggleIconButton
-                @bind-Toggled="_searchEnabled"
-                Icon="@Icons.Material.Filled.Public"
-                ToggledIcon="@Icons.Material.Filled.PublicOff"
-                Color="Color.Primary"
-                ToggledColor="Color.Secondary"
-                aria-label="Toggle search"
-                Class="ml-2"/>
-              <MudText Typo="Typo.body1" Class="ml-1">
-                Search
-              </MudText>
               <div
                 style="margin-left:auto;display:flex;align-items:center;">
                 <MudIconButton
@@ -244,15 +239,14 @@
                     @CurrentMessageFiles.Count file@(CurrentMessageFiles.Count == 1 ? "" : "s")
                   </MudChip>
                 }
-                <MudButton
+                <MudIconButton
                   Variant="Variant.Filled"
                   Color="Color.Primary"
-                  EndIcon="@Icons.Material.Filled.Send"
+                  Icon="@Icons.Material.Filled.Send"
                   OnClick="SendMessage"
                   aria-label="Send message"
                   Disabled="@_isSendingMessage">
-                  Send
-                </MudButton>
+                </MudIconButton>
               </div>
             </div>
           </div>
