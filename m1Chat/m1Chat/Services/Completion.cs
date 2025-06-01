@@ -28,13 +28,20 @@ namespace m1Chat.Services
         private readonly string _groqApiKey;
         private readonly string _aiStudioApiKey;
         private readonly string _chutesApiKey;
-        private readonly string _openRouterURI;
-        private readonly string _groqURI;
-        private readonly string _aiStudioURI;
+        private readonly string _openRouterUri;
+        private readonly string _groqUri;
+        private readonly string _aiStudioUri;
         private readonly string _chutesUri;
-        private string _activeApiKey;
-        private string _activeURI;
-        private string _provider;
+        private Provider _provider;
+
+        private enum Provider
+        {
+            Chutes,
+            OpenRouter,
+            AiStudio,
+            Groq
+            
+        }
 
         public Completion()
         {
@@ -46,12 +53,12 @@ namespace m1Chat.Services
             _aiStudioApiKey = "AIzaSyDpr4nFieUgQ08NlnQOGyMQ4CYHnEm-7hw";
             _chutesApiKey =
                 "cpk_d1c9605d36354f7697c33b118005c996.ec62a91ca96e58f8a6d6ddc854bfd71b.DG1hrwmJ1Q2BekstSUJruw2v7wMAWAhm";
-            _openRouterURI = "https://openrouter.ai/api/v1/chat/completions";
-            _groqURI = "https://api.groq.com/openai/v1/chat/completions";
-            _aiStudioURI =
+            _openRouterUri = "https://openrouter.ai/api/v1/chat/completions";
+            _groqUri = "https://api.groq.com/openai/v1/chat/completions";
+            _aiStudioUri =
                 "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
             _chutesUri = "https://llm.chutes.ai/v1/chat/completions";
-            _provider = "openrouter"; // Default provider
+            _provider = Provider.OpenRouter; // Default provider
 
             if (string.IsNullOrEmpty(_openRouterApiKey))
             {
@@ -65,58 +72,45 @@ namespace m1Chat.Services
             List<ChatMessageDto> messages,
             string model,
             string reasoningEffort,
-            ChatDbContext db = null
+            ChatDbContext db
         )
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
 
-            if (db != null)
+            foreach (var message in messages)
             {
-                foreach (var message in messages)
+                var content = message.Content;
+                Console.WriteLine(message.FileIds);
+                // If message has files, prepend their content
+                if (message.FileIds != null && message.FileIds.Any())
                 {
-                    var content = message.Content;
-                    Console.WriteLine(message.FileIds);
-                    // If message has files, prepend their content
-                    if (message.FileIds != null && message.FileIds.Any())
+                    Console.WriteLine("File detected");
+                    var fileContents = new List<string>();
+                    foreach (var fileId in message.FileIds)
                     {
-                        Console.WriteLine("File detected");
-                        var fileContents = new List<string>();
-                        foreach (var fileId in message.FileIds)
+                        try
                         {
-                            try
+                            var file = await db.UploadedFiles.FindAsync(fileId);
+                            if (file != null && File.Exists(file.FilePath))
                             {
-                                var file = await db.UploadedFiles.FindAsync(fileId);
-                                if (file != null && File.Exists(file.FilePath))
-                                {
-                                    var fileContent = await File.ReadAllTextAsync(file.FilePath);
-                                    fileContents.Add(
-                                        $"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"Error reading file {fileId}: {ex.Message}");
+                                var fileContent = await File.ReadAllTextAsync(file.FilePath);
+                                fileContents.Add(
+                                    $"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
                             }
                         }
-
-                        if (fileContents.Any())
+                        catch (Exception ex)
                         {
-                            content = string.Join("\n", fileContents) + "\n" + content;
+                            Console.WriteLine($"Error reading file {fileId}: {ex.Message}");
                         }
                     }
 
-                    processedMessages.Add(new ChatMessageDto { Role = message.Role, Content = content });
+                    if (fileContents.Count != 0)
+                    {
+                        content = string.Join("\n", fileContents) + "\n" + content;
+                    }
                 }
-            }
-            else
-            {
-                // No database context, use messages as-is but strip file IDs
-                processedMessages = messages.Select(m => new ChatMessageDto
-                {
-                    Role = m.Role,
-                    Content = m.Content
-                }).ToList();
+                processedMessages.Add(new ChatMessageDto { Role = message.Role, Content = content });
             }
 
             reasoningEffort = reasoningEffort.ToLower();
@@ -124,93 +118,65 @@ namespace m1Chat.Services
             {
                 case "DeepSeek v3":
                     model = "deepseek-ai/DeepSeek-V3-0324";
-                    _activeApiKey = _chutesApiKey;
-                    _activeURI = _chutesUri;
-                    _provider = "chutes";
+                    _provider = Provider.Chutes;
                     break;
                 case "DeepSeek Prover v2":
                     model = "deepseek/deepseek-prover-v2:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Gemini 2.5 Pro":
                     model = "google/gemini-2.5-pro-exp-03-25";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Deepseek r1":
                     model = "deepseek/deepseek-r1:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Deepseek R1 0528":
                     model = "deepseek-ai/DeepSeek-R1-0528";
-                    _activeApiKey = _chutesApiKey;
-                    _activeURI = _chutesUri;
-                    _provider = "chutes";
+                    _provider = Provider.Chutes;
                     break;
                 case "Gemini 2.0 Flash":
                     model = "gemini-2.0-flash";
-                    _activeApiKey = _aiStudioApiKey;
-                    _activeURI = _aiStudioURI;
-                    _provider = "aistudio";
+                    _provider = Provider.AiStudio;
                     break;
                 case "Gemini 2.5 Flash":
                     model = "gemini-2.5-flash-preview-05-20";
-                    _activeApiKey = _aiStudioApiKey;
-                    _activeURI = _aiStudioURI;
-                    _provider = "aistudio";
+                    _provider = Provider.AiStudio;
                     break;
                 case "Qwen3 235B":
                     model = "qwen/qwen3-235b-a22b:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "DeepSeek r1 v3 Chimera":
                     model = "tngtech/deepseek-r1t-chimera:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Gemma 3 27B":
                     model = "google/gemma-3-27b-it:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter; 
                     break;
                 case "Qwen3 30B":
                     model = "qwen/qwen3-30b-a3b:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "llama-3.1-8b-instant":
                     model = "llama-3.1-8b-instant";
-                    _activeApiKey = _groqApiKey;
-                    _activeURI = _groqURI;
-                    _provider = "groq";
+                    _provider = Provider.Groq;
                     break;
                 case "Devstral Small":
                     model = "mistralai/devstral-small:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
                 default:
                     model = "google/gemma-3-27b-it:free";
-                    _activeApiKey = _openRouterApiKey;
-                    _activeURI = _openRouterURI;
-                    _provider = "openrouter";
+                    _provider = Provider.OpenRouter;
                     break;
             }
 
             switch (_provider)
             {
-                case "openrouter":
+                case Provider.OpenRouter:
                     await foreach (
                         var chunk in StreamOpenRouterAsync(
                             processedMessages,
@@ -223,7 +189,7 @@ namespace m1Chat.Services
                     }
 
                     break;
-                case "aistudio":
+                case Provider.AiStudio:
                     await foreach (
                         var chunk in StreamAiStudioAsync(
                             processedMessages,
@@ -236,7 +202,7 @@ namespace m1Chat.Services
                     }
 
                     break;
-                case "groq":
+                case Provider.Groq:
                     await foreach (
                         var chunk in StreamGroqAsync(processedMessages, model)
                     )
@@ -245,7 +211,7 @@ namespace m1Chat.Services
                     }
 
                     break;
-                case "chutes":
+                case Provider.Chutes:
                     await foreach (
                         var chunk in StreamChutesAsync(processedMessages, model)
                     )
@@ -289,7 +255,7 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _activeApiKey);
+                new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -299,7 +265,7 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
             using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Post, _activeURI)
+                new HttpRequestMessage(HttpMethod.Post, _openRouterUri)
                 {
                     Content = content
                 },
@@ -381,7 +347,7 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _activeApiKey);
+                new AuthenticationHeaderValue("Bearer", _chutesApiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -391,7 +357,7 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
             using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Post, _activeURI)
+                new HttpRequestMessage(HttpMethod.Post, _chutesUri)
                 {
                     Content = content
                 },
@@ -414,43 +380,42 @@ namespace m1Chat.Services
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
-            bool inReasoningBlock = false;
+            var inReasoningBlock = false;
 
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                if (line.StartsWith("data: "))
+                if (!line.StartsWith("data: ")) continue;
+                var jsonData = line["data: ".Length..].Trim();
+                if (jsonData == "[DONE]") break;
+                //Console.WriteLine(jsonData);
+                var contentChunk = TryParseContentChunk(jsonData);
+                if (string.IsNullOrEmpty(contentChunk)) continue;
+                switch (contentChunk)
                 {
-                    var jsonData = line["data: ".Length..].Trim();
-                    if (jsonData == "[DONE]") break;
-                    //Console.WriteLine(jsonData);
-                    var contentChunk = TryParseContentChunk(jsonData);
-                    if (!string.IsNullOrEmpty(contentChunk))
+                    case "<think>":
+                        yield return "```Thinking\n ";
+                        inReasoningBlock = true;
+                        break;
+                    case "</think>":
+                        yield return "```\n" +
+                                     "\n";
+                        inReasoningBlock = false;
+                        break;
+                    default:
                     {
-                        if (contentChunk == "<think>")
+                        if (!inReasoningBlock)
                         {
-                            yield return "```Thinking\n ";
-                            inReasoningBlock = true;
-                        }
-                        else if (contentChunk == "</think>")
-                        {
-                            yield return "```\n" +
-                                         "\n";
-                            inReasoningBlock = false;
+                            yield return contentChunk;
                         }
                         else
                         {
-                            if (!inReasoningBlock)
-                            {
-                                yield return contentChunk;
-                            }
-                            else
-                            {
-                                yield return contentChunk.Replace("```", "'''");
-                            }
+                            yield return contentChunk.Replace("```", "'''");
                         }
+
+                        break;
                     }
                 }
             }
@@ -474,7 +439,7 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _activeApiKey);
+                new AuthenticationHeaderValue("Bearer", _groqApiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -484,7 +449,7 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
             using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Post, _activeURI)
+                new HttpRequestMessage(HttpMethod.Post, _groqUri)
                 {
                     Content = content
                 },
@@ -544,7 +509,7 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _activeApiKey);
+                new AuthenticationHeaderValue("Bearer", _aiStudioApiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -554,7 +519,7 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
             using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Post, _activeURI)
+                new HttpRequestMessage(HttpMethod.Post, _aiStudioUri)
                 {
                     Content = content
                 },
