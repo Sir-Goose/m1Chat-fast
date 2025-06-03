@@ -12,5 +12,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatCompletionService>();
 builder.Services.AddScoped<FileUploadService>();
+builder.Services.AddScoped<ChatCacheService>();
+
 
 await builder.Build().RunAsync();

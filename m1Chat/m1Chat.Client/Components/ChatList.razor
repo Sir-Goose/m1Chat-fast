@@ -15,6 +15,7 @@
                     Class="sidebar-chat-row"
                     Style="display: flex; align-items: center; justify-content: space-between;"
                     OnClick="() => OnItemSelected.InvokeAsync(chat)"
+                    @onmouseenter="() => OnItemMouseEnter.InvokeAsync(chat)"
                     @oncontextmenu:preventDefault>
                     <MudText
                         Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
@@ -91,4 +92,7 @@
 
     [Parameter]
     public Func<TItem, string> GetItemName { get; set; } = item => item?.ToString() ?? string.Empty;
+    
+    [Parameter]
+    public EventCallback<TItem> OnItemMouseEnter { get; set; }
 }
