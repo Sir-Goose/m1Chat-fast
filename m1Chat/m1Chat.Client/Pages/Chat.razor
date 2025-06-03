@@ -12,6 +12,7 @@
 @inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@inject ChatCacheService ChatCacheService
 
 
 <MudLayout>
@@ -424,6 +425,16 @@
   private async Task LoadChat(ChatDrawer.SidebarChat chat)
   {
     if (_chatId == chat.Id && _chatHistory.Any()) return;
+    // Check cache first
+    if (Guid.TryParse(chat.Id, out var chatGuid))
+    {
+      var cached = ChatCacheService.GetChatIfCached(chatGuid);
+      if (cached != null)
+      {
+        ApplyCachedChat(cached);
+        return;
+      }
+    }
     _chatHistory.Clear();
     var fullChat = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     _chatId = fullChat.Id.ToString();
@@ -445,6 +456,30 @@
     _needsScroll = true;
     StateHasChanged();
   }
+  
+  private void ApplyCachedChat(ChatService.ChatHistory cached)
+  {
+    _chatId = cached.Id.ToString();
+    _chatName = cached.Name;
+    ChatSelectedModel = cached.Model;
+    ApplyThinkingOptionsForModel(cached.Model);
+    _chatIsPinned = cached.IsPinned;
+    _chatHistory = cached.Messages
+      .Select(m => new ChatMessage
+      {
+        IsUser = m.Role == "user",
+        Text = m.Content,
+        FileIds = m.FileIds?.ToList() ?? new List<Guid>()
+      })
+      .ToList();
+    
+    CurrentMessageFiles.Clear();
+    _showFileUpload = false;
+    _messageBeingEdited = null;
+    _needsScroll = true;
+    StateHasChanged();
+  }
+
 
   private List<ServiceChatMessage> ToServiceChatMessages() => // Renamed for clarity
     _chatHistory.Select(m => new ServiceChatMessage // This is m1Chat.Client.Services.ChatMessage
@@ -685,6 +720,7 @@
             _chatIsPinned
         );
         await ChatService.UpdateChatAsync(cId, updateReq);
+        ChatCacheService.InvalidateCache(cId);
         await LoadSidebarChatsAsync();
     }
 }
@@ -723,6 +759,7 @@
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.PinChatAsync(chatId, !chat.IsPinned);
+      ChatCacheService.InvalidateCache(chatId);
       await LoadSidebarChatsAsync();
       if (_chatId == chat.Id) _chatIsPinned = !chat.IsPinned;
       StateHasChanged();
@@ -734,6 +771,7 @@
     if (Guid.TryParse(chat.Id, out var chatId))
     {
       await ChatService.DeleteChatAsync(chatId);
+      ChatCacheService.InvalidateCache(chatId);
       SidebarChats.RemoveAll(c => c.Id == chat.Id);
       if (_chatId == chat.Id)
       {
@@ -873,6 +911,7 @@
         _chatIsPinned
       );
       await ChatService.UpdateChatAsync(cId, updateReq);
+      ChatCacheService.InvalidateCache(cId);
     }
   }
 

@@ -1,6 +1,7 @@
 @using MudBlazor
 @using m1Chat.Client.Services
 @inject ChatService ChatService
+@inject ChatCacheService ChatCacheService
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
@@ -46,7 +47,8 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name" />
+                GetItemName="chat => chat.Name"
+                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
     }
 
     @if (todayChats.Any())
@@ -64,7 +66,8 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name" />
+                GetItemName="chat => chat.Name"
+                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
     }
 
     @if (yesterdayChats.Any())
@@ -82,7 +85,8 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name" />
+                GetItemName="chat => chat.Name"
+                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
     }
 
     @if (last7DaysChats.Any())
@@ -100,7 +104,8 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name" />
+                GetItemName="chat => chat.Name"
+                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
     }
 
     @if (olderChats.Any())
@@ -118,7 +123,8 @@
                 OnItemRenamed="@(chat => HandleRenameChat(chat))"
                 OnItemExported="@(chat => HandleExportChat(chat))"
                 GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name" />
+                GetItemName="chat => chat.Name"
+                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
     }
   </div>
 
@@ -227,7 +233,14 @@
     Snackbar.Add("Feature not yet implemented", Severity.Warning);
     Console.WriteLine($"Export chat: {chat.Name}");
   }
-    
+
+  private async Task HandleChatHover(SidebarChat chat)
+  {
+    if (Guid.TryParse(chat.Id, out var chatId))
+    {
+      await ChatCacheService.PrefetchChatAsync(chatId);
+    }
+  }
 
   private async Task HandleRenameChat(SidebarChat chat)
   {

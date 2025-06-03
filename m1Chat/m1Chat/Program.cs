@@ -24,6 +24,7 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<ChatCompletionService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddScoped<FileUploadService>();
+builder.Services.AddScoped<ChatCacheService>();
 
 // 3) Our dynamic‐BaseAddress HttpClient
 builder.Services.AddScoped<HttpClient>(sp =>
