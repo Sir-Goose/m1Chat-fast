@@ -6,6 +6,7 @@
 <div class="file-upload-container">
     <MudFileUpload @ref="_mudFileUpload"
                    T="IReadOnlyList<IBrowserFile>"
+                   MaximumFileCount="101"
                    OnFilesChanged="OnFilesChanged"
                    AppendMultipleFiles
                    Hidden="@false"
@@ -100,7 +101,8 @@
     private async Task OnFilesChanged(InputFileChangeEventArgs e)
     {
         ClearDragClass();
-        var files = e.GetMultipleFiles();
+        var files = e.GetMultipleFiles(101);
+        Console.WriteLine($"MudFileUpload: User selected {files.Count} files in this operation.");
         
         foreach (var file in files)
         {
