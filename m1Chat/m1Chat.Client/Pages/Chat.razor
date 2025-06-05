@@ -353,6 +353,10 @@
     };
 
     ApplyThinkingOptionsForModel(ChatSelectedModel);
+    if (OperatingSystem.IsBrowser())
+    {
+      await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
+    }
   }
 
   private int EstimateTokens()

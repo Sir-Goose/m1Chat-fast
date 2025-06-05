@@ -379,7 +379,7 @@
 <script>
     (function() {
         console.log('[Loading] Script started');
-        let isHidden = false;
+        let isHidden = false; // Track if the screen is already hidden
         let currentStep = 0;
         let progressInterval;
 
@@ -393,8 +393,7 @@
             { text: 'Starting Blazor runtime...', progress: 55 },
             { text: 'Loading components...', progress: 75 },
             { text: 'Finalizing setup...', progress: 90 },
-            { text: 'Ready!', progress: 100 }
-        ];
+            { text: 'Ready!', progress: 100 }];
 
         function updateProgress(step, immediate = false) {
             if (step < progressSteps.length && loadingText && progressFill) {
@@ -413,11 +412,12 @@
             }
         }
 
-        function hideLoadingScreen() {
+        // Internal function to hide the screen
+        function _internalHideLoadingScreen() {
             if (isHidden) return;
             isHidden = true;
 
-            console.log('[Loading] Hiding loading screen');
+            console.log('[Loading] Hiding loading screen initiated');
 
             // Complete progress first
             updateProgress(progressSteps.length - 1);
@@ -432,16 +432,19 @@
                             loadingScreen.parentNode.removeChild(loadingScreen);
                             console.log('[Loading] Loading screen removed');
                         }
-                    }, 500);
+                    }, 500); // Wait for fade-out to complete before removing
                 }
 
                 if (progressInterval) {
                     clearInterval(progressInterval);
                 }
-            }, 300);
+            }, 300); // Small delay to ensure 100% progress visible
         }
 
-        // Start progress simulation
+        // Expose a global function for Blazor to call
+        window.hideBlazorLoadingScreen = _internalHideLoadingScreen;
+
+        // Start initial progress simulation
         updateProgress(0, true);
         progressInterval = setInterval(() => {
             currentStep++;
@@ -452,91 +455,16 @@
             }
         }, 800);
 
-        // Multiple detection methods for .NET 9 Blazor WebAssembly
-
-        // Method 1: Check for interactive elements
-        function checkForInteractiveElements() {
-            const interactiveElements = document.querySelectorAll('[data-enhanced-nav]');
-            if (interactiveElements.length > 0) {
-                console.log('[Loading] Interactive elements detected');
-                hideLoadingScreen();
-                return true;
-            }
-            return false;
-        }
-
-        // Method 2: Listen for Blazor events
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Loading] DOM Content Loaded');
-            setTimeout(() => {
-                if (checkForInteractiveElements()) return;
-                hideLoadingScreen();
-            }, 1000);
-        });
-
-        // Method 3: Check when MudBlazor is ready (since you're using it)
-        function checkMudBlazorReady() {
-            if (window.MudBlazor || document.querySelector('.mud-theme-provider')) {
-                console.log('[Loading] MudBlazor detected');
-                hideLoadingScreen();
-                return true;
-            }
-            return false;
-        }
-
-        // Method 4: Enhanced navigation events
-        document.addEventListener('blazor:enhancedload', function() {
-            console.log('[Loading] Enhanced load event');
-            setTimeout(hideLoadingScreen, 200);
-        });
-
-        // Method 5: Check for WASM loaded
-        function checkWasmLoaded() {
-            if (window.Module || window.BINDING || document.querySelector('script[src*="_framework"]')) {
-                console.log('[Loading] WASM indicators detected');
-                return true;
-            }
-            return false;
-        }
-
-        // Method 6: Polling approach - check every 500ms
-        const pollInterval = setInterval(() => {
-            if (isHidden) {
-                clearInterval(pollInterval);
-                return;
-            }
-
-            if (checkForInteractiveElements() || checkMudBlazorReady() || checkWasmLoaded()) {
-                clearInterval(pollInterval);
-            }
-        }, 500);
-
-        // Method 7: Window load as fallback
-        window.addEventListener('load', function() {
-            console.log('[Loading] Window load event');
-            setTimeout(() => {
-                if (!isHidden) hideLoadingScreen();
-            }, 1500);
-        });
-
-        // Safety net - force hide after 8 seconds
+        // Safety net - force hide after a very long time, just in case
         setTimeout(() => {
             console.log('[Loading] Safety timeout triggered');
-            hideLoadingScreen();
-            clearInterval(pollInterval);
-        }, 8000);
-
-        // Additional safety for interaction
-        document.addEventListener('click', function() {
-            if (!isHidden) {
-                console.log('[Loading] User interaction detected');
-                setTimeout(hideLoadingScreen, 500);
-            }
-        });
+            _internalHideLoadingScreen();
+        }, 15000); // 15 seconds as a generous fallback
 
         console.log('[Loading] All event listeners set up');
     })();
 </script>
+
 </body>
 
 </html>
