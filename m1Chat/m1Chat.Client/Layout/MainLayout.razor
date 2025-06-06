@@ -5,6 +5,7 @@
 <MudSnackbarProvider />
 <MudPopoverProvider />
 <MudScrollToTop
+    Class="scroll-top-button"
     Selector="#chat-view">
     <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.KeyboardArrowUp" />
 </MudScrollToTop>
@@ -174,6 +175,20 @@
         position: relative;
         width: 70%;
         margin: auto;
+    }
+
+    /* Media query for screens 768px wide or fewer */
+    @@media (max-width: 768px) {
+        .user-message-container,
+        .ai-message-container,
+        .input-area-container,
+        .input-box{
+            width: 95% !important; /* Set width to 95% for both */
+        }
+        .scroll-top-button,
+        .think-icon-text{
+            display: none
+        }
     }
 
     .message-actions {
@@ -713,6 +728,15 @@
         }
     };
 </script>
+
+<script>
+    // Simple width check for initial load
+    window.getInitialWidth = function() {
+        return window.innerWidth;
+    };
+</script>
+
+
 
 
 @Body
