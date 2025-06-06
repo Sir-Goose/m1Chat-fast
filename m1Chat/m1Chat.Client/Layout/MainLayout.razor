@@ -176,6 +176,14 @@
         margin: auto;
     }
 
+    /* Media query for screens 768px wide or fewer */
+    @@media (max-width: 768px) {
+        .user-message-container,
+        .ai-message-container {
+            width: 95%; /* Set width to 95% for both */
+        }
+    }
+
     .message-actions {
         position: absolute;
         top: 100%;
