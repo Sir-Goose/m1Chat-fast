@@ -182,14 +182,44 @@
         .user-message-container,
         .ai-message-container,
         .input-area-container,
-        .input-box{
+        .input-box {
             width: 95% !important; /* Set width to 95% for both */
         }
+
         .scroll-top-button,
-        .think-icon-text{
-            display: none
+        .think-icon-text {
+            display: none;
+        }
+
+        /*
+         * Lifts the input container from the very bottom.
+         * Ensure .input-area-container (or .input-box if it's the one fixed)
+         * has 'position: fixed' for this to work correctly.
+         */
+        .input-area-container {
+            position: fixed !important;
+            left: 0;
+            right: 0;
+
+            /* This centers the element horizontally within the available space
+             * defined by 'left: 0; right: 0;' and its 'width: 95%'. */
+            margin-left: auto;
+            margin-right: auto;
+            /* width: 100%; /* Or whatever width it needs */
+            /* left: 0; */
+
+            /*
+             * 'env(safe-area-inset-bottom)' accounts for system UI elements
+             * like the iPhone X/11/12/13/14 home indicator.
+             * '20px' adds an additional buffer for easier reach.
+             * Adjust '20px' as needed.
+             */
+            bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+            /* You might also want some internal padding to separate content from the edge */
+            padding-bottom: 0; /* Resetting if it was set elsewhere */
         }
     }
+
 
     .message-actions {
         position: absolute;
