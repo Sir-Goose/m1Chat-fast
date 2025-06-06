@@ -1,6 +1,8 @@
 @page "/Chat"
+@using System.Data.SqlTypes
 @using System.Numerics
 @using System.Text
+@using AngleSharp.Css
 @using m1Chat.Client.Components
 @using m1Chat.Client.Services
 @inject IScrollManager ScrollManager
@@ -280,6 +282,12 @@
 
   private string _chatSelectedModel = "Gemini 2.5 Flash";
 
+  private async Task Should_sidebar_be_open()
+  {
+    var width = await Js.InvokeAsync<int>("eval", "window.innerWidth");
+    _drawerOpen = width > 768;
+  }
+  
   private string ChatSelectedModel
   {
     get => _chatSelectedModel;
@@ -334,6 +342,7 @@
   {
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
     await LoadSidebarChatsAsync();
+    _ = Should_sidebar_be_open();
 
     _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
     {
