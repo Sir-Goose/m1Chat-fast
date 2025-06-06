@@ -180,8 +180,10 @@
     /* Media query for screens 768px wide or fewer */
     @@media (max-width: 768px) {
         .user-message-container,
-        .ai-message-container {
-            width: 95%; /* Set width to 95% for both */
+        .ai-message-container,
+        .input-area-container,
+        .input-box{
+            width: 95% !important; /* Set width to 95% for both */
         }
         .scroll-top-button {
             display: none
