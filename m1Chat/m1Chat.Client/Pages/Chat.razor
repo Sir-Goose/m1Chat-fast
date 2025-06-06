@@ -211,21 +211,28 @@
                   <MudSelectItem Value="@opt">@opt</MudSelectItem>
                 }
               </MudSelect>
-              <MudSelect
-                @bind-Value="ThinkingSelectedOption"
-                Variant="Variant.Text"
-                Margin="Margin.None"
-                Underline="false"
-                AdornmentIcon="@Icons.Material.Filled.BlurCircular"
-                AdornmentColor="Color.Primary"
-                FitContent="true"
-                Class="border-hidden"
-                Disabled="@_isThinkingSelectorDisabled">
-                @foreach (var opt in _currentThinkingOptions)
-                {
-                  <MudSelectItem Value="@opt">@opt</MudSelectItem>
-                }
-              </MudSelect>
+              <div style="display:flex; align-items:center;"
+                   class="@(_isThinkingSelectorDisabled ? "mud-text-secondary" : "mud-text-primary")">
+                <div class="think-icon-text">
+                  <MudText Typo="Typo.body1" Class="mr-1">
+                    @ThinkingSelectedOption
+                  </MudText>
+                </div>
+                <MudMenu Icon="@Icons.Material.Filled.Tune"
+                         Color="Color.Primary"
+                         AriaLabel="Thinking options"
+                         Disabled="@_isThinkingSelectorDisabled"
+                         AnchorOrigin="Origin.TopRight"
+                         TransformOrigin="Origin.BottomRight">
+                  @foreach (var opt in _currentThinkingOptions)
+                  {
+                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))">
+                      @opt
+                    </MudMenuItem>
+                  }
+                </MudMenu>
+              </div>
+
               <div
                 style="margin-left:auto;display:flex;align-items:center;">
                 <MudIconButton
@@ -367,6 +374,15 @@
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
     }
   }
+  private void SetThinkingOption(string option)
+  {
+    if (ThinkingSelectedOption != option)
+    {
+      ThinkingSelectedOption = option;
+      StateHasChanged(); // Essential to re-render the component and update the displayed text
+    }
+  }
+
 
   private int EstimateTokens()
   {
