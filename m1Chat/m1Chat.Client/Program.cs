@@ -13,6 +13,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatCompletionService>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<ChatCacheService>();
+builder.Services.AddScoped<SignalRService>();
 
 
 await builder.Build().RunAsync();

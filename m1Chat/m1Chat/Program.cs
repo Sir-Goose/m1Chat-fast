@@ -6,6 +6,7 @@ using MudBlazor.Services;
 using m1Chat.Components;
 using m1Chat.Services;
 using m1Chat.Data;
+using m1Chat.Hubs;
 using m1Chat.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
@@ -25,6 +26,7 @@ builder.Services.AddScoped<ChatCompletionService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<ChatCacheService>();
+builder.Services.AddScoped<SignalRService>();
 
 // 3) Our dynamic‐BaseAddress HttpClient
 builder.Services.AddScoped<HttpClient>(sp =>
@@ -59,6 +61,7 @@ builder.Services.AddScoped<ChatService>();
 
 // 7) MVC controllers
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 // --- Conditional Authentication Registration --- //
 if (builder.Environment.IsDevelopment())
@@ -126,6 +129,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapStaticAssets();
+app.MapHub<ChatHub>("/chathub");
 
 app.MapRazorComponents<App>()
    .AddInteractiveWebAssemblyRenderMode()
