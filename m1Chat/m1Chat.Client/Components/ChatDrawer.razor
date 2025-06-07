@@ -250,8 +250,10 @@
       {
         CloseButton = true,
         MaxWidth = MaxWidth.Small,
-        FullWidth = true
+        FullWidth = true,
+        BackgroundClass = "blur-background"
       };
+    
     var dialog = await DialogService.ShowAsync<RenameChatDialog>("Rename Chat", parameters, options);
     var result = await dialog.Result;
 
