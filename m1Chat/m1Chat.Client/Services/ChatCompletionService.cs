@@ -1,6 +1,6 @@
-// File: m1Chat.Client.Services/ChatCompletionService.cs
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
@@ -16,67 +16,88 @@ namespace m1Chat.Client.Services
 
     public class ChatCompletionService
     {
-        private readonly IJSRuntime _jsRuntime;
+        private readonly SignalRService _signalRService;
+        private readonly HttpClient _http;
 
-        public ChatCompletionService(IJSRuntime jsRuntime)
+        public ChatCompletionService(
+            HttpClient http,
+            SignalRService signalRService)
         {
-            _jsRuntime = jsRuntime;
+            _http = http;
+            _signalRService = signalRService;
         }
 
-        public IAsyncEnumerable<string> StreamCompletionAsync(
+        public async Task StreamCompletion(
             List<ChatMessage> messages,
             string model,
-            string reasoningEffort
-        )
+            string reasoningEffort,
+            Action<string> onChunk,
+            Action onComplete,
+            Action<string> onError)
         {
-            var channel = Channel.CreateUnbounded<string>();
-            var writer = channel.Writer;
-            var dotnetRef = DotNetObjectReference.Create(
-                new StreamCallback(writer)
-            );
-
-            var payload = new
+            try
             {
-                model,
-                reasoningEffort,
-                messages = messages
-                    .Select(m => new { role = m.Role, content = m.Content, fileIds = m.FileIds })
-                    .ToArray()
-            };
+                await _signalRService.InitializeAsync();
+                var connectionId = _signalRService.GetConnectionId();
 
-            _ = _jsRuntime.InvokeVoidAsync(
-                "streamChatCompletion",
-                "/api/completions/stream",
-                payload,
-                dotnetRef
-            );
+                var payload = new
+                {
+                    model,
+                    reasoningEffort,
+                    messages = messages
+                        .Select(m => new
+                        {
+                            role = m.Role,
+                            content = m.Content,
+                            fileIds = m.FileIds
+                        })
+                        .ToArray()
+                };
 
-            return channel.Reader.ReadAllAsync();
-        }
+                // Declare handlers
+                void ChunkHandler(string chunk) => onChunk(chunk);
 
-        private class StreamCallback
-        {
-            private readonly ChannelWriter<string> _writer;
+                void CompleteHandler()
+                {
+                    onComplete?.Invoke();
+                    UnregisterHandlers();
+                }
 
-            public StreamCallback(ChannelWriter<string> writer) =>
-                _writer = writer;
+                void ErrorHandler(string error)
+                {
+                    onError?.Invoke(error);
+                    UnregisterHandlers();
+                }
 
-            [JSInvokable("Receive")]
-            public void Receive(string chunk)
-            {
-                _writer.TryWrite(chunk);
+                // Register handlers
+                void RegisterHandlers()
+                {
+                    _signalRService.OnChunkReceived += ChunkHandler;
+                    _signalRService.OnStreamCompleted += CompleteHandler;
+                    _signalRService.OnStreamError += ErrorHandler;
+                }
+
+                // Unregister handlers
+                void UnregisterHandlers()
+                {
+                    _signalRService.OnChunkReceived -= ChunkHandler;
+                    _signalRService.OnStreamCompleted -= CompleteHandler;
+                    _signalRService.OnStreamError -= ErrorHandler;
+                }
+
+                // Register handlers for this session
+                RegisterHandlers();
+
+                // Start streaming
+                var response = await _http.PostAsJsonAsync(
+                    $"/api/completions/stream?connectionId={connectionId}",
+                    payload);
+
+                response.EnsureSuccessStatusCode();
             }
-
-            [JSInvokable("Complete")]
-            public void Complete()
+            catch (Exception ex)
             {
-                _writer.TryComplete();
-            }
-
-            [JSInvokable("Error")]
-            public void Error(string errorMessage)
-            {
-                _writer.TryComplete(new Exception(errorMessage));
+                onError?.Invoke($"Failed to start streaming: {ex.Message}");
             }
         }
     }
