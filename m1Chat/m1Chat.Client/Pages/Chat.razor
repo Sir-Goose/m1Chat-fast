@@ -159,9 +159,8 @@
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
 
-            <!-- File Upload Component - Show only when _showFileUpload is true -->
-            @if (_showFileUpload)
-            {
+            <!-- File Upload Component - Animate its appearance -->
+            <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
               <div class="mb-2">
                 <MudStack Row Class="mb-2 justify-space-between align-center">
                   <MudText Typo="Typo.subtitle2" Color="Color.Primary">
@@ -177,7 +176,7 @@
                 </MudStack>
                 <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
               </div>
-            }
+            </div>
 
             <div style="display:flex;align-items:center;">
               <MudTextField

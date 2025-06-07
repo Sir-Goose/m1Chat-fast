@@ -537,6 +537,35 @@
         background-color: var(--mud-palette-action-default-hover) !important;
     }
 
+    /* This is the container that will be animated. */
+    .file-upload-container {
+        /* Hides the content when the container's height is 0 */
+        overflow: hidden;
+
+        /* Define the animation properties and duration.
+           We animate max-height, opacity, and the bottom margin for a smooth effect. */
+        transition: max-height 0.2s ease-in,
+        opacity 0.2s ease-in,
+        margin-bottom 0.2s ease-in;
+    }
+
+    /* This is the state when the UI is hidden */
+    .file-upload-hidden {
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0 !important; /* Collapse the bottom margin */
+        /* We make it non-interactive to prevent tabbing into hidden inputs */
+        pointer-events: none;
+    }
+
+    /* This is the state when the UI is visible */
+    .file-upload-visible {
+        /* Set a max-height large enough to contain your component.
+           It will only expand to its natural content height. 500px is a safe value. */
+        max-height: 500px;
+        opacity: 1;
+    }
+
 </style>
 
 
