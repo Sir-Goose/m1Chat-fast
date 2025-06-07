@@ -293,7 +293,7 @@
     var width = await Js.InvokeAsync<int>("eval", "window.innerWidth");
     _drawerOpen = width > 768;
   }
-  
+
   private string ChatSelectedModel
   {
     get => _chatSelectedModel;
@@ -343,7 +343,7 @@
   private bool _chatIsPinned;
   private MudTextField<string> _messageTextField;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
-  
+
   [Inject] private SignalRService SignalRService { get; set; } = null!;
   [Inject] private ChatCompletionService ChatCompletionService { get; set; } = null!;
 
@@ -375,13 +375,12 @@
     {
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
     }
-    
+
     //SignalRService.OnChunkReceived += HandleChunkReceived;
     //SignalRService.OnStreamCompleted += HandleStreamCompleted;
     //SignalRService.OnStreamError += HandleStreamError;
-    
   }
-  
+
   private void HandleChunkReceived(string chunk)
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -392,7 +391,7 @@
       StateHasChanged();
     }
   }
-  
+
   private void HandleStreamCompleted()
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -404,7 +403,7 @@
       SaveChatAfterStreaming();
     }
   }
-  
+
   private void HandleStreamError(string error)
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -416,7 +415,7 @@
       StateHasChanged();
     }
   }
-  
+
   private async Task SaveChatAfterStreaming()
   {
     if (Guid.TryParse(_chatId, out var cId))
@@ -432,7 +431,7 @@
       await LoadSidebarChatsAsync();
     }
   }
-  
+
   private void SetThinkingOption(string option)
   {
     if (ThinkingSelectedOption != option)
@@ -523,6 +522,7 @@
         return;
       }
     }
+
     _chatHistory.Clear();
     var fullChat = await ChatService.GetChatAsync(Guid.Parse(chat.Id));
     _chatId = fullChat.Id.ToString();
@@ -544,7 +544,7 @@
     _needsScroll = true;
     StateHasChanged();
   }
-  
+
   private void ApplyCachedChat(ChatService.ChatHistory cached)
   {
     _chatId = cached.Id.ToString();
@@ -560,7 +560,7 @@
         FileIds = m.FileIds?.ToList() ?? new List<Guid>()
       })
       .ToList();
-    
+
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
@@ -622,7 +622,7 @@
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend) && !CurrentMessageFiles.Any())
     {
-        return;
+      return;
     }
 
     _isSendingMessage = true;
@@ -633,30 +633,30 @@
 
     if (_messageBeingEdited != null)
     {
-        var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
-        if (originalMessageIndex != -1)
+      var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
+      if (originalMessageIndex != -1)
+      {
+        _chatHistory[originalMessageIndex] = _messageBeingEdited with
         {
-            _chatHistory[originalMessageIndex] = _messageBeingEdited with
-            {
-                Text = textToSend,
-                FileIds = fileIds
-            };
-            if (_messageBeingEdited.IsUser)
-            {
-                _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > originalMessageIndex && !m.IsUser);
-            }
+          Text = textToSend,
+          FileIds = fileIds
+        };
+        if (_messageBeingEdited.IsUser)
+        {
+          _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > originalMessageIndex && !m.IsUser);
         }
+      }
 
-        _messageBeingEdited = null;
+      _messageBeingEdited = null;
     }
     else
     {
-        _chatHistory.Add(new ChatMessage
-        {
-            IsUser = true,
-            Text = textToSend,
-            FileIds = fileIds
-        });
+      _chatHistory.Add(new ChatMessage
+      {
+        IsUser = true,
+        Text = textToSend,
+        FileIds = fileIds
+      });
     }
 
     MessageText = "";
@@ -671,68 +671,69 @@
 
     if (isNewChat)
     {
-        _chatName = "New Chat";
-        var initialMessagesForName = new List<ServiceChatMessage>
+      _chatName = "New Chat";
+      var initialMessagesForName = new List<ServiceChatMessage>
+      {
+        new() { Role = "user", Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation that starts with: \"{userMessageTextForName[..Math.Min(100, userMessageTextForName.Length)]}\"" }
+      };
+
+      string tempName = string.IsNullOrWhiteSpace(userMessageTextForName) ? "Chat with Files" : (userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...");
+
+      var createReq = new ChatService.CreateChatRequest(
+        tempName,
+        ChatSelectedModel,
+        new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
+        _chatIsPinned
+      );
+      newChatGuid = await ChatService.CreateChatAsync(createReq);
+      _chatId = newChatGuid.ToString();
+      NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
+
+      string generatedName = "";
+      try
+      {
+        // Start name generation via SignalR
+        var nameGenerationCallback = new Action<string>((chunk) => generatedName += chunk);
+        var nameGenerationComplete = new Action(() =>
         {
-            new() { Role = "user", Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation that starts with: \"{userMessageTextForName[..Math.Min(100, userMessageTextForName.Length)]}\"" }
-        };
+          _chatName = !string.IsNullOrWhiteSpace(generatedName)
+            ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
+            : tempName;
 
-        string tempName = string.IsNullOrWhiteSpace(userMessageTextForName) ? "Chat with Files" : (userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...");
-
-        var createReq = new ChatService.CreateChatRequest(
-            tempName,
+          var updateNameReq = new ChatService.UpdateChatRequest(
+            _chatName,
             ChatSelectedModel,
             new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
-        );
-        newChatGuid = await ChatService.CreateChatAsync(createReq);
-        _chatId = newChatGuid.ToString();
-        NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
+          );
+          ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
+          LoadSidebarChatsAsync();
+          StateHasChanged();
+        });
 
-        string generatedName = "";
-        try
-        {
-            // Start name generation via SignalR
-            var nameGenerationCallback = new Action<string>((chunk) => generatedName += chunk);
-            var nameGenerationComplete = new Action(() => {
-                _chatName = !string.IsNullOrWhiteSpace(generatedName)
-                    ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
-                    : tempName;
-                
-                var updateNameReq = new ChatService.UpdateChatRequest(
-                    _chatName,
-                    ChatSelectedModel,
-                    new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
-                    _chatIsPinned
-                );
-                ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
-                LoadSidebarChatsAsync();
-                StateHasChanged();
-            });
-            
-            // Start name generation streaming
-            await ChatCompletionService.StreamCompletion(
-                initialMessagesForName,
-                "llama-3.1-8b-instant",
-                "Low",
-                nameGenerationCallback,
-                nameGenerationComplete,
-                null
-            );
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Name generation failed: {ex.Message}");
-            _chatName = tempName;
-        }
+        // Start name generation streaming
+        await ChatCompletionService.StreamCompletion(
+          initialMessagesForName,
+          "llama-3.1-8b-instant",
+          "Low",
+          nameGenerationCallback,
+          nameGenerationComplete,
+          null
+        );
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"Name generation failed: {ex.Message}");
+        _chatName = tempName;
+      }
     }
 
     // Create new AI message with streaming enabled
     var aiMessage = new ChatMessage
     {
-        IsUser = false,
-        Text = "",
-        IsStreaming = true
+      IsUser = false,
+      Text = "",
+      IsStreaming = true
     };
     _chatHistory.Add(aiMessage);
     _needsScroll = true;
@@ -740,40 +741,69 @@
 
     try
     {
-        // Prepare messages for AI
-        var messagesForAiStartIdx = _messageBeingEdited != null ? _chatHistory.IndexOf(_messageBeingEdited) : 0;
-        var messagesForAi = _chatHistory
-            .Take(_chatHistory.Count - 1)
-            .Select(m => new ServiceChatMessage
-            {
-                Role = m.IsUser ? "user" : "assistant",
-                Content = m.Text,
-                FileIds = m.FileIds
-            }).Skip(messagesForAiStartIdx).ToList();
+      // Prepare messages for AI
+      var messagesForAiStartIdx = _messageBeingEdited != null ? _chatHistory.IndexOf(_messageBeingEdited) : 0;
+      var messagesForAi = _chatHistory
+        .Take(_chatHistory.Count - 1)
+        .Select(m => new ServiceChatMessage
+        {
+          Role = m.IsUser ? "user" : "assistant",
+          Content = m.Text,
+          FileIds = m.FileIds
+        }).Skip(messagesForAiStartIdx).ToList();
 
-        // Start streaming via SignalR - FIXED: Use the correct parameter count
-        await ChatCompletionService.StreamCompletion(
-          messagesForAi,
-          ChatSelectedModel,
-          ThinkingSelectedOption,
-          chunk => {
-            aiMessage.Text += chunk;
+      // Buffering implementation
+      var buffer = new System.Text.StringBuilder();
+      var lastUpdateTime = DateTime.MinValue;
+      var updateInterval = TimeSpan.FromMilliseconds(300);
+
+      // Start streaming via SignalR
+      await ChatCompletionService.StreamCompletion(
+        messagesForAi,
+        ChatSelectedModel,
+        ThinkingSelectedOption,
+        chunk =>
+        {
+          buffer.Append(chunk);
+
+          var now = DateTime.UtcNow;
+          if (now - lastUpdateTime >= updateInterval)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+            lastUpdateTime = now;
             _needsScroll = true;
             StateHasChanged();
-          },
-          () => {
-            aiMessage.IsStreaming = false;
-            _isSendingMessage = false;
-            StateHasChanged();
-            SaveChatAfterStreaming();
-          },
-          error => {
-            aiMessage.Text = $"[Error: {error}]";
-            aiMessage.IsStreaming = false;
-            _isSendingMessage = false;
-            StateHasChanged();
           }
-        );
+        },
+        () =>
+        {
+          // Flush any remaining buffered content
+          if (buffer.Length > 0)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+
+          aiMessage.IsStreaming = false;
+          _isSendingMessage = false;
+          StateHasChanged();
+          SaveChatAfterStreaming();
+        },
+        error =>
+        {
+          if (buffer.Length > 0)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+
+          aiMessage.Text = $"[Error: {error}]";
+          aiMessage.IsStreaming = false;
+          _isSendingMessage = false;
+          StateHasChanged();
+        }
+      );
     }
     catch (Exception ex)
     {
@@ -783,8 +813,6 @@
       StateHasChanged();
     }
   }
-
-
 
 
   // Used for saving to DB via ChatService (expects DTOs with FileIds)
@@ -921,23 +949,52 @@
 
     try
     {
-      // Start streaming via SignalR - FIXED: Use the correct parameter count
+      // Buffering implementation
+      var buffer = new System.Text.StringBuilder();
+      var lastUpdateTime = DateTime.MinValue;
+      var updateInterval = TimeSpan.FromMilliseconds(300);
+
+      // Start streaming via SignalR
       await ChatCompletionService.StreamCompletion(
         messagesToSendForAi,
         ChatSelectedModel,
         ThinkingSelectedOption,
-        chunk => {
-          targetAiMessage.Text += chunk;
-          _needsScroll = true;
-          StateHasChanged();
+        chunk =>
+        {
+          buffer.Append(chunk);
+
+          var now = DateTime.UtcNow;
+          if (now - lastUpdateTime >= updateInterval)
+          {
+            targetAiMessage.Text += buffer.ToString();
+            buffer.Clear();
+            lastUpdateTime = now;
+            _needsScroll = true;
+            StateHasChanged();
+          }
         },
-        () => {
+        () =>
+        {
+          // Flush any remaining buffered content
+          if (buffer.Length > 0)
+          {
+            targetAiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+
           targetAiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
           SaveChatAfterStreaming();
         },
-        error => {
+        error =>
+        {
+          if (buffer.Length > 0)
+          {
+            targetAiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+
           targetAiMessage.Text = $"[Error: {error}]";
           targetAiMessage.IsStreaming = false;
           _isSendingMessage = false;
@@ -953,6 +1010,7 @@
       _isSendingMessage = false;
     }
   }
+
 
   private void HandleEditMessage(ChatMessage? m)
   {
@@ -1028,7 +1086,7 @@
       StateHasChanged();
     }
   }
-  
+
   public void Dispose()
   {
     // Unsubscribe from SignalR events
