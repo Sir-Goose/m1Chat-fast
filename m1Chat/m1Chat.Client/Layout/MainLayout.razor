@@ -537,6 +537,25 @@
         background-color: var(--mud-palette-action-default-hover) !important;
     }
 
+    .file-upload-container {
+        overflow: hidden;
+        transition: max-height 0.2s ease-in,
+        opacity 0.2s ease-in,
+        margin-bottom 0.2s ease-in;
+    }
+
+    .file-upload-hidden {
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0 !important; 
+        pointer-events: none;
+    }
+
+    .file-upload-visible {
+        max-height: 500px;
+        opacity: 1;
+    }
+
 </style>
 
 
