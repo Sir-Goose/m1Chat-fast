@@ -27,7 +27,7 @@ namespace m1Chat.Controllers
         private readonly IHubContext<ChatHub> _hubContext;
 
         public CompletionsController(
-            Completion completion,
+            Completion completion, 
             ChatDbContext db,
             IHubContext<ChatHub> hubContext)
         {
@@ -37,51 +37,38 @@ namespace m1Chat.Controllers
         }
 
         [HttpPost("stream")]
-        public IActionResult Stream( // Changed to IActionResult and removed async from signature
+        public async Task<IActionResult> Stream(
             [FromBody] ChatHistoryRequest request,
             [FromQuery] string connectionId)
         {
-            if (string.IsNullOrEmpty(connectionId))
+            try
             {
-                return BadRequest("ConnectionId is required.");
-            }
-
-            // Start the AI completion process in a background task
-            // Fire-and-forget, the HTTP request returns immediately.
-            _ = Task.Run(async () =>
-            {
-                try
+                var dtoList = request.Messages.ToList();
+                await foreach (var chunk in _completion.CompleteAsync(
+                                   dtoList, 
+                                   request.Model, 
+                                   request.ReasoningEffort, 
+                                   _db))
                 {
-                    var dtoList = request.Messages.ToList();
-                    await foreach (var chunk in _completion.CompleteAsync(
-                        dtoList,
-                        request.Model,
-                        request.ReasoningEffort,
-                        _db))
+                    if (!string.IsNullOrEmpty(chunk))
                     {
-                        if (!string.IsNullOrEmpty(chunk))
-                        {
-                            // Send to the specific client via SignalR
-                            await _hubContext.Clients.Client(connectionId)
-                                .SendAsync("ReceiveChunk", chunk);
-                        }
+                        await _hubContext.Clients.Client(connectionId)
+                            .SendAsync("ReceiveChunk", chunk);
                     }
-
-                    // Signal completion to the client
-                    await _hubContext.Clients.Client(connectionId)
-                        .SendAsync("StreamComplete");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error during background AI streaming: {ex.Message}\n{ex.StackTrace}");
-                    // Signal error to the client
-                    await _hubContext.Clients.Client(connectionId)
-                        .SendAsync("StreamError", ex.Message);
-                }
-            });
 
-            // Return HTTP 200 OK immediately, indicating the request was accepted
-            return Ok(); // Or return Accepted() for a more semantically correct response.
+                await _hubContext.Clients.Client(connectionId)
+                    .SendAsync("StreamComplete");
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CompletionsController.Stream: {ex.Message}\n{ex.StackTrace}");
+                await _hubContext.Clients.Client(connectionId)
+                    .SendAsync("StreamError", ex.Message);
+                return StatusCode(500, new { error = "An error occurred during streaming" });
+            }
         }
     }
 }
