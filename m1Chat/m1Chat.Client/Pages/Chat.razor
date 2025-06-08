@@ -71,12 +71,14 @@
                       }
                     </div>
                   }
+                  <MudChat ChatPosition="ChatBubblePosition.End">
                   <MudChatBubble
                     Variant="Variant.Text"
-                    Class="user-message rounded-xl"
+                    Class="user-message rounded-xl text-align-left"
                   >
                     <UserMarkdown Markdown="@m.Text"/>
                   </MudChatBubble>
+                  </MudChat>
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
