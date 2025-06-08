@@ -325,13 +325,14 @@
         width: 95%;
         max-width: 768px;
         margin: 0 auto;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100; /* Ensure it's above other content */
-            /* Account for mobile safe areas (e.g., iPhone home indicator) */
-            padding-bottom: env(safe-area-inset-bottom, 20px);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        /* Ensure it's above other content */
+        /* Account for mobile safe areas (e.g., iPhone home indicator) */
+        padding-bottom: env(safe-area-inset-bottom, 20px);
     }
 
     .ai-message hr,
