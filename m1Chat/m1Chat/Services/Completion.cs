@@ -407,7 +407,7 @@ namespace m1Chat.Services
                 switch (contentChunk)
                 {
                     case "<think>":
-                        yield return "```Thinking\n ";
+                        yield return "```Thinking ";
                         inReasoningBlock = true;
                         break;
                     case "</think>":
