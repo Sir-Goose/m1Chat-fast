@@ -1,13 +1,13 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider Theme="@M1ChatTheme" IsDarkMode="true" />
-<MudDialogProvider />
-<MudSnackbarProvider />
-<MudPopoverProvider />
+<MudThemeProvider Theme="@M1ChatTheme" IsDarkMode="true"/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+<MudPopoverProvider/>
 <MudScrollToTop
     Class="scroll-top-button"
     Selector="#chat-view">
-    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.KeyboardArrowUp" />
+    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"/>
 </MudScrollToTop>
 
 <style>
@@ -18,6 +18,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-BoldItalic.woff2') format('woff2');
@@ -25,6 +26,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-ExtraBold.woff2') format('woff2');
@@ -32,6 +34,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-ExtraBoldItalic.woff2') format('woff2');
@@ -39,6 +42,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-ExtraLight.woff2') format('woff2');
@@ -46,6 +50,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-ExtraLightItalic.woff2') format('woff2');
@@ -53,6 +58,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-Italic.woff2') format('woff2');
@@ -60,6 +66,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-Light.woff2') format('woff2');
@@ -67,6 +74,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-LightItalic.woff2') format('woff2');
@@ -74,6 +82,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
@@ -81,6 +90,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-MediumItalic.woff2') format('woff2');
@@ -88,6 +98,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
@@ -95,6 +106,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-SemiBold.woff2') format('woff2');
@@ -102,6 +114,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-SemiBoldItalic.woff2') format('woff2');
@@ -109,6 +122,7 @@
         font-style: italic;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-Thin.woff2') format('woff2');
@@ -116,6 +130,7 @@
         font-style: normal;
         font-display: swap;
     }
+
     @@font-face {
         font-family: 'JetBrains Mono';
         src: url('/fonts/JetBrainsMono-ThinItalic.woff2') format('woff2');
@@ -124,17 +139,25 @@
         font-display: swap;
     }
 
+    .translucent-paper {
+        /* Semi-transparent background using MudBlazor's surface color */
+        background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
+        backdrop-filter: blur(10px); /* Apply blur effect */
+        -webkit-backdrop-filter: blur(10px); /* For Safari compatibility */
+        box-shadow: var(--mud-elevation-3); /* Re-add MudBlazor's elevation 3 shadow */
+    }
+
 
     .p {
         margin-bottom: 1em;
         margin-top: 1em;
     }
-    
+
     .ai-message p {
         margin-bottom: 1em;
         margin-top: 1em;
     }
-    
+
     .no-scrollbar {
         overflow-y: auto;
         overflow-x: hidden;
@@ -167,13 +190,23 @@
 
     .user-message-container {
         position: relative;
-        width: 70%;
-        margin-left: 15%;
+        width: 100%;
+        max-width: 768px;
+        margin: auto;
+    }
+
+    .direction-ltr {
+        direction: ltr;
+    }
+
+    .text-align-left {
+        text-align: left !important;
     }
 
     .ai-message-container {
         position: relative;
-        width: 70%;
+        width: 100%;
+        max-width: 768px;
         margin: auto;
     }
 
@@ -183,14 +216,8 @@
 
     /* Media query for screens 768px wide or fewer */
     @@media (max-width: 768px) {
-        .user-message-container,
-        .ai-message-container,
-        .input-area-container,
         .input-box {
             width: 95% !important; /* Set width to 95% for both */
-        }
-        .ai-message-container{
-            
         }
 
         .scroll-top-button,
@@ -246,6 +273,7 @@
         border-radius: 4px;
         box-sizing: border-box;
     }
+    
 
     .user-message-hoverzone,
     .ai-message-hoverzone {
@@ -269,14 +297,15 @@
         transition-delay: 0s;
     }
 
-    .message-actions .mud-icon-button {
-        padding: 3px;
+    .message-actions {
+        padding-bottom: 10rem;
     }
 
     .message-actions .mud-icon-button .mud-icon-root {
         font-size: 1rem;
     }
-
+    
+    
     .ai-message {
         display: block;
         width: 100%; /* Fixed to fill the container */
@@ -284,12 +313,22 @@
         line-height: 1.75;
         /* Original: padding: 1rem; */
         padding-top: 2rem;
-        padding-left: 0.3rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
     .input-area-container {
-        width: 70%;
+        width: 95%;
+        max-width: 768px;
         margin: 0 auto;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        /* Ensure it's above other content */
+        /* Account for mobile safe areas (e.g., iPhone home indicator) */
+        padding-bottom: env(safe-area-inset-bottom, 20px);
     }
 
     .ai-message hr,
@@ -386,7 +425,7 @@
 
     .language-name {
         font-size: 0.8rem;
-        font-family: "JetBrains Mono" ,Consolas, Monaco, 'Courier New', monospace !important;
+        font-family: "JetBrains Mono", Consolas, Monaco, 'Courier New', monospace !important;
         color: var(--mud-palette-text-secondary);
         text-transform: capitalize;
     }
@@ -398,7 +437,7 @@
         border-left: 3px solid var(--mud-palette-primary);
         padding: 0.75rem;
         margin: 0 0 1rem 0 !important;
-        font-family: "JetBrains Mono" ,Consolas, Monaco, 'Courier New', monospace !important;
+        font-family: "JetBrains Mono", Consolas, Monaco, 'Courier New', monospace !important;
         font-size: 0.875rem !important;
         line-height: 1.4;
         overflow-x: auto;
@@ -436,7 +475,7 @@
         color: var(--mud-palette-text-primary);
         padding: 0.2em 0.4em;
         margin: 0 0.1em;
-        font-family: "JetBrains Mono" ,Consolas, Monaco, 'Courier New', monospace !important;
+        font-family: "JetBrains Mono", Consolas, Monaco, 'Courier New', monospace !important;
         font-size: 85%;
         border-radius: 3px;
         font-weight: bold; /* Inline code remains bold */
@@ -529,7 +568,7 @@
 
     .drawer-toggle-button .mud-icon-button {
         background-color: var(--mud-palette-background) !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: left 0.3s ease;
     }
 
@@ -547,7 +586,7 @@
     .file-upload-hidden {
         max-height: 0;
         opacity: 0;
-        margin-bottom: 0 !important; 
+        margin-bottom: 0 !important;
         pointer-events: none;
     }
 
@@ -591,7 +630,8 @@
     src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
 ></script>
 <!-- Prism.js CSS (okaidia theme) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/katorlys/prism-theme-github/themes/prism-theme-github-copilot.css">
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/katorlys/prism-theme-github/themes/prism-theme-github-copilot.css">
 
 <!-- Prism.js core -->
 <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
@@ -611,13 +651,13 @@
                 // Get the computed line height of the chat content
                 const sampleElement = element.querySelector('.ai-message') || element;
                 const lineHeight = parseFloat(getComputedStyle(sampleElement).lineHeight) || 20;
-                
+
                 const threshold = (4 * lineHeight) + 10;
-                
+
                 // Check if near bottom
-                const atBottom = 
+                const atBottom =
                     element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
-                    
+
                 dotNetHelper.invokeMethodAsync('SetAtBottom', atBottom);
             });
         }
@@ -634,8 +674,8 @@
             if (window.renderMathInElement) {
                 window.renderMathInElement(element, {
                     delimiters: [
-                        { left: "$$", right: "$$", display: true }, // For display math $$...$$
-                        { left: "\\(", right: "\\)", display: false }, // For inline math \(...\)
+                        {left: "$$", right: "$$", display: true}, // For display math $$...$$
+                        {left: "\\(", right: "\\)", display: false}, // For inline math \(...\)
                     ],
                     throwOnError: false, // Prevents KaTeX from stopping on errors
                 });
@@ -735,7 +775,7 @@
 
 <script>
     // Simple width check for initial load
-    window.getInitialWidth = function() {
+    window.getInitialWidth = function () {
         return window.innerWidth;
     };
 </script>
@@ -744,7 +784,9 @@
 
 
 @Body
+
 @code{
+
     MudTheme M1ChatTheme = new MudTheme()
     {
         PaletteDark = new PaletteDark()
@@ -754,8 +796,7 @@
             Background = "#1a1a27",
             BackgroundGray = "#151521",
             TextPrimary = "#b2b0bf"
-            
         }
-
     };
+
 }

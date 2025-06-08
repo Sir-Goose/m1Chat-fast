@@ -47,7 +47,7 @@
     <div
       class="chat-container px-2 pb-2 no-scrollbar"
       @ref="_chatContainerRef"
-      style="overflow-y:auto; flex:1 1 auto;"
+      style="overflow-y:auto; flex:1 1 auto; padding-bottom: 130px;"
       id="chat-view"
     >
       <MudPaper Elevation="0">
@@ -71,12 +71,14 @@
                       }
                     </div>
                   }
+                  <MudChat ChatPosition="ChatBubblePosition.Start" ArrowPosition="ChatArrowPosition.None">
                   <MudChatBubble
                     Variant="Variant.Text"
-                    Class="user-message rounded-xl"
+                    Class="user-message rounded-xl text-align-left"
                   >
                     <UserMarkdown Markdown="@m.Text"/>
                   </MudChatBubble>
+                  </MudChat>
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
                       <MudIconButton
@@ -155,7 +157,7 @@
 
     <div class="input-area-container">
       <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl 
-        px-4 pt-4">
+        px-4 pt-4 translucent-paper">
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
 
