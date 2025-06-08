@@ -190,7 +190,7 @@
 
     .user-message-container {
         position: relative;
-        width: 95%;
+        width: 100%;
         max-width: 768px;
         margin: auto;
     }
@@ -205,7 +205,7 @@
 
     .ai-message-container {
         position: relative;
-        width: 95%;
+        width: 100%;
         max-width: 768px;
         margin: auto;
     }
@@ -216,15 +216,8 @@
 
     /* Media query for screens 768px wide or fewer */
     @@media (max-width: 768px) {
-        .user-message-container,
-        .ai-message-container,
-        .input-area-container,
         .input-box {
             width: 95% !important; /* Set width to 95% for both */
-        }
-
-        .ai-message-container {
-
         }
 
         .scroll-top-button,
@@ -280,6 +273,7 @@
         border-radius: 4px;
         box-sizing: border-box;
     }
+    
 
     .user-message-hoverzone,
     .ai-message-hoverzone {
@@ -303,14 +297,15 @@
         transition-delay: 0s;
     }
 
-    .message-actions .mud-icon-button {
-        padding: 3px;
+    .message-actions {
+        padding-bottom: 10rem;
     }
 
     .message-actions .mud-icon-button .mud-icon-root {
         font-size: 1rem;
     }
-
+    
+    
     .ai-message {
         display: block;
         width: 100%; /* Fixed to fill the container */
@@ -318,7 +313,8 @@
         line-height: 1.75;
         /* Original: padding: 1rem; */
         padding-top: 2rem;
-        padding-left: 0.3rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
     .input-area-container {
