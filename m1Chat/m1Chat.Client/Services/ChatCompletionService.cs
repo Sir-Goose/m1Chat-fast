@@ -1,4 +1,4 @@
-using System; 
+using System; // Added for Action, TaskCompletionSource
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Json;
@@ -31,7 +31,7 @@ namespace m1Chat.Client.Services
             string model,
             string reasoningEffort,
             Action<string> onChunk,
-            Action onComplete,
+            Func<Task> onComplete, // Changed to Func<Task>
             Action<string> onError)
         {
             await _signalRService.InitializeAsync();
@@ -61,25 +61,31 @@ namespace m1Chat.Client.Services
             var tcs = new TaskCompletionSource<bool>();
 
             // Declare handlers for this specific stream request
-            void ChunkHandler(string chunk) => onChunk?.Invoke(chunk); // Null check for onChunk
-            void CompleteHandler()
+            void ChunkHandler(string chunk) => onChunk?.Invoke(chunk);
+
+            // Changed CompleteHandler to be async and await the passed onComplete
+            async Task CompleteHandler()
             {
-                onComplete?.Invoke(); // Null check for onComplete
+                if (onComplete != null)
+                {
+                    await onComplete(); // Await the completion callback
+                }
                 UnregisterHandlers();
-                tcs.TrySetResult(true); // Signal completion of this stream
+                tcs.TrySetResult(true);
             }
 
             void ErrorHandler(string error)
             {
-                onError?.Invoke(error); // Null check for onError
+                onError?.Invoke(error);
                 UnregisterHandlers();
-                tcs.TrySetResult(false); // Signal error and completion of this stream
+                tcs.TrySetResult(false);
             }
 
-            // Register handlers for this session
+            // Register handlers before initiating the HTTP request
             void RegisterHandlers()
             {
                 _signalRService.OnChunkReceived += ChunkHandler;
+                // Assign the async method to the event
                 _signalRService.OnStreamCompleted += CompleteHandler;
                 _signalRService.OnStreamError += ErrorHandler;
             }
@@ -92,7 +98,6 @@ namespace m1Chat.Client.Services
                 _signalRService.OnStreamError -= ErrorHandler;
             }
 
-            // Register handlers before initiating the HTTP request
             RegisterHandlers();
 
             try

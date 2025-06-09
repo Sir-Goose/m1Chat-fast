@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using Microsoft.AspNetCore.Components;
+using System.Threading.Tasks; // Added for Func<Task>
 
 namespace m1Chat.Client.Services
 {
@@ -10,9 +11,9 @@ namespace m1Chat.Client.Services
         private readonly NavigationManager _navigationManager;
         private bool _isInitialized;
         private readonly object _lock = new object();
-        
+
         public event Action<string> OnChunkReceived;
-        public event Action OnStreamCompleted;
+        public event Func<Task> OnStreamCompleted; // Changed to Func<Task>
         public event Action<string> OnStreamError;
 
         public SignalRService(NavigationManager navigationManager)
@@ -33,13 +34,19 @@ namespace m1Chat.Client.Services
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hubConnection.On<string>("ReceiveChunk", chunk => 
+            _hubConnection.On<string>("ReceiveChunk", chunk =>
                 OnChunkReceived?.Invoke(chunk));
-            
-            _hubConnection.On("StreamComplete", () => 
-                OnStreamCompleted?.Invoke());
-            
-            _hubConnection.On<string>("StreamError", error => 
+
+            // Changed to await the Func<Task> if it exists
+            _hubConnection.On("StreamComplete", async () =>
+            {
+                if (OnStreamCompleted != null)
+                {
+                    await OnStreamCompleted.Invoke();
+                }
+            });
+
+            _hubConnection.On<string>("StreamError", error =>
                 OnStreamError?.Invoke(error));
 
             await _hubConnection.StartAsync();
