@@ -623,6 +623,7 @@
   private async Task SendMessage()
   {
     if (_isSendingMessage) return;
+    await SignalRService.EnsureConnectionAsync();
 
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend) && !CurrentMessageFiles.Any())
@@ -697,7 +698,6 @@
       string generatedName = "";
       try
       {
-        await SignalRService.EnsureConnectionAsync();
         // Use an async Func<Task> for the completion callback
         var nameGenerationCompleteFunc = new Func<Task>(async () => // Changed to Func<Task>
         {
@@ -906,7 +906,8 @@
     if (_isSendingMessage) return;
     _isSendingMessage = true;
     StateHasChanged();
-
+    await SignalRService.EnsureConnectionAsync();
+    
     var idx = _chatHistory.IndexOf(messageToRegen);
     if (idx == -1)
     {
