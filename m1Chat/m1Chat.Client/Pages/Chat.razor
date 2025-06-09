@@ -156,7 +156,7 @@
     </div>
 
     <div class="input-area-container">
-      <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl 
+      <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl
         px-4 pt-4 translucent-paper">
         <MudContainer Class="pa-0">
           <div style="display:flex;flex-direction:column;">
@@ -378,11 +378,25 @@
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
     }
 
-    //SignalRService.OnChunkReceived += HandleChunkReceived;
-    //SignalRService.OnStreamCompleted += HandleStreamCompleted;
-    //SignalRService.OnStreamError += HandleStreamError;
+    // SignalRService.OnChunkReceived += HandleChunkReceived; // These are handled per-stream now
+    // SignalRService.OnStreamCompleted += HandleStreamCompleted; // These are handled per-stream now
+    // SignalRService.OnStreamError += HandleStreamError; // These are handled per-stream now
   }
 
+  // Changed this method to async Task as it will be called by SignalRService.OnStreamCompleted (which is now Func<Task>)
+  private async Task HandleStreamCompleted()
+  {
+    var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
+    if (aiMessage != null)
+    {
+      aiMessage.IsStreaming = false;
+      _isSendingMessage = false;
+      StateHasChanged();
+      await SaveChatAfterStreaming(); // Await this now
+    }
+  }
+
+  // HandleChunkReceived and HandleStreamError remain the same, as they are passed as Actions.
   private void HandleChunkReceived(string chunk)
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -391,18 +405,6 @@
       aiMessage.Text += chunk;
       _needsScroll = true;
       StateHasChanged();
-    }
-  }
-
-  private void HandleStreamCompleted()
-  {
-    var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
-    if (aiMessage != null)
-    {
-      aiMessage.IsStreaming = false;
-      _isSendingMessage = false;
-      StateHasChanged();
-      SaveChatAfterStreaming();
     }
   }
 
@@ -430,7 +432,7 @@
       );
       await ChatService.UpdateChatAsync(cId, updateReq);
       ChatCacheService.InvalidateCache(cId);
-      await LoadSidebarChatsAsync();
+      await LoadSidebarChatsAsync(); // Await this to ensure sidebar is updated
     }
   }
 
@@ -497,6 +499,7 @@
       .ThenByDescending(c => c.LastUpdatedAt)
       .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model, c.IsPinned, c.LastUpdatedAt))
       .ToList();
+    // No StateHasChanged here, as it's typically called by the caller after this
   }
 
   private async Task CreateNewChat()
@@ -694,9 +697,8 @@
       string generatedName = "";
       try
       {
-        // Start name generation via SignalR
-        var nameGenerationCallback = new Action<string>((chunk) => generatedName += chunk);
-        var nameGenerationComplete = new Action(() =>
+        // Use an async Func<Task> for the completion callback
+        var nameGenerationCompleteFunc = new Func<Task>(async () => // Changed to Func<Task>
         {
           _chatName = !string.IsNullOrWhiteSpace(generatedName)
             ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
@@ -708,18 +710,19 @@
             new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
           );
-          ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
-          LoadSidebarChatsAsync();
-          StateHasChanged();
+          await ChatService.UpdateChatAsync(newChatGuid, updateNameReq); // Await this update
+          ChatCacheService.InvalidateCache(newChatGuid); // Invalidate cache so next sidebar load is fresh
+          await LoadSidebarChatsAsync(); // Await loading sidebar chats
+          StateHasChanged(); // Re-render Chat component (and thus ChatDrawer)
         });
 
         // Start name generation streaming
         await ChatCompletionService.StreamCompletion(
           initialMessagesForName,
           "llama-3.1-8b-instant",
-          "Low",
-          nameGenerationCallback,
-          nameGenerationComplete,
+          "Low", // Or "None" if 'reasoningEffort' is not applicable to name generation model
+          chunk => generatedName += chunk,
+          nameGenerationCompleteFunc, // Pass the Func<Task>
           null
         );
       }
@@ -727,6 +730,9 @@
       {
         Console.WriteLine($"Name generation failed: {ex.Message}");
         _chatName = tempName;
+        // Ensure sidebar is loaded even if name generation failed
+        await LoadSidebarChatsAsync();
+        StateHasChanged();
       }
     }
 
@@ -778,7 +784,7 @@
             StateHasChanged();
           }
         },
-        () =>
+        async () => // This also needs to be async Func<Task> now
         {
           // Flush any remaining buffered content
           if (buffer.Length > 0)
@@ -790,7 +796,7 @@
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
-          SaveChatAfterStreaming();
+          await SaveChatAfterStreaming(); // Await this as well
         },
         error =>
         {
@@ -801,7 +807,7 @@
           }
 
           aiMessage.Text = $"[Error: {error}]";
-          aiMessage.IsStreaming = false;
+          aiMessage.IsStreaming = false; // Should be false on error
           _isSendingMessage = false;
           StateHasChanged();
         }
@@ -810,7 +816,8 @@
     catch (Exception ex)
     {
       aiMessage.Text = $"[Error: {ex.Message}]";
-      aiMessage.IsStreaming = true;
+      aiMessage.IsStreaming = true; // Should be false on error
+      _isSendingMessage = false;
       Console.WriteLine($"Error streaming completion: {ex}");
       StateHasChanged();
     }
@@ -975,7 +982,7 @@
             StateHasChanged();
           }
         },
-        () =>
+        async () => // This needs to be async Func<Task> as well
         {
           // Flush any remaining buffered content
           if (buffer.Length > 0)
@@ -987,7 +994,7 @@
           targetAiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
-          SaveChatAfterStreaming();
+          await SaveChatAfterStreaming(); // Await this
         },
         error =>
         {
@@ -1091,10 +1098,10 @@
 
   public void Dispose()
   {
-    // Unsubscribe from SignalR events
-    SignalRService.OnChunkReceived -= HandleChunkReceived;
-    SignalRService.OnStreamCompleted -= HandleStreamCompleted;
-    SignalRService.OnStreamError -= HandleStreamError;
+    // Unsubscribe from SignalR events - these are now handled per-stream in ChatCompletionService
+    // SignalRService.OnChunkReceived -= HandleChunkReceived;
+    // SignalRService.OnStreamCompleted -= HandleStreamCompleted;
+    // SignalRService.OnStreamError -= HandleStreamError;
   }
 
   // This is the local record for UI state in Chat.razor
