@@ -697,6 +697,7 @@
       string generatedName = "";
       try
       {
+        await SignalRService.EnsureConnectionAsync();
         // Use an async Func<Task> for the completion callback
         var nameGenerationCompleteFunc = new Func<Task>(async () => // Changed to Func<Task>
         {

@@ -56,5 +56,17 @@ namespace m1Chat.Client.Services
         }
 
         public string? GetConnectionId() => _hubConnection?.ConnectionId;
+        
+        public async Task EnsureConnectionAsync()
+        {
+            if (_hubConnection != null && _hubConnection.State != HubConnectionState.Connected)
+            {
+                await _hubConnection.StopAsync();
+                _hubConnection = null;
+                _isInitialized = false;
+            }
+            await InitializeAsync();
+        }
+
     }
 }
