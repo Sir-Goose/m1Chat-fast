@@ -150,7 +150,7 @@ namespace m1Chat.Client.Services
 
                 // Await the SignalR stream completion via the TaskCompletionSource
                 // This task will complete only when CleanupStreamResources is called for this requestId.
-                _ = tcs.Task;
+                //await tcs.Task;
             }
             catch (Exception ex)
             {
