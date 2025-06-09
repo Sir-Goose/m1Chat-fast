@@ -872,16 +872,8 @@
       SidebarChats.RemoveAll(c => c.Id == chat.Id);
       if (_chatId == chat.Id)
       {
-        if (SidebarChats.Any())
-        {
-          await LoadChat(SidebarChats.First());
-        }
-        else
-        {
           await CreateNewChat();
-        }
       }
-
       StateHasChanged();
     }
   }
