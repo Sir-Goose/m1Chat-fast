@@ -81,31 +81,34 @@
                   </MudChat>
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
-                      <MudIconButton
-                        Icon="@Icons.Material.Filled.Refresh"
-                        Size="Size.Small"
-                        OnClick="@(() => HandleRegenerateMessage(m))"
-                        aria-label="Regenerate"
-                        Title="Regenerate"
-                      />
+                      <MudTooltip Text="Retry message">
+                        <MudIconButton
+                          Icon="@Icons.Material.Filled.Refresh"
+                          Size="Size.Small"
+                          OnClick="@(() => HandleRegenerateMessage(m))"
+                          aria-label="Regenerate"
+                          Title="Regenerate"/>
+                      </MudTooltip>
                     </span>
                     <span @onclick:stopPropagation="true">
-                      <MudIconButton
-                        Icon="@Icons.Material.Filled.Edit"
-                        Size="Size.Small"
-                        OnClick="@(() => HandleEditMessage(m))"
-                        aria-label="Edit"
-                        Title="Edit"
-                      />
+                      <MudTooltip Text="Edit message">
+                        <MudIconButton
+                          Icon="@Icons.Material.Filled.Edit"
+                          Size="Size.Small"
+                          OnClick="@(() => HandleEditMessage(m))"
+                          aria-label="Edit"
+                          Title="Edit"/>
+                      </MudTooltip>
                     </span>
                     <span @onclick:stopPropagation="true">
+                      <MudTooltip Text="Copy message">
                       <MudIconButton
                         Icon="@Icons.Material.Filled.ContentCopy"
                         Size="Size.Small"
                         OnClick="@(async () => await HandleCopyMessage(m))"
                         aria-label="Copy"
-                        Title="Copy"
-                      />
+                        Title="Copy"/>
+                      </MudTooltip>
                     </span>
                   </div>
                   <div class="user-message-hoverzone"></div>
@@ -119,31 +122,34 @@
                   <AiMarkdown Markdown="@m.Text" IsStreaming="@m.IsStreaming"/>
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
+                      <MudTooltip Text="Copy message">
                       <MudIconButton
                         Icon="@Icons.Material.Filled.ContentCopy"
                         Size="Size.Small"
                         OnClick="@(async () => await HandleCopyMessage(m))"
                         aria-label="Copy"
-                        Title="Copy"
-                      />
+                        Title="Copy"/>
+                      </MudTooltip>
                     </span>
                     <span @onclick:stopPropagation="true">
+                      <MudTooltip Text="Branch off">
                       <MudIconButton
                         Icon="@Icons.Material.Filled.MergeType"
                         Size="Size.Small"
                         OnClick="@(() => HandleBranchMessage(m))"
                         aria-label="Branch"
-                        Title="Branch"
-                      />
+                        Title="Branch"/>
+                      </MudTooltip>
                     </span>
                     <span @onclick:stopPropagation="true">
+                      <MudTooltip Text="Retry message">
                       <MudIconButton
                         Icon="@Icons.Material.Filled.Refresh"
                         Size="Size.Small"
                         OnClick="@(() => HandleRegenerateMessage(m))"
                         aria-label="Regenerate"
-                        Title="Regenerate"
-                      />
+                        Title="Regenerate"/>
+                      </MudTooltip>
                     </span>
                   </div>
                   <div class="ai-message-hoverzone"></div>
