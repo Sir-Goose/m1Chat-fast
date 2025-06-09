@@ -623,6 +623,7 @@
   private async Task SendMessage()
   {
     if (_isSendingMessage) return;
+    await SignalRService.EnsureConnectionAsync();
 
     var textToSend = MessageText.Trim();
     if (string.IsNullOrWhiteSpace(textToSend) && !CurrentMessageFiles.Any())
@@ -905,7 +906,8 @@
     if (_isSendingMessage) return;
     _isSendingMessage = true;
     StateHasChanged();
-
+    await SignalRService.EnsureConnectionAsync();
+    
     var idx = _chatHistory.IndexOf(messageToRegen);
     if (idx == -1)
     {
