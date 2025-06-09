@@ -26,20 +26,24 @@
                     </MudText>
                     <span class="chat-actions" style="display: flex; gap: 2px;">
                         <span @onclick:stopPropagation="true">
+                            <MudTooltip Text="Pin Thread">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.PushPin"
                                 Color="Color.Primary"
                                 Size="Size.Small"
                                 OnClick="() => OnItemPinned.InvokeAsync(chat)"
                                 aria-label="Pin chat"/>
+                            </MudTooltip>
                         </span>
                         <span @onclick:stopPropagation="true">
+                            <MudTooltip Text="Delete Thread">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.Delete"
                                 Color="Color.Error"
                                 Size="Size.Small"
                                 OnClick="() => OnItemDeleted.InvokeAsync(chat)"
                                 aria-label="Delete chat"/>
+                            </MudTooltip>
                         </span>
                     </span>
                 </MudListItem>
