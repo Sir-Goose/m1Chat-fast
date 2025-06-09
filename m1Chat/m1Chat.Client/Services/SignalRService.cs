@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using Microsoft.AspNetCore.Components;
-using System.Threading.Tasks; // Added for Func<Task>
+using System.Threading.Tasks;
 
 namespace m1Chat.Client.Services
 {
@@ -12,9 +12,10 @@ namespace m1Chat.Client.Services
         private bool _isInitialized;
         private readonly object _lock = new object();
 
-        public event Action<string> OnChunkReceived;
-        public event Func<Task> OnStreamCompleted; // Changed to Func<Task>
-        public event Action<string> OnStreamError;
+        // Updated event signatures to include Guid requestId
+        public event Action<Guid, string>? OnChunkReceived;
+        public event Func<Guid, Task>? OnStreamCompleted;
+        public event Action<Guid, string>? OnStreamError;
 
         public SignalRService(NavigationManager navigationManager)
         {
@@ -34,20 +35,22 @@ namespace m1Chat.Client.Services
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hubConnection.On<string>("ReceiveChunk", chunk =>
-                OnChunkReceived?.Invoke(chunk));
+            // Updated to receive Guid requestId and string chunk
+            _hubConnection.On<Guid, string>("ReceiveChunk", (requestId, chunk) =>
+                OnChunkReceived?.Invoke(requestId, chunk));
 
-            // Changed to await the Func<Task> if it exists
-            _hubConnection.On("StreamComplete", async () =>
+            // Updated to receive Guid requestId and pass it to the Func<Task>
+            _hubConnection.On<Guid>("StreamComplete", async (requestId) =>
             {
                 if (OnStreamCompleted != null)
                 {
-                    await OnStreamCompleted.Invoke();
+                    await OnStreamCompleted.Invoke(requestId);
                 }
             });
 
-            _hubConnection.On<string>("StreamError", error =>
-                OnStreamError?.Invoke(error));
+            // Updated to receive Guid requestId and string error
+            _hubConnection.On<Guid, string>("StreamError", (requestId, error) =>
+                OnStreamError?.Invoke(requestId, error));
 
             await _hubConnection.StartAsync();
         }

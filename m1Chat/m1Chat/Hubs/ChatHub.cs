@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System; // Added for Guid
 using System.Threading.Tasks;
 
 namespace m1Chat.Hubs
@@ -7,19 +8,25 @@ namespace m1Chat.Hubs
     [Authorize]
     public class ChatHub : Hub
     {
-        public Task SendChunk(string connectionId, string chunk)
+        // Changed to accept requestId and include it in the message
+        public Task SendChunk(string connectionId, Guid requestId, string chunk)
         {
-            return Clients.Client(connectionId).SendAsync("ReceiveChunk", chunk);
+            // The client-side "ReceiveChunk" handler will now expect (Guid, string)
+            return Clients.Client(connectionId).SendAsync("ReceiveChunk", requestId, chunk);
         }
 
-        public Task CompleteStream(string connectionId)
+        // Changed to accept requestId and include it in the message
+        public Task CompleteStream(string connectionId, Guid requestId)
         {
-            return Clients.Client(connectionId).SendAsync("StreamComplete");
+            // The client-side "StreamComplete" handler will now expect (Guid)
+            return Clients.Client(connectionId).SendAsync("StreamComplete", requestId);
         }
 
-        public Task StreamError(string connectionId, string error)
+        // Changed to accept requestId and include it in the message
+        public Task StreamError(string connectionId, Guid requestId, string error)
         {
-            return Clients.Client(connectionId).SendAsync("StreamError", error);
+            // The client-side "StreamError" handler will now expect (Guid, string)
+            return Clients.Client(connectionId).SendAsync("StreamError", requestId, error);
         }
     }
 }
