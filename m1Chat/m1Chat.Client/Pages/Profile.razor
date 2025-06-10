@@ -5,9 +5,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Elevation="3" Class="pa-4 rounded-lg blur-background">
-        <MudGrid>
-            <MudItem xs="12" Class="text-center mb-4">
-                <MudText Typo="Typo.h5" Class="mt-2">User Profile</MudText>
+        <MudGrid Spacing="0">
+            <MudItem xs="12" Class="d-flex align-center"> 
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                               Color="Color.Inherit"
+                               OnClick="NavigateToChat"
+                               Edge="Edge.Start" />
+                <MudText Typo="Typo.h5" Class="flex-grow-1 text-center pr-10">
+                    User Profile
+                </MudText>
             </MudItem>
 
             <MudItem xs="12" Class="mb-4">
@@ -82,6 +88,11 @@
         // (e.g., https://<your-domain>.cloudflareaccess.com/cdn-cgi/access/logout)
         // or a server-side endpoint that handles the redirect.
         // As a temporary measure, navigating to the root might cause re-authentication if the session is expired.
-        NavigationManager.NavigateTo("/", forceLoad: true); 
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+
+    private void NavigateToChat()
+    {
+        NavigationManager.NavigateTo("/Chat");
     }
 }
