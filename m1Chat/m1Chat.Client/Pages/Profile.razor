@@ -11,7 +11,7 @@
                                Color="Color.Inherit"
                                OnClick="NavigateToChat"
                                Edge="Edge.Start" />
-                <MudText Typo="Typo.h5" Class="flex-grow-1 text-center pr-10">
+                <MudText Typo="Typo.h4" Class="flex-grow-1 text-center pr-10">
                     User Profile
                 </MudText>
             </MudItem>
@@ -19,10 +19,15 @@
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="mb-2">Account Information</MudText>
-                        <MudList T="string">
-                            <MudListItem Text="Email" SecondaryText="@UserEmail" />
-                        </MudList>
+                        <MudText Typo="Typo.h5" Class="mb-2">
+                            Account Information
+                        </MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Primary">
+                           Email 
+                        </MudText>
+                        <MudText>
+                            @UserEmail
+                        </MudText>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -30,7 +35,7 @@
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="mb-2">Usage Statistics</MudText>
+                        <MudText Typo="Typo.h5" Class="mb-2">Usage Statistics</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4" Class="text-center">
                                 <MudText Typo="Typo.h4" Color="Color.Primary">@TotalChats</MudText>
