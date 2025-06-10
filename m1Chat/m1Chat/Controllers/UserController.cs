@@ -61,6 +61,8 @@ public class UserController : ControllerBase
             }
         }
 
+        totalMessages /= 2;
+
         return Ok(new UserStatsResponseDto
         {
             TotalChats = totalChats,
