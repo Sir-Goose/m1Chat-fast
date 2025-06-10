@@ -15,6 +15,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject ChatCacheService ChatCacheService
+@inject SvgIcons SvgIcons
 
 
 <MudLayout>
@@ -219,7 +220,7 @@
                     @ThinkingSelectedOption
                   </MudText>
                 </div>
-                <MudMenu Icon="@Icons.Material.Filled.Tune"
+                <MudMenu Icon="@CurrentThinkingIcon"
                          Color="Color.Primary"
                          AriaLabel="Thinking options"
                          Disabled="@_isThinkingSelectorDisabled"
@@ -281,6 +282,7 @@
 
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
+  
 
   private ChatMessage? _messageBeingEdited; // New state variable to track the message being edited
 
@@ -295,7 +297,7 @@
     var width = await Js.InvokeAsync<int>("eval", "window.innerWidth");
     _drawerOpen = width > 768;
   }
-
+  
   private string ChatSelectedModel
   {
     get => _chatSelectedModel;
@@ -311,6 +313,20 @@
   }
 
   private string ThinkingSelectedOption { get; set; } = "None";
+  private string CurrentThinkingIcon
+    {
+        get
+          {
+            return ThinkingSelectedOption switch
+            {
+                "None" => SvgIcons.BrainIcons[0],
+                "Low" => SvgIcons.BrainIcons[1],
+                "Medium" => SvgIcons.BrainIcons[2],
+                "High" => SvgIcons.BrainIcons[3],
+                _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
+                };
+          }
+      }
 
   private bool _isThinkingSelectorDisabled = false;
   private List<string> _currentThinkingOptions = new();
