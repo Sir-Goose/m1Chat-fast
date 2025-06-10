@@ -147,6 +147,8 @@
         box-shadow: var(--mud-elevation-3); /* Re-add MudBlazor's elevation 3 shadow */
     }
 
+    
+
 
     .p {
         margin-bottom: 1em;
@@ -171,6 +173,9 @@
 
     .mud-main-content {
         padding-top: 0 !important;
+        background-image: url('/noise.png'); /* Path to your noise image */
+        background-repeat: repeat; /* This will tile the image */
+        background-attachment: fixed; /* Optional: Makes the noise stay put during scroll */
     }
 
     .chat-main-content-bg {
@@ -180,6 +185,12 @@
     .chat-container {
         overflow-y: auto;
         height: calc(100vh - 128px);
+    }
+    
+    .mud-paper {
+        background-image: url('/noise.png'); /* Path to your noise image */
+        background-repeat: repeat; /* This will tile the image */
+        background-attachment: fixed; /* Optional: Makes the noise stay put during scroll */
     }
 
     .user-message {
@@ -333,6 +344,12 @@
         /* Ensure it's above other content */
         /* Account for mobile safe areas (e.g., iPhone home indicator) */
         padding-bottom: env(safe-area-inset-bottom, 20px);
+        
+    }
+    
+    .background-hack {
+        background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
+        background-image: none;
     }
 
     .ai-message hr,
