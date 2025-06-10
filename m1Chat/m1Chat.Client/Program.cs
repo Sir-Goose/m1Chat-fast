@@ -1,3 +1,4 @@
+using m1Chat.Client;
 using m1Chat.Client.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -14,6 +15,7 @@ builder.Services.AddScoped<ChatCompletionService>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<ChatCacheService>();
 builder.Services.AddScoped<SignalRService>();
+builder.Services.AddScoped<SvgIcons>();
 
 
 await builder.Build().RunAsync();

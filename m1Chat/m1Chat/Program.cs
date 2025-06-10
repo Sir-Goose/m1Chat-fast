@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using m1Chat.Authentication;
+using m1Chat.Client;
 using m1Chat.Client.Services;
 using MudBlazor.Services;
 using m1Chat.Components;
@@ -27,6 +28,7 @@ builder.Services.AddScoped<FileService>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<ChatCacheService>();
 builder.Services.AddScoped<SignalRService>();
+builder.Services.AddScoped<SvgIcons>();
 
 // 3) Our dynamic‐BaseAddress HttpClient
 builder.Services.AddScoped<HttpClient>(sp =>
