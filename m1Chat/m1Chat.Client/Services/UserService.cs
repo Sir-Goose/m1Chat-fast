@@ -26,9 +26,28 @@ namespace m1Chat.Client.Services
             }
         }
 
+        public async Task<UserStatsResponse?> GetUserStatsAsync()
+        {
+            try
+            {
+                return await _http.GetFromJsonAsync<UserStatsResponse>("api/user/stats");
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error fetching user stats: {ex.Message}");
+                return null;
+            }
+        }
+
         private class UserMeResponse
         {
             public string? email { get; set; }
+        }
+
+        public class UserStatsResponse
+        {
+            public int TotalChats { get; set; }
+            public int TotalMessages { get; set; }
         }
     }
 }

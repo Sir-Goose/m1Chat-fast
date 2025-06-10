@@ -22,7 +22,6 @@
                         <MudText Typo="Typo.h6" Class="mb-2">Account Information</MudText>
                         <MudList T="string">
                             <MudListItem Text="Email" SecondaryText="@UserEmail" />
-                            <MudListItem Text="Joined" SecondaryText="@createdAt.ToString("MMMM dd, yyyy")" />
                         </MudList>
                     </MudCardContent>
                 </MudCard>
@@ -39,11 +38,7 @@
                             </MudItem>
                             <MudItem xs="12" sm="4" Class="text-center">
                                 <MudText Typo="Typo.h4" Color="Color.Primary">@TotalMessages</MudText>
-                                <MudText>Messages Sent</MudText>
-                            </MudItem>
-                            <MudItem xs="12" sm="4" Class="text-center">
-                                <MudText Typo="Typo.h4" Color="Color.Primary">@TotalFiles</MudText>
-                                <MudText>Files Uploaded</MudText>
+                            <MudText>Messages Sent</MudText>
                             </MudItem>
                         </MudGrid>
                     </MudCardContent>
@@ -65,29 +60,28 @@
 
 @code {
     private string UserEmail { get; set; } = "Loading...";
-    private DateTime createdAt = DateTime.UtcNow; // Placeholder for joined date
     private int TotalChats = 0;
     private int TotalMessages = 0;
-    private int TotalFiles = 0;
 
     protected override async Task OnInitializedAsync()
     {
         UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
-        // Placeholder stats - these would ideally come from your backend
-        TotalChats = 24;
-        TotalMessages = 127;
-        TotalFiles = 8;
-        // The 'createdAt' would also ideally come from a user profile endpoint.
-        // For now, it defaults to the current UTC time.
+        var stats = await UserService.GetUserStatsAsync();
+        if (stats != null)
+        {
+            TotalChats = stats.TotalChats;
+            TotalMessages = stats.TotalMessages;
+        }
+        else
+        {
+            Console.WriteLine("Could not fetch user stats.");
+            TotalChats = 0;
+            TotalMessages = 0;
+        }
     }
 
     private void Logout()
     {
-        // This is a placeholder for actual logout functionality.
-        // For Cloudflare Access, a direct logout might involve navigating to a specific Cloudflare URL
-        // (e.g., https://<your-domain>.cloudflareaccess.com/cdn-cgi/access/logout)
-        // or a server-side endpoint that handles the redirect.
-        // As a temporary measure, navigating to the root might cause re-authentication if the session is expired.
         NavigationManager.NavigateTo("/", forceLoad: true);
     }
 
