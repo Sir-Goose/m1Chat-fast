@@ -1,12 +1,13 @@
 @page "/Profile"
 @inject UserService UserService
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 @using m1Chat.Client.Services
 
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Elevation="3" Class="pa-4 rounded-lg blur-background">
         <MudGrid Spacing="0">
-            <MudItem xs="12" Class="d-flex align-center"> 
+            <MudItem xs="12" Class="d-flex align-center">
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                Color="Color.Inherit"
                                OnClick="NavigateToChat"
@@ -23,7 +24,7 @@
                             Account Information
                         </MudText>
                         <MudText Typo="Typo.h6" Color="Color.Primary">
-                           Email 
+                           Email
                         </MudText>
                         <MudText>
                             @UserEmail
@@ -43,9 +44,20 @@
                             </MudItem>
                             <MudItem xs="12" sm="4" Class="text-center">
                                 <MudText Typo="Typo.h4" Color="Color.Primary">@TotalMessages</MudText>
-                            <MudText>Messages Sent</MudText>
+                                <MudText>Messages Sent</MudText>
                             </MudItem>
                         </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" Class="mb-4">
+                <MudCard Elevation="0">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5" Class="mb-2">Bring Your Own Key</MudText>
+                        <MudText>OpenRouter</MudText>
+                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." Variant="Variant.Outlined"></MudTextField>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="ShowNotImplementedSnackbar">Save</MudButton>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -67,6 +79,7 @@
     private string UserEmail { get; set; } = "Loading...";
     private int TotalChats = 0;
     private int TotalMessages = 0;
+    private string? Openrouterkey { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,5 +106,10 @@
     private void NavigateToChat()
     {
         NavigationManager.NavigateTo("/Chat");
+    }
+
+    private void ShowNotImplementedSnackbar()
+    {
+        Snackbar.Add("Feature not yet implemented.", Severity.Warning);
     }
 }
