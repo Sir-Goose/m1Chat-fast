@@ -131,17 +131,15 @@
 
   <!-- User section fixed at bottom -->
   <div class="pa-2" style="flex-shrink: 0;">
-    <MudText Typo="Typo.subtitle2" Class="mb-1">
-      @UserEmail
-    </MudText>
     <MudButton
       Variant="Variant.Filled"
-      Color="Color.Secondary"
+      StartIcon="@Icons.Material.Filled.AccountCircle"
+      Color="Color.Dark"
       FullWidth="true"
-      OnClick="Logout"
+      OnClick="ViewProfile"
       Class="rounded-xl"
     >
-      Logout
+      @UserEmail
     </MudButton>
   </div>
 </MudDrawer>
@@ -267,6 +265,11 @@
   }
 
   private void Logout() => NavigationManager.NavigateTo("/");
+
+  private void ViewProfile()
+  {
+    NavigationManager.NavigateTo("/Profile");
+  }
 
   public record SidebarChat(
     string Id,
