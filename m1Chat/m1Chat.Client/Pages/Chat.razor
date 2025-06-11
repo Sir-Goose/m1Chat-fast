@@ -216,19 +216,25 @@
               <div style="display:flex; align-items:center;"
                    class="@(_isThinkingSelectorDisabled ? "mud-text-secondary" : "mud-text-primary")">
                 <div class="think-icon-text">
-                  <MudText Typo="Typo.body1" Class="mr-1">
-                    @ThinkingSelectedOption
-                  </MudText>
+                  <MudButton Variant="Variant.Text"
+                             OnClick="ToggleMenuAsync"
+                             Disabled="@_isThinkingSelectorDisabled">
+                    <MudText Typo="Typo.body1">
+                      @ThinkingSelectedOption 
+                    </MudText>
+                  </MudButton>
                 </div>
-                <MudMenu Icon="@CurrentThinkingIcon"
+                <MudMenu @ref="_mudMenu"
+                         Icon="@CurrentThinkingIcon"
                          Color="Color.Primary"
                          AriaLabel="Thinking options"
                          Disabled="@_isThinkingSelectorDisabled"
                          AnchorOrigin="Origin.TopRight"
+                         Class="rounded-xl"
                          TransformOrigin="Origin.BottomRight">
                   @foreach (var opt in _currentThinkingOptions)
                   {
-                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))" Class="px-3 py-1" Style="min-width: 120px;">
+                    <MudMenuItem OnClick="() => SetThinkingOption(opt)" Class="px-3 py-1" Style="min-width: 120px;">
                       <div class="d-flex align-center">
                         <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2" Style="margin-top: -2px;" />
                         <MudText Typo="Typo.body1">@opt</MudText>
@@ -237,6 +243,7 @@
                   }
                 </MudMenu>
               </div>
+
 
               <div
                 style="margin-left:auto;display:flex;align-items:center;">
@@ -869,6 +876,17 @@
     _showFileUpload = !_showFileUpload;
     StateHasChanged();
   }
+  
+  private MudMenu _mudMenu;
+
+  private async Task ToggleMenuAsync(MouseEventArgs args)
+  {
+    if (_mudMenu != null)
+    {
+      await _mudMenu.ToggleMenuAsync(args);
+    }
+  }
+
 
   private async Task TriggerFileUpload()
   {
