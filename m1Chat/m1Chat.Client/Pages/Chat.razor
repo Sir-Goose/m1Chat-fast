@@ -228,7 +228,8 @@
                          TransformOrigin="Origin.BottomRight">
                   @foreach (var opt in _currentThinkingOptions)
                   {
-                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))">
+                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))" Class="d-flex align-center">
+                      <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2" />
                       @opt
                     </MudMenuItem>
                   }
@@ -327,6 +328,18 @@
                 };
           }
       }
+
+  private string GetThinkingOptionIcon(string option)
+  {
+    return option switch
+    {
+      "None" => SvgIcons.BrainIcons[0],
+      "Low" => SvgIcons.BrainIcons[1],
+      "Medium" => SvgIcons.BrainIcons[2],
+      "High" => SvgIcons.BrainIcons[3],
+      _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
+    };
+  }
 
   private bool _isThinkingSelectorDisabled = false;
   private List<string> _currentThinkingOptions = new();
