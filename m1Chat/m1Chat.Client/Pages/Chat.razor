@@ -228,9 +228,11 @@
                          TransformOrigin="Origin.BottomRight">
                   @foreach (var opt in _currentThinkingOptions)
                   {
-                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))" Class="d-flex align-center">
-                      <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2" />
-                      @opt
+                    <MudMenuItem OnClick="(() => SetThinkingOption(opt))" Class="px-3 py-1" Style="min-width: 120px;">
+                      <div class="d-flex align-center">
+                        <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2" Style="margin-top: -2px;" />
+                        <MudText Typo="Typo.body1">@opt</MudText>
+                      </div>
                     </MudMenuItem>
                   }
                 </MudMenu>
