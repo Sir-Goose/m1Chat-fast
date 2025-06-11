@@ -1,7 +1,7 @@
 @inject IScrollManager ScrollManager
 
 <MudScrollToTop
-    Style="position: absolute; top: -50px; margin-right: auto; margin-left: auto; z-index: 1000;"
+    Style="position: absolute; top: -50px; margin-right: auto; margin-left: auto; z-index: 4;"
     TopOffset="-100"
     Selector="#chat-view"
     VisibleCssClass="visible absolute"
@@ -11,7 +11,7 @@
     OnScroll="Hide"
     Visible="false">
     
-    <MudButton Variant="Variant.Filled" Class="rounded-xl" EndIcon="@Icons.Material.Filled.ArrowDownward" Color="Color.Dark">
+    <MudButton Variant="Variant.Filled" Class="rounded-xl translucent-paper" EndIcon="@Icons.Material.Filled.ArrowDownward" >
         <MudText Typo="Typo.caption">Scroll to bottom</MudText>
     </MudButton>
 </MudScrollToTop>
