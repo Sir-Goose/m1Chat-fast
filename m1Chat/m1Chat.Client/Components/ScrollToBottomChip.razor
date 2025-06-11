@@ -8,7 +8,6 @@
     HiddenCssClass="invisible"
     OnClick="ScrollToBottom"
     @ref="_scrollToBottomChip"
-    OnScroll="Hide"
     Visible="false">
     
     <MudButton Variant="Variant.Filled" Class="rounded-xl translucent-paper" EndIcon="@Icons.Material.Filled.ArrowDownward" >
@@ -26,10 +25,4 @@
         _scrollToBottomChip.Visible = false;
     }
 
-    private async Task Hide()
-    {
-        _scrollToBottomChip.Visible = false;
-    }
-    
-    
 }
