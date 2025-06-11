@@ -803,7 +803,7 @@
       // Buffering implementation
       var buffer = new System.Text.StringBuilder();
       var lastUpdateTime = DateTime.MinValue;
-      var updateInterval = TimeSpan.FromMilliseconds(300);
+      var updateInterval = TimeSpan.FromMilliseconds(200);
 
       // Start streaming via SignalR
       await ChatCompletionService.StreamCompletion(
