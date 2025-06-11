@@ -35,23 +35,27 @@
   >
     @if (!_drawerOpen)
     {
-      <MudIconGroup class="ma-2" Style="position: fixed; left: 0; top: 0; z-index: 100; background-color: var(--mud-palette-background); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <MudIconGroup
+        class="ma-2 pa-2 translucent-paper rounded-xl"
+        Style="position: fixed; left: 0; top: 0; z-index: 100;"
+      >
         <MudIconButton
           Icon="@SvgIcons.SideBar"
           Size="Size.Small"
-          OnClick="() => _drawerOpen = true">
+          OnClick="() => _drawerOpen = true"
+          class="mr-2"
+        >
         </MudIconButton>
         <MudIconButton
           Icon="@SvgIcons.Search"
-          Size="Size.Small">
-        </MudIconButton>
-        <MudIconButton
-          Icon="@SvgIcons.New"
           Size="Size.Small"
-          OnClick="CreateNewChat">
+          class="mr-2"
+        >
         </MudIconButton>
-        
+        <MudIconButton Icon="@SvgIcons.New" Size="Size.Small" OnClick="CreateNewChat">
+        </MudIconButton>
       </MudIconGroup>
+
     }
 
     <div
