@@ -1,0 +1,35 @@
+@inject IScrollManager ScrollManager
+
+<MudScrollToTop
+    Style="position: absolute; top: -50px; margin-right: auto; margin-left: auto; z-index: 1000;"
+    TopOffset="-100"
+    Selector="#chat-view"
+    VisibleCssClass="visible absolute"
+    HiddenCssClass="invisible"
+    OnClick="ScrollToBottom"
+    @ref="_scrollToBottomChip"
+    OnScroll="Hide"
+    Visible="false">
+    
+    <MudButton Variant="Variant.Filled" Class="rounded-xl" EndIcon="@Icons.Material.Filled.ArrowDownward" Color="Color.Dark">
+        <MudText Typo="Typo.caption">Scroll to bottom</MudText>
+    </MudButton>
+</MudScrollToTop>
+
+@code {
+    private MudScrollToTop _scrollToBottomChip;
+    
+    private async Task ScrollToBottom()
+    {
+        _scrollToBottomChip.Visible = false;
+        await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Auto);
+        _scrollToBottomChip.Visible = false;
+    }
+
+    private async Task Hide()
+    {
+        _scrollToBottomChip.Visible = false;
+    }
+    
+    
+}

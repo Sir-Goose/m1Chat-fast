@@ -156,48 +156,47 @@
       </MudPaper>
     </div>
 
-    <div class="input-area-container">
-      <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl
-        px-4 pt-4 translucent-paper background-hack">
+    <div class="input-area-container" >
+    <ScrollToBottomChip></ScrollToBottomChip>
+    <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
         <MudContainer Class="pa-0">
-          <div style="display:flex;flex-direction:column;">
+            <div style="display:flex;flex-direction:column;">
+                <!-- File Upload Component - Animate its appearance -->
+                <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
+                    <div class="mb-2">
+                        <MudStack Row Class="mb-2 justify-space-between align-center">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                Attach Files
+                            </MudText>
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.Close"
+                                Size="Size.Small"
+                                OnClick="() => _showFileUpload = false"
+                                Color="Color.Secondary"
+                                aria-label="Close file upload"
+                            />
+                        </MudStack>
+                        <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
+                    </div>
+                </div>
 
-            <!-- File Upload Component - Animate its appearance -->
-            <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
-              <div class="mb-2">
-                <MudStack Row Class="mb-2 justify-space-between align-center">
-                  <MudText Typo="Typo.subtitle2" Color="Color.Primary">
-                    Attach Files
-                  </MudText>
-                  <MudIconButton
-                    Icon="@Icons.Material.Filled.Close"
-                    Size="Size.Small"
-                    OnClick="() => _showFileUpload = false"
-                    Color="Color.Secondary"
-                    aria-label="Close file upload"
-                  />
-                </MudStack>
-                <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
-              </div>
-            </div>
-
-            <div style="display:flex;align-items:center;">
-              <MudTextField
-                @ref="_messageTextField"
-                @bind-Value="MessageText"
-                Label="Enter your message"
-                Margin="Margin.None"
-                Variant="Variant.Text"
-                AutoGrow="true"
-                AutoFocus="true"
-                Underline="false"
-                Lines="2"
-                MaxLines="10"
-                Class="flex-grow-1"
-                Immediate="false"
-                OnKeyUp="HandleKeyUp"
-              />
-            </div>
+                <div style="display:flex;align-items:center;">
+                    <MudTextField
+                        @ref="_messageTextField"
+                        @bind-Value="MessageText"
+                        Label="Enter your message"
+                        Margin="Margin.None"
+                        Variant="Variant.Text"
+                        AutoGrow="true"
+                        AutoFocus="true"
+                        Underline="false"
+                        Lines="2"
+                        MaxLines="10"
+                        Class="flex-grow-1"
+                        Immediate="false"
+                        OnKeyUp="HandleKeyUp"
+                    />
+                </div>
             <div
               style="display:flex;align-items:center;margin-top:8px;">
               <MudSelect
@@ -446,6 +445,11 @@
       StateHasChanged();
     }
   }
+  
+  private async Task ScrollToBottom()
+{
+    await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Smooth);
+}
 
   private void HandleStreamError(string error)
   {
