@@ -225,16 +225,21 @@
             display: none;
         }
     }
-    
 
+    @@media (max-width: 400px) {
+        .think-icon-text{
+            display: none;
+        }
+    }
+    
     /* Media query for screens 768px wide or fewer */
     @@media (max-width: 768px) {
         .input-box {
             width: 95% !important; /* Set width to 95% for both */
         }
 
-        .scroll-top-button,
-        .think-icon-text {
+        .scroll-top-button
+        {
             display: none;
         }
 
