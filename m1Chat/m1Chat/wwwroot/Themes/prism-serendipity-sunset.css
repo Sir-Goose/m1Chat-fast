@@ -1,0 +1,100 @@
+/*!
+ * https://www.michaelandreuzza.com/vscode/serendipity/
+ */
+
+code[class*='language-'],
+pre[class*='language-'] {
+	color: #dee0ef;
+}
+
+pre[class*='language-']::-moz-selection,
+pre[class*='language-'] ::-moz-selection,
+code[class*='language-']::-moz-selection,
+code[class*='language-'] ::-moz-selection {
+	text-shadow: none;
+	background: #6b6d7c26;
+}
+
+pre[class*='language-']::selection,
+pre[class*='language-'] ::selection,
+code[class*='language-']::selection,
+code[class*='language-'] ::selection {
+	text-shadow: none;
+	background: #6b6d7c26;
+}
+
+:not(pre) > code[class*='language-'],
+pre[class*='language-'] {
+	color: white;
+	background: #202231;
+	border: var(--am-prism-border-width, 1px) solid var(--am-prism-border-color);
+}
+
+:not(pre) > code[class*='language-'] {
+	padding: 0.1em;
+	border-radius: 0.3em;
+	white-space: normal;
+}
+
+.token.comment {
+	color: #8d8f9e;
+	font-style: italic;
+}
+
+.token.keyword,
+.token.constant {
+	color: #709bbd;
+}
+
+.token.hexcode {
+	color: #709bbd;
+}
+
+.token.punctuation {
+	color: #8d8f9e88;
+}
+
+.token.number {
+	color: #d6b4b4;
+}
+
+.token.builtin {
+	color: #d6b4b4;
+}
+
+.token.tag {
+	color: #a0b6e8;
+}
+
+.token.attr-name {
+	color: #aac9d4;
+}
+
+.token.selector {
+	color: #aac9d4;
+}
+
+.token.attr-value,
+.token.string {
+	color: #a392dc;
+}
+
+.token.function {
+	color: #d6b4b4;
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+
+.token.italic {
+	font-style: italic;
+}
+
+:root {
+	--am-prism-line-numbers-color: #8d8f9e55;
+	--am-prism-border-color: #8d8f9e18;
+	--am-prism-copy-color: #dee0ef;
+	--am-prism-copy-bg: #8d8f9e11;
+}
