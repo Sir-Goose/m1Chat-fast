@@ -438,9 +438,10 @@
         color: var(--mud-palette-appbar-text, #fff);
         padding: 0.4rem 0.75rem;
         border: 1px solid var(--mud-palette-divider);
+        z-index: 3;
         border-bottom: 0;
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
         margin-top: 1rem;
     }
 
@@ -453,10 +454,10 @@
 
     .ai-message pre,
     .user-message pre {
-        background: var(--mud-palette-background-grey) !important;
-        border: 1px solid var(--mud-palette-divider);
-        border-left: 3px solid var(--mud-palette-primary);
+        background: #111118 !important;
         padding: 0.75rem;
+        z-index: 3;
+        border-top: none;
         margin: 0 0 1rem 0 !important;
         font-family: "JetBrains Mono", Consolas, Monaco, 'Courier New', monospace !important;
         font-size: 0.875rem !important;
@@ -464,8 +465,8 @@
         overflow-x: auto;
         border-top-left-radius: 0;
         border-top-right-radius: 0;
-        border-bottom-left-radius: 4px;
-        border-bottom-right-radius: 4px;
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
     }
 
     .ai-message pre code.language-thinking {
