@@ -9,6 +9,7 @@ using m1Chat.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Fastenshtein;
 
 namespace m1Chat.Controllers
 {
@@ -146,7 +147,7 @@ namespace m1Chat.Controllers
 
             return NoContent();
         }
-        
+
         [HttpPatch("{id:guid}/pin")]
         public async Task<IActionResult> PinChat(Guid id, [FromBody] PinChatDto dto)
         {
@@ -168,7 +169,7 @@ namespace m1Chat.Controllers
         {
             public bool IsPinned { get; init; }
         }
-        
+
         // DELETE api/chats/{id}
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteChat(Guid id)
@@ -202,6 +203,74 @@ namespace m1Chat.Controllers
             await _fileService.AttachFilesToMessageAsync(id, request.MessageIndex, request.FileIds);
 
             return NoContent();
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchChats([FromQuery] string query)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email == null) return Unauthorized();
+
+            var user = await _db.Users
+                .Include(u => u.Chats)
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return Ok(new List<ChatSearchResultDto>());
+            }
+
+            var results = new List<ChatSearchResultDto>();
+            var queryLower = query.ToLower();
+
+            foreach (var chat in user.Chats)
+            {
+                var messages = JsonSerializer.Deserialize<List<ChatMessageDto>>(chat.HistoryJson)
+                               ?? new List<ChatMessageDto>();
+
+                var matchScore = 0;
+                var content = $"{chat.Name} {string.Join(" ", messages.Select(m => m.Content))}";
+
+                // Calculate match score using Levenshtein distance
+                var distance = Levenshtein.Distance(content.ToLower(), queryLower);
+                matchScore = Math.Max(0, 100 - Math.Min(100, distance));
+
+                // Check for direct matches
+                if (content.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchScore = 100;
+                }
+
+                if (matchScore > 30) // Minimum threshold
+                {
+                    results.Add(new ChatSearchResultDto
+                    {
+                        Id = chat.Id,
+                        Name = chat.Name,
+                        Model = chat.Model,
+                        LastUpdatedAt = chat.LastUpdatedAt,
+                        IsPinned = chat.IsPinned,
+                        Score = matchScore
+                    });
+                }
+            }
+
+            return Ok(results
+                .OrderByDescending(r => r.Score)
+                .ThenByDescending(r => r.LastUpdatedAt));
+        }
+
+// Add new DTO at bottom of ChatsController class
+        public record ChatSearchResultDto
+        {
+            public Guid Id { get; init; }
+            public string Name { get; init; }
+            public string Model { get; init; }
+            public DateTime LastUpdatedAt { get; init; }
+            public bool IsPinned { get; init; }
+            public int Score { get; init; }
         }
 
         public record AttachFilesRequest(int MessageIndex, List<Guid> FileIds);

@@ -79,6 +79,12 @@ namespace m1Chat.Client.Services
             resp.EnsureSuccessStatusCode();
         }
 
+        public async Task<List<ChatSearchResultDto>> SearchChatsAsync(string query)
+        {
+            return await _http.GetFromJsonAsync<List<ChatSearchResultDto>>($"api/chats/search?query={Uri.EscapeDataString(query)}") 
+                ?? new List<ChatSearchResultDto>();
+        }
+
         // ---- DTOs / Models ----
         public record ChatSummary(Guid Id, string Name, string Model, DateTime LastUpdatedAt, bool IsPinned);
 
@@ -91,6 +97,17 @@ namespace m1Chat.Client.Services
         public record CreateChatResponse(Guid id);
 
         public record UpdateChatRequest(string Name, string Model, ChatMessageDto[] Messages, bool IsPinned);
+        
         public record PinChatRequest(bool IsPinned);
+        
+        // Add the missing DTO definition
+        public record ChatSearchResultDto(
+            Guid Id,
+            string Name,
+            string Model,
+            DateTime LastUpdatedAt,
+            bool IsPinned,
+            int Score
+        );
     }
 }

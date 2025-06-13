@@ -1,5 +1,6 @@
 @using MudBlazor
 @using m1Chat.Client.Services
+@using System.Threading
 @inject ChatService ChatService
 @inject ChatCacheService ChatCacheService
 @inject UserService UserService
@@ -32,102 +33,146 @@
     </MudButton>
   </MudDrawerHeader>
 
+  <!-- Search Box -->
+  <MudPaper Class="pa-2" Style="flex-shrink: 0; border-bottom: 1px solid var(--mud-palette-divider);">
+    <MudTextField @ref="_searchField"
+                  Value="@_searchQuery"
+                  ValueChanged="@(EventCallback.Factory.Create<string>(this, OnSearchValueChanged))"
+                  Placeholder="Search chat contents..."
+                  Immediate="true"
+                  Adornment="@(_isSearching ? Adornment.End : Adornment.Start)"
+                  AdornmentIcon="@(_isSearching ? Icons.Material.Filled.Close : Icons.Material.Filled.Search)"
+                  OnAdornmentClick="ClearSearch"
+                  Variant="Variant.Outlined"
+                  Class="rounded-xl"
+                  FullWidth="true" />
+  </MudPaper>
+
   <!-- Scrollable chat list with fixed height -->
   <div class="flex-grow-1 no-scrollbar"
        style="height: calc(100% - 180px); overflow-y: auto;">
-    @if (pinnedChats.Any())
+    @if (_isSearching)
     {
-      <MudText Typo="Typo.subtitle2"
-               Align="Align.Center"
-               Color="Color.Primary"
-               Class="py-2">Pinned</MudText>
-      <ChatList TItem="SidebarChat"
-                Items="pinnedChats"
-                ActiveItemId="ActiveChatId"
-                OnItemSelected="@(chat => HandleSelectChat(chat))"
-                OnItemPinned="@(chat => HandlePinChat(chat))"
-                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                OnItemExported="@(chat => HandleExportChat(chat))"
-                GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"
-                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      <div class="pa-2">
+        @if (_searchResults != null && _searchResults.Any())
+        {
+          <MudText Typo="Typo.subtitle2"
+                   Align="Align.Center"
+                   Color="Color.Primary"
+                   Class="py-2">Search Results</MudText>
+          <ChatList TItem="SidebarChat"
+                    Items="_searchResults"
+                    ActiveItemId="ActiveChatId"
+                    OnItemSelected="HandleSelectChat"
+                    OnItemPinned="HandlePinChat"
+                    OnItemDeleted="HandleDeleteChat"
+                    OnItemRenamed="HandleRenameChat"
+                    GetItemId="chat => chat.Id"
+                    GetItemName="chat => chat.Name"
+                    OnItemMouseEnter="HandleChatHover" />
+        }
+        else
+        {
+          <MudText Align="Align.Center" Class="py-4">No matching chats found</MudText>
+        }
+      </div>
     }
-
-    @if (todayChats.Any())
+    else
     {
-      <MudText Typo="Typo.subtitle2"
-               Align="Align.Center"
-               Color="Color.Primary"
-               Class="py-2">Today</MudText>
-      <ChatList TItem="SidebarChat"
-                Items="todayChats"
-                ActiveItemId="ActiveChatId"
-                OnItemSelected="@(chat => HandleSelectChat(chat))"
-                OnItemPinned="@(chat => HandlePinChat(chat))"
-                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                OnItemExported="@(chat => HandleExportChat(chat))"
-                GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"
-                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
-    }
+      @if (pinnedChats.Any())
+      {
+        <MudText Typo="Typo.subtitle2"
+                 Align="Align.Center"
+                 Color="Color.Primary"
+                 Class="py-2">Pinned</MudText>
+        <ChatList TItem="SidebarChat"
+                  Items="pinnedChats"
+                  ActiveItemId="ActiveChatId"
+                  OnItemSelected="@(chat => HandleSelectChat(chat))"
+                  OnItemPinned="@(chat => HandlePinChat(chat))"
+                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  GetItemId="chat => chat.Id"
+                  GetItemName="chat => chat.Name"
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      }
 
-    @if (yesterdayChats.Any())
-    {
-      <MudText Typo="Typo.subtitle2"
-               Align="Align.Center"
-               Color="Color.Primary"
-               Class="py-2">Yesterday</MudText>
-      <ChatList TItem="SidebarChat"
-                Items="yesterdayChats"
-                ActiveItemId="ActiveChatId"
-                OnItemSelected="@(chat => HandleSelectChat(chat))"
-                OnItemPinned="@(chat => HandlePinChat(chat))"
-                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                OnItemExported="@(chat => HandleExportChat(chat))"
-                GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"
-                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
-    }
+      @if (todayChats.Any())
+      {
+        <MudText Typo="Typo.subtitle2"
+                 Align="Align.Center"
+                 Color="Color.Primary"
+                 Class="py-2">Today</MudText>
+        <ChatList TItem="SidebarChat"
+                  Items="todayChats"
+                  ActiveItemId="ActiveChatId"
+                  OnItemSelected="@(chat => HandleSelectChat(chat))"
+                  OnItemPinned="@(chat => HandlePinChat(chat))"
+                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  GetItemId="chat => chat.Id"
+                  GetItemName="chat => chat.Name"
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      }
 
-    @if (last7DaysChats.Any())
-    {
-      <MudText Typo="Typo.subtitle2"
-               Align="Align.Center"
-               Color="Color.Primary"
-               Class="py-2">Last 7 Days</MudText>
-      <ChatList TItem="SidebarChat"
-                Items="last7DaysChats"
-                ActiveItemId="ActiveChatId"
-                OnItemSelected="@(chat => HandleSelectChat(chat))"
-                OnItemPinned="@(chat => HandlePinChat(chat))"
-                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                OnItemExported="@(chat => HandleExportChat(chat))"
-                GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"
-                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
-    }
+      @if (yesterdayChats.Any())
+      {
+        <MudText Typo="Typo.subtitle2"
+                 Align="Align.Center"
+                 Color="Color.Primary"
+                 Class="py-2">Yesterday</MudText>
+        <ChatList TItem="SidebarChat"
+                  Items="yesterdayChats"
+                  ActiveItemId="ActiveChatId"
+                  OnItemSelected="@(chat => HandleSelectChat(chat))"
+                  OnItemPinned="@(chat => HandlePinChat(chat))"
+                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  GetItemId="chat => chat.Id"
+                  GetItemName="chat => chat.Name"
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      }
 
-    @if (olderChats.Any())
-    {
-      <MudText Typo="Typo.subtitle2"
-               Align="Align.Center"
-               Color="Color.Primary"
-               Class="py-2">Older</MudText>
-      <ChatList TItem="SidebarChat"
-                Items="olderChats"
-                ActiveItemId="ActiveChatId"
-                OnItemSelected="@(chat => HandleSelectChat(chat))"
-                OnItemPinned="@(chat => HandlePinChat(chat))"
-                OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                OnItemExported="@(chat => HandleExportChat(chat))"
-                GetItemId="chat => chat.Id"
-                GetItemName="chat => chat.Name"
-                OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      @if (last7DaysChats.Any())
+      {
+        <MudText Typo="Typo.subtitle2"
+                 Align="Align.Center"
+                 Color="Color.Primary"
+                 Class="py-2">Last 7 Days</MudText>
+        <ChatList TItem="SidebarChat"
+                  Items="last7DaysChats"
+                  ActiveItemId="ActiveChatId"
+                  OnItemSelected="@(chat => HandleSelectChat(chat))"
+                  OnItemPinned="@(chat => HandlePinChat(chat))"
+                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  GetItemId="chat => chat.Id"
+                  GetItemName="chat => chat.Name"
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      }
+
+      @if (olderChats.Any())
+      {
+        <MudText Typo="Typo.subtitle2"
+                 Align="Align.Center"
+                 Color="Color.Primary"
+                 Class="py-2">Older</MudText>
+        <ChatList TItem="SidebarChat"
+                  Items="olderChats"
+                  ActiveItemId="ActiveChatId"
+                  OnItemSelected="@(chat => HandleSelectChat(chat))"
+                  OnItemPinned="@(chat => HandlePinChat(chat))"
+                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
+                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
+                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  GetItemId="chat => chat.Id"
+                  GetItemName="chat => chat.Name"
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+      }
     }
   </div>
 
@@ -176,6 +221,14 @@
 
   [Parameter]
   public EventCallback<SidebarChat> OnChatRenamed { get; set; }
+
+  // Search state
+  private string _searchQuery = "";
+  private List<SidebarChat> _searchResults = new();
+  private MudTextField<string> _searchField;
+  private bool _isSearching => !string.IsNullOrWhiteSpace(_searchQuery);
+  private CancellationTokenSource? _debounceCts;
+  private const int DebounceTime = 300; // milliseconds
 
   // Filtered chat lists
   private List<SidebarChat> pinnedChats =>
@@ -266,11 +319,103 @@
     }
   }
 
-  private void Logout() => NavigationManager.NavigateTo("/");
-
+  private async Task OnSearchValueChanged(string value)
+  {
+    _searchQuery = value;
+    await TriggerSearch();
+  }
+  
   private void ViewProfile()
   {
     NavigationManager.NavigateTo("/Profile");
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender && _searchField != null)
+    {
+      await _searchField.FocusAsync();
+    }
+  }
+
+  private async Task OnSearchInput(ChangeEventArgs args)
+  {
+    _searchQuery = args.Value?.ToString() ?? "";
+    await TriggerSearch();
+  }
+
+  private async Task TriggerSearch()
+  {
+    // Cancel any previous search
+    _debounceCts?.Cancel();
+    _debounceCts?.Dispose();
+    _debounceCts = new CancellationTokenSource();
+    
+    try
+    {
+      // Wait for the debounce time
+      await Task.Delay(DebounceTime, _debounceCts.Token);
+      await SearchChats();
+    }
+    catch (TaskCanceledException)
+    {
+      // Search was canceled by new input - ignore
+    }
+  }
+
+  private async Task SearchChats()
+  {
+    if (string.IsNullOrWhiteSpace(_searchQuery))
+    {
+      _searchResults.Clear();
+      StateHasChanged();
+      return;
+    }
+
+    try
+    {
+      var searchResults = await ChatService.SearchChatsAsync(_searchQuery);
+      var sidebarResults = searchResults.Select(r => new SidebarChat(
+        r.Id.ToString(),
+        r.Name,
+        r.Model,
+        r.IsPinned,
+        r.LastUpdatedAt
+      )).ToList();
+
+      // Sort by score descending and then by last updated
+      _searchResults = sidebarResults
+        .OrderByDescending(r => r.LastUpdatedAt)
+        .ToList();
+        
+      StateHasChanged();
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Search failed: {ex.Message}");
+      Snackbar.Add("Search failed", Severity.Error);
+      _searchResults.Clear();
+      StateHasChanged();
+    }
+  }
+
+  private async Task ClearSearch()
+  {
+    _searchQuery = "";
+    _searchResults.Clear();
+    _debounceCts?.Cancel();
+    
+    if (_searchField != null)
+    {
+      await _searchField.FocusAsync();
+    }
+    StateHasChanged();
+  }
+
+  public void Dispose()
+  {
+    _debounceCts?.Cancel();
+    _debounceCts?.Dispose();
   }
 
   public record SidebarChat(
