@@ -10,7 +10,8 @@
 @inject SvgIcons SvgIcons
 
 <MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1"
-           Variant="DrawerVariant.Temporary" Overlay="false" ClipMode="DrawerClipMode.Never" Class="d-flex flex-column translucent-paper">
+           Variant="DrawerVariant.Temporary" Overlay="false" ClipMode="DrawerClipMode.Never"
+           Class="d-flex flex-column translucent-paper">
   <MudDrawerHeader Class="d-flex flex-column pa-2" Style="flex-shrink: 0;">
     <div class="d-flex align-center justify-center" style="position: relative;">
       <MudIconButton
@@ -34,19 +35,18 @@
   </MudDrawerHeader>
 
   <!-- Search Box -->
-  <MudPaper Class="pa-2" Style="flex-shrink: 0; border-bottom: 1px solid var(--mud-palette-divider);">
-    <MudTextField @ref="_searchField"
-                  Value="@_searchQuery"
-                  ValueChanged="@(EventCallback.Factory.Create<string>(this, OnSearchValueChanged))"
-                  Placeholder="Search chat contents..."
-                  Immediate="true"
-                  Adornment="@(_isSearching ? Adornment.End : Adornment.Start)"
-                  AdornmentIcon="@(_isSearching ? Icons.Material.Filled.Close : Icons.Material.Filled.Search)"
-                  OnAdornmentClick="ClearSearch"
-                  Variant="Variant.Outlined"
-                  Class="rounded-xl"
-                  FullWidth="true" />
-  </MudPaper>
+  <MudTextField @ref="_searchField"
+                Value="@_searchQuery"
+                ValueChanged="@(EventCallback.Factory.Create<string>(this, OnSearchValueChanged))"
+                Placeholder="Search chat contents..."
+                Immediate="true"
+                Adornment="Adornment.End"
+                AdornmentColor="@(_isSearching ? Color.Error: Color.Primary)"
+                AdornmentIcon="@(_isSearching ? Icons.Material.Filled.Close : Icons.Material.Filled.Search)"
+                OnAdornmentClick="ClearSearch"
+                Variant="Variant.Text"
+                Class="rounded-xl ma-4"
+                FullWidth="false"/>
 
   <!-- Scrollable chat list with fixed height -->
   <div class="flex-grow-1 no-scrollbar"
@@ -59,7 +59,8 @@
           <MudText Typo="Typo.subtitle2"
                    Align="Align.Center"
                    Color="Color.Primary"
-                   Class="py-2">Search Results</MudText>
+                   Class="py-2">Search Results
+          </MudText>
           <ChatList TItem="SidebarChat"
                     Items="_searchResults"
                     ActiveItemId="ActiveChatId"
@@ -69,7 +70,7 @@
                     OnItemRenamed="HandleRenameChat"
                     GetItemId="chat => chat.Id"
                     GetItemName="chat => chat.Name"
-                    OnItemMouseEnter="HandleChatHover" />
+                    OnItemMouseEnter="HandleChatHover"/>
         }
         else
         {
@@ -84,7 +85,8 @@
         <MudText Typo="Typo.subtitle2"
                  Align="Align.Center"
                  Color="Color.Primary"
-                 Class="py-2">Pinned</MudText>
+                 Class="py-2">Pinned
+        </MudText>
         <ChatList TItem="SidebarChat"
                   Items="pinnedChats"
                   ActiveItemId="ActiveChatId"
@@ -95,7 +97,7 @@
                   OnItemExported="@(chat => HandleExportChat(chat))"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
       }
 
       @if (todayChats.Any())
@@ -103,7 +105,8 @@
         <MudText Typo="Typo.subtitle2"
                  Align="Align.Center"
                  Color="Color.Primary"
-                 Class="py-2">Today</MudText>
+                 Class="py-2">Today
+        </MudText>
         <ChatList TItem="SidebarChat"
                   Items="todayChats"
                   ActiveItemId="ActiveChatId"
@@ -114,7 +117,7 @@
                   OnItemExported="@(chat => HandleExportChat(chat))"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
       }
 
       @if (yesterdayChats.Any())
@@ -122,7 +125,8 @@
         <MudText Typo="Typo.subtitle2"
                  Align="Align.Center"
                  Color="Color.Primary"
-                 Class="py-2">Yesterday</MudText>
+                 Class="py-2">Yesterday
+        </MudText>
         <ChatList TItem="SidebarChat"
                   Items="yesterdayChats"
                   ActiveItemId="ActiveChatId"
@@ -133,7 +137,7 @@
                   OnItemExported="@(chat => HandleExportChat(chat))"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
       }
 
       @if (last7DaysChats.Any())
@@ -141,7 +145,8 @@
         <MudText Typo="Typo.subtitle2"
                  Align="Align.Center"
                  Color="Color.Primary"
-                 Class="py-2">Last 7 Days</MudText>
+                 Class="py-2">Last 7 Days
+        </MudText>
         <ChatList TItem="SidebarChat"
                   Items="last7DaysChats"
                   ActiveItemId="ActiveChatId"
@@ -152,7 +157,7 @@
                   OnItemExported="@(chat => HandleExportChat(chat))"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
       }
 
       @if (olderChats.Any())
@@ -160,7 +165,8 @@
         <MudText Typo="Typo.subtitle2"
                  Align="Align.Center"
                  Color="Color.Primary"
-                 Class="py-2">Older</MudText>
+                 Class="py-2">Older
+        </MudText>
         <ChatList TItem="SidebarChat"
                   Items="olderChats"
                   ActiveItemId="ActiveChatId"
@@ -171,7 +177,7 @@
                   OnItemExported="@(chat => HandleExportChat(chat))"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))" />
+                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
       }
     }
   </div>
@@ -192,35 +198,25 @@
 </MudDrawer>
 
 @code {
-  [Parameter]
-  public bool DrawerOpen { get; set; }
+  [Parameter] public bool DrawerOpen { get; set; }
 
-  [Parameter]
-  public EventCallback<bool> DrawerOpenChanged { get; set; }
+  [Parameter] public EventCallback<bool> DrawerOpenChanged { get; set; }
 
-  [Parameter]
-  public List<SidebarChat> SidebarChats { get; set; } = new();
+  [Parameter] public List<SidebarChat> SidebarChats { get; set; } = new();
 
-  [Parameter]
-  public string UserEmail { get; set; } = "";
+  [Parameter] public string UserEmail { get; set; } = "";
 
-  [Parameter]
-  public string? ActiveChatId { get; set; }
+  [Parameter] public string? ActiveChatId { get; set; }
 
-  [Parameter]
-  public EventCallback<SidebarChat> OnChatSelected { get; set; }
+  [Parameter] public EventCallback<SidebarChat> OnChatSelected { get; set; }
 
-  [Parameter]
-  public EventCallback OnCreateNewChat { get; set; }
+  [Parameter] public EventCallback OnCreateNewChat { get; set; }
 
-  [Parameter]
-  public EventCallback<SidebarChat> OnChatPinned { get; set; }
+  [Parameter] public EventCallback<SidebarChat> OnChatPinned { get; set; }
 
-  [Parameter]
-  public EventCallback<SidebarChat> OnChatDeleted { get; set; }
+  [Parameter] public EventCallback<SidebarChat> OnChatDeleted { get; set; }
 
-  [Parameter]
-  public EventCallback<SidebarChat> OnChatRenamed { get; set; }
+  [Parameter] public EventCallback<SidebarChat> OnChatRenamed { get; set; }
 
   // Search state
   private string _searchQuery = "";
@@ -251,10 +247,9 @@
 
   private List<SidebarChat> last7DaysChats =>
     nonPinnedChats
-      .Where(
-        c =>
-          c.LastUpdatedAt.Date >= DateTime.Today.AddDays(-8)
-          && c.LastUpdatedAt.Date <= DateTime.Today.AddDays(-2)
+      .Where(c =>
+        c.LastUpdatedAt.Date >= DateTime.Today.AddDays(-8)
+        && c.LastUpdatedAt.Date <= DateTime.Today.AddDays(-2)
       )
       .OrderByDescending(c => c.LastUpdatedAt)
       .ToList();
@@ -308,7 +303,7 @@
         FullWidth = true,
         BackgroundClass = "blur-background"
       };
-    
+
     var dialog = await DialogService.ShowAsync<RenameChatDialog>("Rename Chat", parameters, options);
     var result = await dialog.Result;
 
@@ -324,7 +319,7 @@
     _searchQuery = value;
     await TriggerSearch();
   }
-  
+
   private void ViewProfile()
   {
     NavigationManager.NavigateTo("/Profile");
@@ -350,7 +345,7 @@
     _debounceCts?.Cancel();
     _debounceCts?.Dispose();
     _debounceCts = new CancellationTokenSource();
-    
+
     try
     {
       // Wait for the debounce time
@@ -387,7 +382,7 @@
       _searchResults = sidebarResults
         .OrderByDescending(r => r.LastUpdatedAt)
         .ToList();
-        
+
       StateHasChanged();
     }
     catch (Exception ex)
@@ -404,11 +399,12 @@
     _searchQuery = "";
     _searchResults.Clear();
     _debounceCts?.Cancel();
-    
+
     if (_searchField != null)
     {
       await _searchField.FocusAsync();
     }
+
     StateHasChanged();
   }
 
@@ -425,4 +421,5 @@
     bool IsPinned = false,
     DateTime LastUpdatedAt = default
   );
+
 }
