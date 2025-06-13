@@ -18,8 +18,10 @@
 @inject SvgIcons SvgIcons
 
 
+
 <MudLayout>
   <ChatDrawer @bind-DrawerOpen="_drawerOpen"
+              @ref="_chatDrawerRef"
               SidebarChats="SidebarChats"
               UserEmail="@UserEmail"
               ActiveChatId="@_chatId"
@@ -49,14 +51,13 @@
         <MudIconButton
           Icon="@SvgIcons.Search"
           Size="Size.Small"
-          OnClick="() => _drawerOpen = true"
+          OnClick="FocusSearchFieldInDrawer"
           class="mr-2"
         >
         </MudIconButton>
         <MudIconButton Icon="@SvgIcons.New" Size="Size.Small" OnClick="CreateNewChat">
         </MudIconButton>
       </MudIconGroup>
-
     }
 
     <div
@@ -87,12 +88,12 @@
                     </div>
                   }
                   <MudChat ChatPosition="ChatBubblePosition.Start" ArrowPosition="ChatArrowPosition.None">
-                  <MudChatBubble
-                    Variant="Variant.Text"
-                    Class="user-message rounded-xl text-align-left"
-                  >
-                    <UserMarkdown Markdown="@m.Text"/>
-                  </MudChatBubble>
+                    <MudChatBubble
+                      Variant="Variant.Text"
+                      Class="user-message rounded-xl text-align-left"
+                    >
+                      <UserMarkdown Markdown="@m.Text"/>
+                    </MudChatBubble>
                   </MudChat>
                   <div class="message-actions">
                     <span @onclick:stopPropagation="true">
@@ -170,47 +171,48 @@
       </MudPaper>
     </div>
 
-    <div class="input-area-container" >
-    <ScrollToBottomChip></ScrollToBottomChip>
-    <MudPaper Elevation="3" Outlined="true" Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
+    <div class="input-area-container">
+      <ScrollToBottomChip></ScrollToBottomChip>
+      <MudPaper Elevation="3" Outlined="true"
+                Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
         <MudContainer Class="pa-0">
-            <div style="display:flex;flex-direction:column;">
-                <!-- File Upload Component - Animate its appearance -->
-                <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
-                    <div class="mb-2">
-                        <MudStack Row Class="mb-2 justify-space-between align-center">
-                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
-                                Attach Files
-                            </MudText>
-                            <MudIconButton
-                                Icon="@Icons.Material.Filled.Close"
-                                Size="Size.Small"
-                                OnClick="() => _showFileUpload = false"
-                                Color="Color.Secondary"
-                                aria-label="Close file upload"
-                            />
-                        </MudStack>
-                        <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
-                    </div>
-                </div>
+          <div style="display:flex;flex-direction:column;">
+            <!-- File Upload Component - Animate its appearance -->
+            <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
+              <div class="mb-2">
+                <MudStack Row Class="mb-2 justify-space-between align-center">
+                  <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                    Attach Files
+                  </MudText>
+                  <MudIconButton
+                    Icon="@Icons.Material.Filled.Close"
+                    Size="Size.Small"
+                    OnClick="() => _showFileUpload = false"
+                    Color="Color.Secondary"
+                    aria-label="Close file upload"
+                  />
+                </MudStack>
+                <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
+              </div>
+            </div>
 
-                <div style="display:flex;align-items:center;">
-                    <MudTextField
-                        @ref="_messageTextField"
-                        @bind-Value="MessageText"
-                        Label="Enter your message"
-                        Margin="Margin.None"
-                        Variant="Variant.Text"
-                        AutoGrow="true"
-                        AutoFocus="true"
-                        Underline="false"
-                        Lines="2"
-                        MaxLines="10"
-                        Class="flex-grow-1"
-                        Immediate="false"
-                        OnKeyUp="HandleKeyUp"
-                    />
-                </div>
+            <div style="display:flex;align-items:center;">
+              <MudTextField
+                @ref="_messageTextField"
+                @bind-Value="MessageText"
+                Label="Enter your message"
+                Margin="Margin.None"
+                Variant="Variant.Text"
+                AutoGrow="true"
+                AutoFocus="true"
+                Underline="false"
+                Lines="2"
+                MaxLines="10"
+                Class="flex-grow-1"
+                Immediate="false"
+                OnKeyUp="HandleKeyUp"
+              />
+            </div>
             <div
               style="display:flex;align-items:center;margin-top:8px;">
               <MudSelect
@@ -234,7 +236,7 @@
                              OnClick="ToggleMenuAsync"
                              Disabled="@_isThinkingSelectorDisabled">
                     <MudText Typo="Typo.body1">
-                      @ThinkingSelectedOption 
+                      @ThinkingSelectedOption
                     </MudText>
                   </MudButton>
                 </div>
@@ -250,7 +252,8 @@
                   {
                     <MudMenuItem OnClick="() => SetThinkingOption(opt)" Class="px-3 py-1" Style="min-width: 120px;">
                       <div class="d-flex align-center">
-                        <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2" Style="margin-top: -2px;" />
+                        <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2"
+                                 Style="margin-top: -2px;"/>
                         <MudText Typo="Typo.body1">@opt</MudText>
                       </div>
                     </MudMenuItem>
@@ -306,7 +309,9 @@
 
   private string UserEmail { get; set; } = "";
   private string MessageText { get; set; } = "";
-  
+
+  private ChatDrawer _chatDrawerRef;
+
 
   private ChatMessage? _messageBeingEdited; // New state variable to track the message being edited
 
@@ -321,7 +326,7 @@
     var width = await Js.InvokeAsync<int>("eval", "window.innerWidth");
     _drawerOpen = width > 768;
   }
-  
+
   private string ChatSelectedModel
   {
     get => _chatSelectedModel;
@@ -337,20 +342,21 @@
   }
 
   private string ThinkingSelectedOption { get; set; } = "None";
+
   private string CurrentThinkingIcon
+  {
+    get
     {
-        get
-          {
-            return ThinkingSelectedOption switch
-            {
-                "None" => SvgIcons.BrainIcons[0],
-                "Low" => SvgIcons.BrainIcons[1],
-                "Medium" => SvgIcons.BrainIcons[2],
-                "High" => SvgIcons.BrainIcons[3],
-                _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
-                };
-          }
-      }
+      return ThinkingSelectedOption switch
+      {
+        "None" => SvgIcons.BrainIcons[0],
+        "Low" => SvgIcons.BrainIcons[1],
+        "Medium" => SvgIcons.BrainIcons[2],
+        "High" => SvgIcons.BrainIcons[3],
+        _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
+      };
+    }
+  }
 
   private string GetThinkingOptionIcon(string option)
   {
@@ -430,8 +436,26 @@
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
       await SignalRService.EnsureConnectionAsync();
     }
-
   }
+
+  private async Task FocusSearchFieldInDrawer()
+  {
+    // Open drawer if closed
+    if (!_drawerOpen)
+    {
+      _drawerOpen = true;
+      await InvokeAsync(StateHasChanged);
+
+      // Small delay to ensure drawer is rendered
+      //await Task.Delay(50);
+    }
+
+    if (_chatDrawerRef != null)
+    {
+      await _chatDrawerRef.FocusSearchFieldAsync();
+    }
+  }
+
 
   // Changed this method to async Task as it will be called by SignalRService.OnStreamCompleted (which is now Func<Task>)
   private async Task HandleStreamCompleted()
@@ -457,11 +481,11 @@
       StateHasChanged();
     }
   }
-  
+
   private async Task ScrollToBottom()
-{
+  {
     await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Smooth);
-}
+  }
 
   private void HandleStreamError(string error)
   {
@@ -893,7 +917,7 @@
     _showFileUpload = !_showFileUpload;
     StateHasChanged();
   }
-  
+
   private MudMenu _mudMenu;
 
   private async Task ToggleMenuAsync(MouseEventArgs args)
@@ -938,8 +962,9 @@
       SidebarChats.RemoveAll(c => c.Id == chat.Id);
       if (_chatId == chat.Id)
       {
-          await CreateNewChat();
+        await CreateNewChat();
       }
+
       StateHasChanged();
     }
   }
@@ -965,7 +990,7 @@
     _isSendingMessage = true;
     StateHasChanged();
     await SignalRService.EnsureConnectionAsync();
-    
+
     var idx = _chatHistory.IndexOf(messageToRegen);
     if (idx == -1)
     {

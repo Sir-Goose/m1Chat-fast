@@ -407,6 +407,15 @@
 
     StateHasChanged();
   }
+  
+  public async Task FocusSearchFieldAsync()
+  {
+    if (_searchField != null)
+    {
+      await _searchField.FocusAsync();
+    }
+  }
+
 
   public void Dispose()
   {
