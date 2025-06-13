@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using m1Chat.Data;
 using m1Chat.Services;
@@ -218,32 +219,50 @@ namespace m1Chat.Controllers
             if (user == null) return NotFound();
 
             if (string.IsNullOrWhiteSpace(query))
-            {
                 return Ok(new List<ChatSearchResultDto>());
-            }
 
             var results = new List<ChatSearchResultDto>();
-            var queryLower = query.ToLower();
+            var exactMatchRegex = new Regex($@"\b{Regex.Escape(query)}\b",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
             foreach (var chat in user.Chats)
             {
-                var messages = JsonSerializer.Deserialize<List<ChatMessageDto>>(chat.HistoryJson)
-                               ?? new List<ChatMessageDto>();
+                int score = 0;
 
-                var matchScore = 0;
-                var content = $"{chat.Name} {string.Join(" ", messages.Select(m => m.Content))}";
-
-                // Calculate match score using Levenshtein distance
-                var distance = Levenshtein.Distance(content.ToLower(), queryLower);
-                matchScore = Math.Max(0, 100 - Math.Min(100, distance));
-
-                // Check for direct matches
-                if (content.Contains(query, StringComparison.OrdinalIgnoreCase))
+                // 1. Check chat name first (highest priority)
+                if (exactMatchRegex.IsMatch(chat.Name))
                 {
-                    matchScore = 100;
+                    score = 100; // Exact name match
+                }
+                else if (chat.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    score = 70; // Partial name match
                 }
 
-                if (matchScore > 30) // Minimum threshold
+                // 2. Only check messages if no name match found
+                if (score == 0)
+                {
+                    var messages = JsonSerializer.Deserialize<List<ChatMessageDto>>(chat.HistoryJson)
+                                   ?? new List<ChatMessageDto>();
+                    int matchCount = 0;
+
+                    foreach (var message in messages)
+                    {
+                        if (exactMatchRegex.IsMatch(message.Content))
+                        {
+                            matchCount++;
+                        }
+                    }
+
+                    if (matchCount > 0)
+                    {
+                        // Base score + term frequency bonus
+                        score = Math.Min(80, 40 + (matchCount * 5));
+                    }
+                }
+
+                // Add to results if above threshold
+                if (score >= 40)
                 {
                     results.Add(new ChatSearchResultDto
                     {
@@ -252,7 +271,7 @@ namespace m1Chat.Controllers
                         Model = chat.Model,
                         LastUpdatedAt = chat.LastUpdatedAt,
                         IsPinned = chat.IsPinned,
-                        Score = matchScore
+                        Score = score
                     });
                 }
             }
@@ -261,6 +280,7 @@ namespace m1Chat.Controllers
                 .OrderByDescending(r => r.Score)
                 .ThenByDescending(r => r.LastUpdatedAt));
         }
+
 
 // Add new DTO at bottom of ChatsController class
         public record ChatSearchResultDto
