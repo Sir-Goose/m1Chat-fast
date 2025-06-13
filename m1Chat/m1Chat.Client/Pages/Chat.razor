@@ -427,8 +427,8 @@
     if (OperatingSystem.IsBrowser())
     {
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
+      await SignalRService.EnsureConnectionAsync();
     }
-    await SignalRService.EnsureConnectionAsync();
 
   }
 
