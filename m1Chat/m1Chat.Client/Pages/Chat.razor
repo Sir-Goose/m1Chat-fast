@@ -428,10 +428,8 @@
     {
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
     }
+    await SignalRService.EnsureConnectionAsync();
 
-    // SignalRService.OnChunkReceived += HandleChunkReceived; // These are handled per-stream now
-    // SignalRService.OnStreamCompleted += HandleStreamCompleted; // These are handled per-stream now
-    // SignalRService.OnStreamError += HandleStreamError; // These are handled per-stream now
   }
 
   // Changed this method to async Task as it will be called by SignalRService.OnStreamCompleted (which is now Func<Task>)
