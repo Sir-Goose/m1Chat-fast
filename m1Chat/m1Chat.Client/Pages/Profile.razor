@@ -55,9 +55,15 @@
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Bring Your Own Key</MudText>
-                        <MudText>OpenRouter</MudText>
-                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." Variant="Variant.Outlined"></MudTextField>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="ShowNotImplementedSnackbar">Save</MudButton>
+                        <MudText Class="mt-2">OpenRouter</MudText>
+                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudText Class="mt-4">AI Studio</MudText>
+                        <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudText Class="mt-4">Chutes</MudText>
+                        <MudTextField @bind-Value="ChutesKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudText Class="mt-4">Mistral</MudText>
+                        <MudTextField @bind-Value="MistralKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-3 rounded-xl" OnClick="ShowNotImplementedSnackbar">Save</MudButton>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -80,6 +86,9 @@
     private int TotalChats = 0;
     private int TotalMessages = 0;
     private string? Openrouterkey { get; set; }
+    public string? AiStudioKey { get; set; }
+    public string? ChutesKey { get; set; }
+    public string? MistralKey { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
