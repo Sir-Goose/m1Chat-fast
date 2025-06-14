@@ -28,10 +28,12 @@ namespace m1Chat.Services
         private readonly string _groqApiKey;
         private readonly string _aiStudioApiKey;
         private readonly string _chutesApiKey;
+        private readonly string _mistralApiKey;
         private readonly string _openRouterUri;
         private readonly string _groqUri;
         private readonly string _aiStudioUri;
         private readonly string _chutesUri;
+        private readonly string _mistralUri;
         private Provider _provider;
         private readonly string _systemPrompt;
         private DateTime _dateTime;
@@ -41,7 +43,8 @@ namespace m1Chat.Services
             Chutes,
             OpenRouter,
             AiStudio,
-            Groq
+            Groq,
+            Mistral
             
         }
 
@@ -55,11 +58,13 @@ namespace m1Chat.Services
             _aiStudioApiKey = "AIzaSyDpr4nFieUgQ08NlnQOGyMQ4CYHnEm-7hw";
             _chutesApiKey =
                 "cpk_d1c9605d36354f7697c33b118005c996.ec62a91ca96e58f8a6d6ddc854bfd71b.DG1hrwmJ1Q2BekstSUJruw2v7wMAWAhm";
+            _mistralApiKey = "7pENTY2DoHpnna2SGvSIaA0K9rEfBAxA";
             _openRouterUri = "https://openrouter.ai/api/v1/chat/completions";
             _groqUri = "https://api.groq.com/openai/v1/chat/completions";
             _aiStudioUri =
                 "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
             _chutesUri = "https://llm.chutes.ai/v1/chat/completions";
+            _mistralUri = "https://api.mistral.ai/v1/chat/completions";
             _provider = Provider.OpenRouter; // Default provider
             _dateTime = DateTime.Now;
             _systemPrompt =
@@ -176,8 +181,20 @@ namespace m1Chat.Services
                     _provider = Provider.Groq;
                     break;
                 case "Devstral Small":
-                    model = "mistralai/devstral-small:free";
-                    _provider = Provider.OpenRouter;
+                    model = "devstral-small-latest";
+                    _provider = Provider.Mistral;
+                    break;
+                case "Magistral Small":
+                    model = "magistral-small-latest";
+                    _provider = Provider.Mistral;
+                    break;
+                case "Mistral Medium":
+                    model = "mistral-medium-latest";
+                    _provider = Provider.Mistral;
+                    break;
+                case "Magistral Medium":
+                    model = "magistral-medium-latest";
+                    _provider = Provider.Mistral;
                     break;
                 default:
                     model = "google/gemma-3-27b-it:free";
@@ -225,6 +242,16 @@ namespace m1Chat.Services
                 case Provider.Chutes:
                     await foreach (
                         var chunk in StreamChutesAsync(processedMessages, model)
+                    )
+                    {
+                        yield return chunk;
+                    }
+                    
+                    break;
+                    
+                case Provider.Mistral:
+                    await foreach (
+                        var chunk in StreamMistralAsync(processedMessages, model)
                     )
                     {
                         yield return chunk;
@@ -565,6 +592,74 @@ namespace m1Chat.Services
                     if (jsonData == "[DONE]")
                         break;
                     //Console.WriteLine($"Raw chunk: {jsonData}");
+                    var chunk = TryParseContentChunk(jsonData);
+                    if (!string.IsNullOrEmpty(chunk))
+                        yield return chunk;
+                }
+            }
+        }
+        
+        private async IAsyncEnumerable<string> StreamMistralAsync(
+            List<ChatMessageDto> messages,
+            string model
+        )
+        {
+            var requestBody = new
+            {
+                model,
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }
+                ),
+                stream = true
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _mistralApiKey);
+            _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
+            _httpClient.DefaultRequestHeaders.Add(
+                "HTTP-Referer",
+                "https://chat.mattdev.im"
+            );
+            _httpClient.DefaultRequestHeaders.Remove("X-Title");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+
+            using var response = await _httpClient.SendAsync(
+                new HttpRequestMessage(HttpMethod.Post, _mistralUri)
+                {
+                    Content = content
+                },
+                HttpCompletionOption.ResponseHeadersRead
+            );
+
+            Console.WriteLine(
+                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response content: {error}");
+                throw new Exception(
+                    $"Mistral API error: {response.StatusCode} - {error}"
+                );
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                if (line.StartsWith("data: "))
+                {
+                    var jsonData = line["data: ".Length..].Trim();
+                    if (jsonData == "[DONE]")
+                        break;
                     var chunk = TryParseContentChunk(jsonData);
                     if (!string.IsNullOrEmpty(chunk))
                         yield return chunk;
