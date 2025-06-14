@@ -112,11 +112,11 @@
                 continue;
             }
 
-            if (UploadedFiles.Any(f => f.OriginalFileName == file.Name))
-            {
-                Snackbar.Add($"File {file.Name} is already uploaded", Severity.Info);
-                continue;
-            }
+            // if (UploadedFiles.Any(f => f.OriginalFileName == file.Name))
+            // {
+            //     Snackbar.Add($"File {file.Name} is already uploaded", Severity.Info);
+            //     continue;
+            // }
 
             try
             {
