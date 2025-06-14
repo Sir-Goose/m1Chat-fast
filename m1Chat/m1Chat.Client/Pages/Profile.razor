@@ -51,14 +51,20 @@
                 </MudCard>
             </MudItem>
 
-            <MudDataGrid Items="@models" Filterable="false" SortMode="@SortMode.None" Groupable="false">
+            <MudDataGrid Items="@models" 
+                         Filterable="false" 
+                         SortMode="@SortMode.None" 
+                         Groupable="false" 
+                         MultiSelection="true" 
+                         SelectedItems="@selectedModels" 
+                         SelectedItemsChanged="@(EventCallback.Factory.Create<HashSet<Model>>(this, OnSelectedItemsChanged))">
                 <Columns>
                     <SelectColumn T="Model"/>
-                    <PropertyColumn Property="x => x.Name" Title="Model"/>
+                    <PropertyColumn Property="x => x.Name" Title="Model" />
                     <PropertyColumn Property="x => x.Provider"/>
                 </Columns>
             </MudDataGrid>
-            
+
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
@@ -99,8 +105,10 @@
     public string? MistralKey { get; set; }
 
     public record Model(string Name, string Provider);
-    public IEnumerable<Model> models;
-
+    
+    // Changed to List<Model> instead of IEnumerable<Model>
+    public List<Model> models = new();
+    public HashSet<Model> selectedModels = new HashSet<Model>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,6 +126,7 @@
             TotalMessages = 0;
         }
         
+        // Initialize the list directly
         models = new List<Model>
         {
             new Model("Deepseek v3", "Chutes"),
@@ -131,6 +140,16 @@
             new Model("Llama 3.1 8B", "Groq"),
             new Model("Llama 4 Scout", "Groq"),
         };
+    }
+
+    private void OnSelectedItemsChanged(HashSet<Model> items)
+    {
+        selectedModels = items;
+        // You can use the selected models list here
+        foreach (var model in selectedModels)
+        {
+            Console.WriteLine($"Selected: {model.Name}");
+        }
     }
 
     private void Logout()
@@ -147,5 +166,4 @@
     {
         Snackbar.Add("Feature not yet implemented.", Severity.Warning);
     }
-    
 }
