@@ -51,6 +51,14 @@
                 </MudCard>
             </MudItem>
 
+            <MudDataGrid Items="@models" Filterable="false" SortMode="@SortMode.None" Groupable="false">
+                <Columns>
+                    <SelectColumn T="Model"/>
+                    <PropertyColumn Property="x => x.Name" Title="Model"/>
+                    <PropertyColumn Property="x => x.Provider"/>
+                </Columns>
+            </MudDataGrid>
+            
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
@@ -90,6 +98,10 @@
     public string? ChutesKey { get; set; }
     public string? MistralKey { get; set; }
 
+    public record Model(string Name, string Provider);
+    public IEnumerable<Model> models;
+
+
     protected override async Task OnInitializedAsync()
     {
         UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
@@ -105,6 +117,20 @@
             TotalChats = 0;
             TotalMessages = 0;
         }
+        
+        models = new List<Model>
+        {
+            new Model("Deepseek v3", "Chutes"),
+            new Model("Deepseek R1 0528", "Chutes"),
+            new Model("Gemini 2.5 Flash", "AI Studio"),
+            new Model("Gemini 2.0 Flash", "AI Studio"),
+            new Model("Devstral Small", "Mistral AI"),
+            new Model("Mistral Medium", "Mistral AI"),
+            new Model("Gemma 3 27B", "Openrouter"),
+            new Model("Llama 4 Maverick", "Openrouter"),
+            new Model("Llama 3.1 8B", "Groq"),
+            new Model("Llama 4 Scout", "Groq"),
+        };
     }
 
     private void Logout()
@@ -121,4 +147,5 @@
     {
         Snackbar.Add("Feature not yet implemented.", Severity.Warning);
     }
+    
 }
