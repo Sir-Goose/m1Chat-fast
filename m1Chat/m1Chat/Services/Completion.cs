@@ -411,7 +411,7 @@ namespace m1Chat.Services
                 var error = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Error response content: {error}");
                 throw new Exception(
-                    $"OpenRouter API error: {response.StatusCode} - {error}"
+                    $"Chutes API error: {response.StatusCode} - {error}"
                 );
             }
 
@@ -649,22 +649,46 @@ namespace m1Chat.Services
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
+            var inReasoningBlock = false;
+
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
-                if (line.StartsWith("data: "))
+                if (!line.StartsWith("data: ")) continue;
+                var jsonData = line["data: ".Length..].Trim();
+                if (jsonData == "[DONE]") break;
+                //Console.WriteLine(jsonData);
+                var contentChunk = TryParseContentChunk(jsonData);
+                if (string.IsNullOrEmpty(contentChunk)) continue;
+                switch (contentChunk)
                 {
-                    var jsonData = line["data: ".Length..].Trim();
-                    if (jsonData == "[DONE]")
+                    case "<think>":
+                        yield return "```Thinking ";
+                        inReasoningBlock = true;
                         break;
-                    var chunk = TryParseContentChunk(jsonData);
-                    if (!string.IsNullOrEmpty(chunk))
-                        yield return chunk;
+                    case "</think>":
+                        yield return "```\n" +
+                                     "\n";
+                        inReasoningBlock = false;
+                        break;
+                    default:
+                    {
+                        if (!inReasoningBlock)
+                        {
+                            yield return contentChunk;
+                        }
+                        else
+                        {
+                            yield return contentChunk.Replace("```", "'''");
+                        }
+
+                        break;
+                    }
                 }
             }
+
         }
 
         private string? TryParseContentChunk(string jsonData)
