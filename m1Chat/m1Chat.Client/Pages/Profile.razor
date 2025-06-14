@@ -50,7 +50,9 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
-
+            
+            <MudPaper Elevation="0">
+            <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
             <MudDataGrid Items="@models" 
                          Filterable="false" 
                          SortMode="@SortMode.None" 
@@ -64,6 +66,7 @@
                     <PropertyColumn Property="x => x.Provider"/>
                 </Columns>
             </MudDataGrid>
+            </MudPaper>
 
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
@@ -140,6 +143,8 @@
             new Model("Llama 3.1 8B", "Groq"),
             new Model("Llama 4 Scout", "Groq"),
         };
+        
+        selectedModels = new HashSet<Model>(models);
     }
 
     private void OnSelectedItemsChanged(HashSet<Model> items)
