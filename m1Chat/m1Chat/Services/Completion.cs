@@ -132,7 +132,7 @@ namespace m1Chat.Services
             reasoningEffort = reasoningEffort.ToLower();
             switch (model)
             {
-                case "DeepSeek v3":
+                case "Deepseek v3":
                     model = "deepseek-ai/DeepSeek-V3-0324";
                     _provider = Provider.Chutes;
                     break;
@@ -176,8 +176,16 @@ namespace m1Chat.Services
                     model = "qwen/qwen3-30b-a3b:free";
                     _provider = Provider.OpenRouter;
                     break;
-                case "llama-3.1-8b-instant":
+                case "Llama 4 Maverick":
+                    model = "meta-llama/llama-4-maverick:free";
+                    _provider = Provider.OpenRouter;
+                    break;
+                case "Llama 3.1 8B":
                     model = "llama-3.1-8b-instant";
+                    _provider = Provider.Groq;
+                    break;
+                case "Llama 4 Scout":
+                    model = "meta-llama/llama-4-scout-17b-16e-instruct";
                     _provider = Provider.Groq;
                     break;
                 case "Devstral Small":

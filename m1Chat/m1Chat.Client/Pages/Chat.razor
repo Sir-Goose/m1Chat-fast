@@ -381,7 +381,7 @@
 
   private readonly List<string> _aiModelOptions = new()
   {
-    "DeepSeek v3",
+    "Deepseek v3",
     //"DeepSeek Prover v2",
     "Deepseek R1 0528",
     //"Deepseek r1",
@@ -389,14 +389,12 @@
     "Gemini 2.5 Flash",
     "Gemini 2.0 Flash",
     "Devstral Small",
-    "Magistral Small",
     "Mistral Medium",
-    "Magistral Medium",
-    "Qwen3 235B",
     //"DeepSeek r1 v3 Chimera",
+    "Llama 4 Maverick",
     "Gemma 3 27B",
-    "Qwen3 30B",
-    "llama-3.1-8b-instant"
+    "Llama 3.1 8B",
+    "Llama 4 Scout"
   };
 
   private string? _chatId;
@@ -420,7 +418,7 @@
       { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly },
       { "Gemini 2.5 Flash", ThinkingOptionsNoneLowMediumHigh },
       { "Gemini 2.0 Flash", ThinkingOptionsNoneOnly },
-      { "DeepSeek v3", ThinkingOptionsNoneOnly },
+      { "Deepseek v3", ThinkingOptionsNoneOnly },
       { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh },
       { "Deepseek r1", ThinkingOptionsLowMediumHigh },
       { "Deepseek R1 0528", ThinkingOptionsNoneOnly },
@@ -432,7 +430,9 @@
       { "Magistral Small", ThinkingOptionsNoneOnly },
       { "Mistral Medium", ThinkingOptionsNoneOnly },
       { "Magistral Medium", ThinkingOptionsNoneOnly },
-      { "llama-3.1-8b-instant", ThinkingOptionsNoneOnly }
+      { "Llama 3.1 8B", ThinkingOptionsNoneOnly },
+      { "Llama 4 Scout", ThinkingOptionsNoneOnly },
+    { "Llama 4 Maverick", ThinkingOptionsNoneOnly }
     };
 
     ApplyThinkingOptionsForModel(ChatSelectedModel);
