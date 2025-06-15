@@ -7,6 +7,7 @@
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Elevation="3" Class="pa-4 rounded-lg blur-background">
         <MudGrid Spacing="0">
+            <!-- Header -->
             <MudItem xs="12" Class="d-flex align-center">
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                Color="Color.Inherit"
@@ -17,6 +18,7 @@
                 </MudText>
             </MudItem>
 
+            <!-- Account Info -->
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
@@ -33,6 +35,7 @@
                 </MudCard>
             </MudItem>
 
+            <!-- Usage Stats -->
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
@@ -51,6 +54,7 @@
                 </MudCard>
             </MudItem>
             
+            <!-- Model Selection -->
             <MudPaper Elevation="0">
             <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
             <MudDataGrid Items="@models" 
@@ -68,23 +72,41 @@
             </MudDataGrid>
             </MudPaper>
 
+            <!-- API Keys -->
             <MudItem xs="12" Class="mb-4">
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Bring Your Own Key</MudText>
                         <MudText Class="mt-2">OpenRouter</MudText>
-                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." 
+                                      Variant="Variant.Outlined" Class="rounded-xl"
+                                      Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">AI Studio</MudText>
-                        <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...." 
+                                      Variant="Variant.Outlined" Class="rounded-xl"
+                                      Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">Chutes</MudText>
-                        <MudTextField @bind-Value="ChutesKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
+                        <MudTextField @bind-Value="ChutesKey" Label="sk-1234...." 
+                                      Variant="Variant.Outlined" Class="rounded-xl"
+                                      Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">Mistral</MudText>
-                        <MudTextField @bind-Value="MistralKey" Label="sk-1234...." Variant="Variant.Outlined" Class="rounded-xl"></MudTextField>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-3 rounded-xl" OnClick="ShowNotImplementedSnackbar">Save</MudButton>
+                        <MudTextField @bind-Value="MistralKey" Label="sk-1234...." 
+                                      Variant="Variant.Outlined" Class="rounded-xl"
+                                      Disabled="@isSaving"></MudTextField>
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true" 
+                                   Class="mt-3 rounded-xl" 
+                                   OnClick="SaveKeys"
+                                   Disabled="@isSaving">
+                            @(isSaving ? "Saving..." : "Save Keys")
+                        </MudButton>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
+            <!-- Logout -->
             <MudItem xs="12" Class="text-center mt-4">
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Error"
@@ -102,95 +124,84 @@
     private string UserEmail { get; set; } = "Loading...";
     private int TotalChats = 0;
     private int TotalMessages = 0;
-    private string? Openrouterkey { get; set; }
-    public string? AiStudioKey { get; set; }
-    public string? ChutesKey { get; set; }
-    public string? MistralKey { get; set; }
+    private bool isSaving = false;
+    
+    private string Openrouterkey = "";
+    private string AiStudioKey = "";
+    private string ChutesKey = "";
+    private string MistralKey = "";
 
     public record Model(string Name, string Provider);
     
-    
-    
-    // Changed to List<Model> instead of IEnumerable<Model>
     public List<Model> models = new();
     public HashSet<Model> selectedModels = new HashSet<Model>();
 
     protected override async Task OnInitializedAsync()
     {
-        UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
-        var stats = await UserService.GetUserStatsAsync();
-        if (stats != null)
-        {
-            TotalChats = stats.TotalChats;
-            TotalMessages = stats.TotalMessages;
+        try {
+            UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
+            
+            var stats = await UserService.GetUserStatsAsync();
+            if (stats != null) {
+                TotalChats = stats.TotalChats;
+                TotalMessages = stats.TotalMessages;
+            }
+            
+            var keys = await UserService.GetUserApiKeysAsync();
+            Openrouterkey = keys.GetValueOrDefault("OpenRouter") ?? "";
+            AiStudioKey = keys.GetValueOrDefault("AIStudio") ?? "";
+            ChutesKey = keys.GetValueOrDefault("Chutes") ?? "";
+            MistralKey = keys.GetValueOrDefault("Mistral") ?? "";
+            
+            models = new List<Model> {
+                new("Deepseek v3", "Chutes"),
+                new("Deepseek R1 0528", "Chutes"),
+                new("Gemini 2.5 Flash", "AI Studio"),
+                new("Gemini 2.0 Flash", "AI Studio"),
+                new("Devstral Small", "Mistral AI"),
+                new("Mistral Medium", "Mistral AI"),
+                new("Gemma 3 27B", "Openrouter"),
+                new("Llama 4 Maverick", "Openrouter"),
+                new("Llama 3.1 8B", "Groq"),
+                new("Llama 4 Scout", "Groq"),
+            };
+            
+            selectedModels = new HashSet<Model>(models);
         }
-        else
-        {
-            Console.WriteLine("Could not fetch user stats.");
-            TotalChats = 0;
-            TotalMessages = 0;
-        }
-        
-        var keys = await UserService.GetUserApiKeysAsync();
-        Openrouterkey = keys.GetValueOrDefault("OpenRouter");
-        AiStudioKey = keys.GetValueOrDefault("AIStudio");
-        ChutesKey = keys.GetValueOrDefault("Chutes");
-        MistralKey = keys.GetValueOrDefault("Mistral");
-        
-        
-        // Initialize the list directly
-        models = new List<Model>
-        {
-            new Model("Deepseek v3", "Chutes"),
-            new Model("Deepseek R1 0528", "Chutes"),
-            new Model("Gemini 2.5 Flash", "AI Studio"),
-            new Model("Gemini 2.0 Flash", "AI Studio"),
-            new Model("Devstral Small", "Mistral AI"),
-            new Model("Mistral Medium", "Mistral AI"),
-            new Model("Gemma 3 27B", "Openrouter"),
-            new Model("Llama 4 Maverick", "Openrouter"),
-            new Model("Llama 3.1 8B", "Groq"),
-            new Model("Llama 4 Scout", "Groq"),
-        };
-        
-        selectedModels = new HashSet<Model>(models);
-    }
-
-    private void OnSelectedItemsChanged(HashSet<Model> items)
-    {
-        selectedModels = items;
-        // You can use the selected models list here
-        foreach (var model in selectedModels)
-        {
-            Console.WriteLine($"Selected: {model.Name}");
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
         }
     }
 
-    private void Logout()
-    {
-        NavigationManager.NavigateTo("/", forceLoad: true);
-    }
+    private void OnSelectedItemsChanged(HashSet<Model> items) => selectedModels = items;
 
-    private void NavigateToChat()
-    {
-        NavigationManager.NavigateTo("/Chat");
-    }
+    private void Logout() => NavigationManager.NavigateTo("/", forceLoad: true);
 
-    private void ShowNotImplementedSnackbar()
-    {
-        Snackbar.Add("Feature not yet implemented.", Severity.Warning);
-    }
+    private void NavigateToChat() => NavigationManager.NavigateTo("/Chat");
+
     private async Task SaveKeys()
     {
-        var keys = new Dictionary<string, string>
+        isSaving = true;
+        try
         {
-            ["OpenRouter"] = Openrouterkey ?? "",
-            ["AIStudio"] = AiStudioKey ?? "",
-            ["Chutes"] = ChutesKey ?? "",
-            ["Mistral"] = MistralKey ?? ""
-        };
+            var keys = new Dictionary<string, string>
+            {
+                ["OpenRouter"] = Openrouterkey ?? "",
+                ["AIStudio"] = AiStudioKey ?? "",
+                ["Chutes"] = ChutesKey ?? "",
+                ["Mistral"] = MistralKey ?? ""
+            };
 
-        await UserService.SaveUserApiKeysAsync(keys);
-        Snackbar.Add("API keys saved successfully!", Severity.Success);
+            await UserService.SaveUserApiKeysAsync(keys);
+            Snackbar.Add("API keys saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save keys: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 }
