@@ -109,6 +109,8 @@
 
     public record Model(string Name, string Provider);
     
+    
+    
     // Changed to List<Model> instead of IEnumerable<Model>
     public List<Model> models = new();
     public HashSet<Model> selectedModels = new HashSet<Model>();
@@ -128,6 +130,13 @@
             TotalChats = 0;
             TotalMessages = 0;
         }
+        
+        var keys = await UserService.GetUserApiKeysAsync();
+        Openrouterkey = keys.GetValueOrDefault("OpenRouter");
+        AiStudioKey = keys.GetValueOrDefault("AIStudio");
+        ChutesKey = keys.GetValueOrDefault("Chutes");
+        MistralKey = keys.GetValueOrDefault("Mistral");
+        
         
         // Initialize the list directly
         models = new List<Model>
@@ -170,5 +179,18 @@
     private void ShowNotImplementedSnackbar()
     {
         Snackbar.Add("Feature not yet implemented.", Severity.Warning);
+    }
+    private async Task SaveKeys()
+    {
+        var keys = new Dictionary<string, string>
+        {
+            ["OpenRouter"] = Openrouterkey ?? "",
+            ["AIStudio"] = AiStudioKey ?? "",
+            ["Chutes"] = ChutesKey ?? "",
+            ["Mistral"] = MistralKey ?? ""
+        };
+
+        await UserService.SaveUserApiKeysAsync(keys);
+        Snackbar.Add("API keys saved successfully!", Severity.Success);
     }
 }

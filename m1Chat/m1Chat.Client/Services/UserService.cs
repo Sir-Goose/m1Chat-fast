@@ -38,6 +38,18 @@ namespace m1Chat.Client.Services
                 return null;
             }
         }
+        
+        public async Task<Dictionary<string, string>> GetUserApiKeysAsync()
+        {
+            return await _http.GetFromJsonAsync<Dictionary<string, string>>("api/user/apikeys") 
+                   ?? new Dictionary<string, string>();
+        }
+
+        public async Task SaveUserApiKeysAsync(Dictionary<string, string> keys)
+        {
+            await _http.PostAsJsonAsync("api/user/apikeys", keys);
+        }
+
 
         private class UserMeResponse
         {

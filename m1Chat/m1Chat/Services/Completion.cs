@@ -37,6 +37,14 @@ namespace m1Chat.Services
         private Provider _provider;
         private readonly string _systemPrompt;
         private DateTime _dateTime;
+        private readonly ApiKeyService _apiKeyService;
+
+        // Provider constants
+        public const string ProviderOpenRouter = "OpenRouter";
+        public const string ProviderGroq = "Groq";
+        public const string ProviderAIStudio = "AIStudio";
+        public const string ProviderChutes = "Chutes";
+        public const string ProviderMistral = "Mistral";
 
         private enum Provider
         {
@@ -45,10 +53,9 @@ namespace m1Chat.Services
             AiStudio,
             Groq,
             Mistral
-            
         }
 
-        public Completion()
+        public Completion(ApiKeyService apiKeyService)
         {
             _httpClient = new HttpClient();
             _openRouterApiKey =
@@ -69,6 +76,7 @@ namespace m1Chat.Services
             _dateTime = DateTime.Now;
             _systemPrompt =
                 $"You are M1 Chat, an AI assistant. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.\n- The current date and time including timezone is {_dateTime}.\n- Always use LaTeX for mathematical expressions:\n    - Inline math must be wrapped in single dollar signs: $ content $ \n    - Display math must be wrapped in double dollar signs: $$ content $$\n-   \n- When generating code:\n    - Ensure it is properly formatted using Prettier with a print width of 80 characters\n    - Present it in Markdown code blocks with the correct language extension indicated";
+            _apiKeyService = apiKeyService;
 
             if (string.IsNullOrEmpty(_openRouterApiKey))
             {
@@ -82,16 +90,16 @@ namespace m1Chat.Services
             List<ChatMessageDto> messages,
             string model,
             string reasoningEffort,
-            ChatDbContext db
-        )
+            ChatDbContext db,
+            string userEmail)
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
             // Add system prompt if provided
-            processedMessages.Add(new ChatMessageDto 
-            { 
-                Role = "system", 
-                Content = _systemPrompt 
+            processedMessages.Add(new ChatMessageDto
+            {
+                Role = "system",
+                Content = _systemPrompt
             });
 
             foreach (var message in messages)
@@ -170,7 +178,7 @@ namespace m1Chat.Services
                     break;
                 case "Gemma 3 27B":
                     model = "google/gemma-3-27b-it:free";
-                    _provider = Provider.OpenRouter; 
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Qwen3 30B":
                     model = "qwen/qwen3-30b-a3b:free";
@@ -217,67 +225,75 @@ namespace m1Chat.Services
                         var chunk in StreamOpenRouterAsync(
                             processedMessages,
                             model,
-                            reasoningEffort
+                            reasoningEffort,
+                            userEmail
                         )
                     )
                     {
                         yield return chunk;
                     }
-
                     break;
                 case Provider.AiStudio:
                     await foreach (
                         var chunk in StreamAiStudioAsync(
                             processedMessages,
                             model,
-                            reasoningEffort
+                            reasoningEffort,
+                            userEmail
                         )
                     )
                     {
                         yield return chunk;
                     }
-
                     break;
                 case Provider.Groq:
                     await foreach (
-                        var chunk in StreamGroqAsync(processedMessages, model)
+                        var chunk in StreamGroqAsync(
+                            processedMessages,
+                            model,
+                            userEmail
+                        )
                     )
                     {
                         yield return chunk;
                     }
-
                     break;
                 case Provider.Chutes:
                     await foreach (
-                        var chunk in StreamChutesAsync(processedMessages, model)
+                        var chunk in StreamChutesAsync(
+                            processedMessages,
+                            model,
+                            userEmail
+                        )
                     )
                     {
                         yield return chunk;
                     }
-                    
                     break;
-                    
                 case Provider.Mistral:
                     await foreach (
-                        var chunk in StreamMistralAsync(processedMessages, model)
+                        var chunk in StreamMistralAsync(
+                            processedMessages,
+                            model,
+                            userEmail
+                        )
                     )
                     {
                         yield return chunk;
                     }
-
                     break;
                 default:
                     await foreach (
                         var chunk in StreamOpenRouterAsync(
                             processedMessages,
                             model,
-                            reasoningEffort
+                            reasoningEffort,
+                            userEmail
                         )
                     )
                     {
                         yield return chunk;
                     }
-
                     break;
             }
         }
@@ -285,23 +301,25 @@ namespace m1Chat.Services
         private async IAsyncEnumerable<string> StreamOpenRouterAsync(
             List<ChatMessageDto> messages,
             string model,
-            string reasoningEffort
-        )
+            string reasoningEffort,
+            string userEmail)
         {
             var requestBody = new
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }
-                ),
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter) ?? _openRouterApiKey;
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _openRouterApiKey);
+                new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -375,25 +393,27 @@ namespace m1Chat.Services
                 yield return "```\n";
             }
         }
-        
+
         private async IAsyncEnumerable<string> StreamChutesAsync(
             List<ChatMessageDto> messages,
-            string model
-        )
+            string model,
+            string userEmail)
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }
-                ),
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes) ?? _chutesApiKey;
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _chutesApiKey);
+                new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -436,7 +456,6 @@ namespace m1Chat.Services
                 if (!line.StartsWith("data: ")) continue;
                 var jsonData = line["data: ".Length..].Trim();
                 if (jsonData == "[DONE]") break;
-                //Console.WriteLine(jsonData);
                 var contentChunk = TryParseContentChunk(jsonData);
                 if (string.IsNullOrEmpty(contentChunk)) continue;
                 switch (contentChunk)
@@ -465,27 +484,28 @@ namespace m1Chat.Services
                     }
                 }
             }
-
         }
 
         private async IAsyncEnumerable<string> StreamGroqAsync(
             List<ChatMessageDto> messages,
-            string model
-        )
+            string model,
+            string userEmail)
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }
-                ),
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq) ?? _groqApiKey;
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _groqApiKey);
+                new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -539,23 +559,25 @@ namespace m1Chat.Services
         private async IAsyncEnumerable<string> StreamAiStudioAsync(
             List<ChatMessageDto> messages,
             string model,
-            string reasoningEffort
-        )
+            string reasoningEffort,
+            string userEmail)
         {
             var requestBody = new
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }
-                ),
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true,
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio) ?? _aiStudioApiKey;
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _aiStudioApiKey);
+                new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -599,32 +621,33 @@ namespace m1Chat.Services
                     var jsonData = line["data: ".Length..].Trim();
                     if (jsonData == "[DONE]")
                         break;
-                    //Console.WriteLine($"Raw chunk: {jsonData}");
                     var chunk = TryParseContentChunk(jsonData);
                     if (!string.IsNullOrEmpty(chunk))
                         yield return chunk;
                 }
             }
         }
-        
+
         private async IAsyncEnumerable<string> StreamMistralAsync(
             List<ChatMessageDto> messages,
-            string model
-        )
+            string model,
+            string userEmail)
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }
-                ),
+                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
                 stream = true
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral) ?? _mistralApiKey;
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _mistralApiKey);
+                new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
             _httpClient.DefaultRequestHeaders.Add(
                 "HTTP-Referer",
@@ -667,7 +690,6 @@ namespace m1Chat.Services
                 if (!line.StartsWith("data: ")) continue;
                 var jsonData = line["data: ".Length..].Trim();
                 if (jsonData == "[DONE]") break;
-                //Console.WriteLine(jsonData);
                 var contentChunk = TryParseContentChunk(jsonData);
                 if (string.IsNullOrEmpty(contentChunk)) continue;
                 switch (contentChunk)
@@ -696,7 +718,6 @@ namespace m1Chat.Services
                     }
                 }
             }
-
         }
 
         private string? TryParseContentChunk(string jsonData)

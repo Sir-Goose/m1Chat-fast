@@ -65,6 +65,9 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddHttpContextAccessor();
+
 // --- Conditional Authentication Registration --- //
 if (builder.Environment.IsDevelopment())
 {

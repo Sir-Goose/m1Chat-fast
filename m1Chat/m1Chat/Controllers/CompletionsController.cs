@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -59,6 +60,7 @@ namespace m1Chat.Controllers
             var requestId = request.RequestId;
             var model = request.Model;
             var reasoningEffort = request.ReasoningEffort;
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
 
             // Start the long-running operation in a background task.
             // _ = Task.Run allows the current HTTP request to complete immediately.
@@ -80,7 +82,8 @@ namespace m1Chat.Controllers
                                            dtoList,
                                            model, // Use captured variables
                                            reasoningEffort, // Use captured variables
-                                           scopedDb)) // Use the scoped DbContext
+                                           scopedDb,
+                                           email)) // Use the scoped DbContext
                         {
                             if (!string.IsNullOrEmpty(chunk))
                             {
