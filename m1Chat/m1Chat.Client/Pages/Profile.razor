@@ -2,7 +2,9 @@
 @inject UserService UserService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject ModelPreferencesService ModelPreferences 
 @using m1Chat.Client.Services
+@using System.Text.Json 
 
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Elevation="3" Class="pa-4 rounded-lg blur-background">
@@ -53,23 +55,32 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
-            
+
             <!-- Model Selection -->
             <MudPaper Elevation="0">
-            <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
-            <MudDataGrid Items="@models" 
-                         Filterable="false" 
-                         SortMode="@SortMode.None" 
-                         Groupable="false" 
-                         MultiSelection="true" 
-                         SelectedItems="@selectedModels" 
-                         SelectedItemsChanged="@(EventCallback.Factory.Create<HashSet<Model>>(this, OnSelectedItemsChanged))">
-                <Columns>
-                    <SelectColumn T="Model"/>
-                    <PropertyColumn Property="x => x.Name" Title="Model" />
-                    <PropertyColumn Property="x => x.Provider"/>
-                </Columns>
-            </MudDataGrid>
+                <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
+                <MudDataGrid Items="@models"
+                             Filterable="false"
+                             SortMode="@SortMode.None"
+                             Groupable="false"
+                             MultiSelection="true"
+                             SelectedItems="@selectedModels"
+                             SelectedItemsChanged="@(EventCallback.Factory.Create<HashSet<Model>>(this, OnSelectedItemsChanged))">
+                    <Columns>
+                        <SelectColumn T="Model"/>
+                        <PropertyColumn Property="x => x.Name" Title="Model" />
+                        <PropertyColumn Property="x => x.Provider"/>
+                    </Columns>
+                </MudDataGrid>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           FullWidth="true" 
+                           Class="mt-3 rounded-xl" 
+                           OnClick="SaveModelPreferences"
+                           Disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save Model Preferences")
+                </MudButton>
             </MudPaper>
 
             <!-- API Keys -->
@@ -78,29 +89,29 @@
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Bring Your Own Key</MudText>
                         <MudText Class="mt-2">OpenRouter</MudText>
-                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...." 
+                        <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
                                       Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">AI Studio</MudText>
-                        <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...." 
+                        <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
                                       Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">Chutes</MudText>
-                        <MudTextField @bind-Value="ChutesKey" Label="sk-1234...." 
+                        <MudTextField @bind-Value="ChutesKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
                                       Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">Mistral</MudText>
-                        <MudTextField @bind-Value="MistralKey" Label="sk-1234...." 
+                        <MudTextField @bind-Value="MistralKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
                                       Disabled="@isSaving"></MudTextField>
-                        
-                        <MudButton Variant="Variant.Filled" 
-                                   Color="Color.Primary" 
-                                   FullWidth="true" 
-                                   Class="mt-3 rounded-xl" 
-                                   OnClick="SaveKeys"
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Class="mt-3 rounded-xl"
+                                   OnClick="SaveApiKeys"
                                    Disabled="@isSaving">
-                            @(isSaving ? "Saving..." : "Save Keys")
+                            @(isSaving ? "Saving..." : "Save API Keys")
                         </MudButton>
                     </MudCardContent>
                 </MudCard>
@@ -124,51 +135,55 @@
     private string UserEmail { get; set; } = "Loading...";
     private int TotalChats = 0;
     private int TotalMessages = 0;
-    private bool isSaving = false;
-    
+    private bool isSaving = false; // Controls UI state for both saves
+
     private string Openrouterkey = "";
     private string AiStudioKey = "";
     private string ChutesKey = "";
     private string MistralKey = "";
 
     public record Model(string Name, string Provider);
-    
+
     public List<Model> models = new();
     public HashSet<Model> selectedModels = new HashSet<Model>();
 
     protected override async Task OnInitializedAsync()
     {
-        try {
+        try
+        {
             UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
-            
+
             var stats = await UserService.GetUserStatsAsync();
-            if (stats != null) {
+            if (stats != null)
+            {
                 TotalChats = stats.TotalChats;
                 TotalMessages = stats.TotalMessages;
             }
-            
+
             var keys = await UserService.GetUserApiKeysAsync();
             Openrouterkey = keys.GetValueOrDefault("OpenRouter") ?? "";
             AiStudioKey = keys.GetValueOrDefault("AIStudio") ?? "";
             ChutesKey = keys.GetValueOrDefault("Chutes") ?? "";
             MistralKey = keys.GetValueOrDefault("Mistral") ?? "";
-            
-            models = new List<Model> {
-                new("Deepseek v3", "Chutes"),
-                new("Deepseek R1 0528", "Chutes"),
-                new("Gemini 2.5 Flash", "AI Studio"),
-                new("Gemini 2.0 Flash", "AI Studio"),
-                new("Devstral Small", "Mistral AI"),
-                new("Mistral Medium", "Mistral AI"),
-                new("Gemma 3 27B", "Openrouter"),
-                new("Llama 4 Maverick", "Openrouter"),
-                new("Llama 3.1 8B", "Groq"),
-                new("Llama 4 Scout", "Groq"),
-            };
-            
-            selectedModels = new HashSet<Model>(models);
+
+            // Initialize ModelPreferences service and load enabled models
+            await ModelPreferences.InitializeAsync();
+
+            // Populate the 'models' list from the ModelPreferencesService
+            var allAvailableModels = ModelPreferences.GetAllAvailableModels();
+            var modelProviders = ModelPreferences.GetModelProviders();
+
+            models = allAvailableModels
+                .Select(modelName => new Model(modelName, modelProviders.GetValueOrDefault(modelName, "Unknown")))
+                .ToList();
+
+            // Select models that are currently enabled based on preferences
+            selectedModels = new HashSet<Model>(
+                models.Where(m => ModelPreferences.EnabledModels.Contains(m.Name))
+            );
         }
-        catch (Exception ex) {
+        catch (Exception ex)
+        {
             Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
         }
     }
@@ -179,7 +194,7 @@
 
     private void NavigateToChat() => NavigationManager.NavigateTo("/Chat");
 
-    private async Task SaveKeys()
+    private async Task SaveApiKeys() // Renamed to be specific
     {
         isSaving = true;
         try
@@ -197,7 +212,26 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to save keys: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Failed to save API keys: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+    
+    private async Task SaveModelPreferences() // New method for saving model preferences
+    {
+        isSaving = true;
+        try
+        {
+            var enabledModelNames = selectedModels.Select(m => m.Name).ToList();
+            await ModelPreferences.SetEnabledModels(enabledModelNames);
+            Snackbar.Add("Model preferences saved!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save model preferences: {ex.Message}", Severity.Error);
         }
         finally
         {

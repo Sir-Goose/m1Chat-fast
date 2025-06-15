@@ -67,6 +67,7 @@ builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ModelPreferencesService>();
 
 // --- Conditional Authentication Registration --- //
 if (builder.Environment.IsDevelopment())
