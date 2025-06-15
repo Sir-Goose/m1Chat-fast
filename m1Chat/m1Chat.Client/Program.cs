@@ -16,7 +16,7 @@ builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<ChatCacheService>();
 builder.Services.AddScoped<SignalRService>();
 builder.Services.AddScoped<SvgIcons>();
-
+builder.Services.AddScoped<ModelPreferencesService>();
 
 
 await builder.Build().RunAsync();

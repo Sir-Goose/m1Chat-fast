@@ -1,0 +1,30 @@
+@using MudBlazor
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mt-2">
+            The model you selected requires an API key. Please go to your profile to add it.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Secondary" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="GoToProfile" Color="Color.Primary" Variant="Variant.Filled">Go to Profile</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private void GoToProfile()
+    {
+        // Close the dialog and indicate that the user chose to go to the profile
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        // Just cancel the dialog
+        MudDialog.Cancel();
+    }
+}

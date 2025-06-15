@@ -29,7 +29,8 @@ public class UserApiKeysController : ControllerBase
             ["OpenRouter"] = await _apiKeyService.GetUserApiKey(email, "OpenRouter") ?? "",
             ["AIStudio"] = await _apiKeyService.GetUserApiKey(email, "AIStudio") ?? "",
             ["Chutes"] = await _apiKeyService.GetUserApiKey(email, "Chutes") ?? "",
-            ["Mistral"] = await _apiKeyService.GetUserApiKey(email, "Mistral") ?? ""
+            ["Mistral"] = await _apiKeyService.GetUserApiKey(email, "Mistral") ?? "",
+            ["Groq"] = await _apiKeyService.GetUserApiKey(email, "Groq") ?? ""
         };
 
         return Ok(keys);
