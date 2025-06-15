@@ -18,4 +18,5 @@ builder.Services.AddScoped<SignalRService>();
 builder.Services.AddScoped<SvgIcons>();
 
 
+
 await builder.Build().RunAsync();

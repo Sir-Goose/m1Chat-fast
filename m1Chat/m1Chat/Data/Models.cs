@@ -92,4 +92,23 @@ namespace m1Chat.Data
         [Required]
         public DateTime AttachedAt { get; set; } = DateTime.UtcNow;
     }
+    
+    public class UserApiKey
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [Required]
+        public Guid UserId { get; set; }
+        public User User { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Provider { get; set; } // "OpenRouter", "AIStudio", "Chutes", "Mistral"
+
+        [Required]
+        [MaxLength(256)]
+        public string ApiKey { get; set; }
+    }
+
 }

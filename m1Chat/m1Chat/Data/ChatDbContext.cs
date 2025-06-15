@@ -13,6 +13,7 @@ namespace m1Chat.Data
         public DbSet<Chat> Chats { get; set; }
         public DbSet<UploadedFile> UploadedFiles { get; set; }
         public DbSet<ChatMessageFile> ChatMessageFiles { get; set; }
+        public DbSet<UserApiKey> UserApiKeys { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -51,6 +52,10 @@ namespace m1Chat.Data
             // Ensure unique constraint on chat + message index + file
             modelBuilder.Entity<ChatMessageFile>()
                 .HasIndex(cmf => new { cmf.ChatId, cmf.MessageIndex, cmf.FileId })
+                .IsUnique();
+            
+            modelBuilder.Entity<UserApiKey>()
+                .HasIndex(k => new { k.UserId, k.Provider })
                 .IsUnique();
         }
     }
