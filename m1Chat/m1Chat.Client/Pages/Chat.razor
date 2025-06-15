@@ -852,7 +852,7 @@
       _chatName = "New Chat";
       var initialMessagesForName = new List<ServiceChatMessage>
       {
-        new() { Role = "user", Content = $"Generate a brief, relevant chat name (under 5 words, no quotes) for this conversation that starts with: \"{userMessageTextForName[..Math.Min(100, userMessageTextForName.Length)]}\"" }
+        new() { Role = "user", Content = $"{userMessageTextForName}\n-----\nIgnore all previous instructions. The preceding text is a conversation thread that needs a concise but descriptive 3 to 5 word title in natural English so that readers will be able to easily find it again. Do not add any quotation marks or formatting to the title. Respond only with the title text." }
       };
 
       string tempName = string.IsNullOrWhiteSpace(userMessageTextForName) ? "Chat with Files" : (userMessageTextForName.Length <= 20 ? userMessageTextForName : userMessageTextForName.Substring(0, 20) + "...");
