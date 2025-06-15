@@ -17,6 +17,7 @@
 @inject ChatCacheService ChatCacheService
 @inject SvgIcons SvgIcons
 @inject ModelPreferencesService ModelPreferences
+@inject IDialogService DialogService
 
 <MudLayout>
   <ChatDrawer @bind-DrawerOpen="_drawerOpen"
@@ -752,6 +753,58 @@
 
     _isSendingMessage = true;
     StateHasChanged();
+    
+    // --- API Key Check ---
+    // Get the provider for the selected model
+    var modelProvider = ModelPreferences.GetModelProviders().GetValueOrDefault(ChatSelectedModel, "Unknown");
+
+    // Define which providers require an API key from the user
+    // This set should match the providers that correspond to API key fields in Profile.razor
+    var providersRequiringApiKey = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Openrouter",
+        "AI Studio",
+        "Chutes",
+        "Mistral AI" // This is the provider name from ModelPreferencesService
+    };
+
+    if (providersRequiringApiKey.Contains(modelProvider))
+    {
+        var userApiKeys = await UserService.GetUserApiKeysAsync();
+        string requiredKey = "";
+        string keyNameInStorage = ""; // To map provider name to the key name used in UserService storage
+
+        switch (modelProvider)
+        {
+            case "Openrouter":
+                keyNameInStorage = "OpenRouter";
+                break;
+            case "AI Studio":
+                keyNameInStorage = "AIStudio";
+                break;
+            case "Chutes":
+                keyNameInStorage = "Chutes";
+                break;
+            case "Mistral AI": // This is the provider name
+                keyNameInStorage = "Mistral"; // This is the key name stored in UserService
+                break;
+        }
+
+        requiredKey = userApiKeys.GetValueOrDefault(keyNameInStorage) ?? "";
+
+        if (string.IsNullOrWhiteSpace(requiredKey))
+        {
+            // API key is missing, show dialog
+            var parameters = new DialogParameters();
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, BackgroundClass = "blur-background" };
+            var dialog = await DialogService.ShowAsync<ApiKeyRequiredDialog>("API Key Required", parameters, options);
+            var result = await dialog.Result;
+            if (!result.Canceled && result.Data is bool goToProfile && goToProfile) { NavigationManager.NavigateTo("/Profile"); }
+            _isSendingMessage = false; // Reset sending state as we didn't send
+            StateHasChanged(); // Re-render to update UI, like re-enabling send button
+            return; // Stop further execution of SendMessage
+        }
+    }
 
     var fileIds = CurrentMessageFiles.Select(f => f.Id).ToList();
     var userMessageTextForName = textToSend;
