@@ -2,9 +2,9 @@
 @inject UserService UserService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject ModelPreferencesService ModelPreferences 
+@inject ModelPreferencesService ModelPreferences
 @using m1Chat.Client.Services
-@using System.Text.Json 
+@using System.Text.Json
 
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Elevation="3" Class="pa-4 rounded-lg blur-background">
@@ -42,7 +42,7 @@
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Usage Statistics</MudText>
-                        <MudGrid>
+                        <MudGrid Class="rounded-xl">
                             <MudItem xs="12" sm="4" Class="text-center">
                                 <MudText Typo="Typo.h4" Color="Color.Primary">@TotalChats</MudText>
                                 <MudText>Chat Threads</MudText>
@@ -72,11 +72,11 @@
                         <PropertyColumn Property="x => x.Provider"/>
                     </Columns>
                 </MudDataGrid>
-                
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           FullWidth="true" 
-                           Class="mt-3 rounded-xl" 
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Class="mt-3 rounded-xl"
                            OnClick="SaveModelPreferences"
                            Disabled="@isSaving">
                     @(isSaving ? "Saving..." : "Save Model Preferences")
@@ -102,6 +102,10 @@
                                       Disabled="@isSaving"></MudTextField>
                         <MudText Class="mt-4">Mistral</MudText>
                         <MudTextField @bind-Value="MistralKey" Label="sk-1234...."
+                                      Variant="Variant.Outlined" Class="rounded-xl"
+                                      Disabled="@isSaving"></MudTextField>
+                        <MudText Class="mt-4">Groq</MudText>
+                        <MudTextField @bind-Value="GroqKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
                                       Disabled="@isSaving"></MudTextField>
 
@@ -141,6 +145,7 @@
     private string AiStudioKey = "";
     private string ChutesKey = "";
     private string MistralKey = "";
+    private string GroqKey = "";
 
     public record Model(string Name, string Provider);
 
@@ -165,6 +170,7 @@
             AiStudioKey = keys.GetValueOrDefault("AIStudio") ?? "";
             ChutesKey = keys.GetValueOrDefault("Chutes") ?? "";
             MistralKey = keys.GetValueOrDefault("Mistral") ?? "";
+            GroqKey = keys.GetValueOrDefault("Groq") ?? "";
 
             // Initialize ModelPreferences service and load enabled models
             await ModelPreferences.InitializeAsync();
@@ -194,7 +200,7 @@
 
     private void NavigateToChat() => NavigationManager.NavigateTo("/Chat");
 
-    private async Task SaveApiKeys() // Renamed to be specific
+    private async Task SaveApiKeys()
     {
         isSaving = true;
         try
@@ -204,7 +210,8 @@
                 ["OpenRouter"] = Openrouterkey ?? "",
                 ["AIStudio"] = AiStudioKey ?? "",
                 ["Chutes"] = ChutesKey ?? "",
-                ["Mistral"] = MistralKey ?? ""
+                ["Mistral"] = MistralKey ?? "",
+                ["Groq"] = GroqKey ?? ""
             };
 
             await UserService.SaveUserApiKeysAsync(keys);
@@ -219,8 +226,8 @@
             isSaving = false;
         }
     }
-    
-    private async Task SaveModelPreferences() // New method for saving model preferences
+
+    private async Task SaveModelPreferences()
     {
         isSaving = true;
         try
