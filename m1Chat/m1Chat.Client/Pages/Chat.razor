@@ -892,7 +892,7 @@
         // Start name generation streaming
         await ChatCompletionService.StreamCompletion(
           initialMessagesForName,
-          "llama-3.1-8b-instant",
+          "Llama 4 Scout",
           "Low", // Or "None" if 'reasoningEffort' is not applicable to name generation model
           chunk => generatedName += chunk,
           nameGenerationCompleteFunc, // Pass the Func<Task>
