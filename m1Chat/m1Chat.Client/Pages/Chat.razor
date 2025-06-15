@@ -439,24 +439,24 @@
 
     _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
     {
-      { "Deepseek v3", ThinkingOptionsNoneOnly },
+      { "Deepseek v3 (Chutes)", ThinkingOptionsNoneOnly },
       { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
       { "Deepseek r1", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Deepseek R1 0528", ThinkingOptionsNoneOnly },
+      { "Deepseek R1 0528 (Chutes)", ThinkingOptionsNoneOnly },
       { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
       { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Gemini 2.5 Flash", ThinkingOptionsNoneLowMediumHigh },
-      { "Gemini 2.0 Flash", ThinkingOptionsNoneOnly },
+      { "Gemini 2.5 Flash (AI Studio)", ThinkingOptionsNoneLowMediumHigh },
+      { "Gemini 2.0 Flash (AI Studio)", ThinkingOptionsNoneOnly },
       { "Qwen3 235B", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
       { "Qwen3 30B", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Gemma 3 27B", ThinkingOptionsNoneOnly },
-      { "Devstral Small", ThinkingOptionsNoneOnly },
-      { "Magistral Small", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Mistral Medium", ThinkingOptionsNoneOnly },
+      { "Gemma 3 27B (OpenRouter)", ThinkingOptionsNoneOnly },
+      { "Devstral Small (Mistral AI)", ThinkingOptionsNoneOnly },
+      { "Magistral Small (Mistral AI)", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
+      { "Mistral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
       { "Magistral Medium", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Llama 3.1 8B", ThinkingOptionsNoneOnly },
-      { "Llama 4 Scout", ThinkingOptionsNoneOnly },
-      { "Llama 4 Maverick", ThinkingOptionsNoneOnly }
+      { "Llama 3.1 8B (Groq)", ThinkingOptionsNoneOnly },
+      { "Llama 4 Scout (Groq)", ThinkingOptionsNoneOnly },
+      { "Llama 4 Maverick (OpenRouter)", ThinkingOptionsNoneOnly }
     };
 
     ApplyThinkingOptionsForModel(ChatSelectedModel);
@@ -765,7 +765,8 @@
         "Openrouter",
         "AI Studio",
         "Chutes",
-        "Mistral AI" // This is the provider name from ModelPreferencesService
+        "Mistral AI",
+        "Groq"
     };
 
     if (providersRequiringApiKey.Contains(modelProvider))
@@ -788,6 +789,9 @@
             case "Mistral AI": // This is the provider name
                 keyNameInStorage = "Mistral"; // This is the key name stored in UserService
                 break;
+            case "Groq":
+              keyNameInStorage = "Groq";
+              break;
         }
 
         requiredKey = userApiKeys.GetValueOrDefault(keyNameInStorage) ?? "";
@@ -892,7 +896,7 @@
         // Start name generation streaming
         await ChatCompletionService.StreamCompletion(
           initialMessagesForName,
-          "Llama 4 Scout",
+          "Llama 4 Scout (Groq)",
           "Low", // Or "None" if 'reasoningEffort' is not applicable to name generation model
           chunk => generatedName += chunk,
           nameGenerationCompleteFunc, // Pass the Func<Task>

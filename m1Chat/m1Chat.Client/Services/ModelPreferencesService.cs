@@ -36,29 +36,31 @@ public class ModelPreferencesService
 
     public List<string> GetAllAvailableModels() => new()
     {
-        "Deepseek v3",
-        "Deepseek R1 0528",
-        "Gemini 2.5 Flash",
-        "Gemini 2.0 Flash",
-        "Devstral Small",
-        "Mistral Medium",
-        "Gemma 3 27B",
-        "Llama 4 Maverick",
-        "Llama 3.1 8B",
-        "Llama 4 Scout"
+        "Deepseek v3 (Chutes)",
+        "Deepseek R1 0528 (Chutes)",
+        "Gemini 2.5 Flash (AI Studio)",
+        "Gemini 2.0 Flash (AI Studio)",
+        "Devstral Small (Mistral AI)",
+        "Mistral Medium (Mistral AI)",
+        "Gemini 2.5 Flash (OpenRouter)",
+        "Gemma 3 27B (OpenRouter",
+        "Llama 4 Maverick (OpenRouter)",
+        "Llama 3.1 8B (Groq)",
+        "Llama 4 Scout (Groq)"
     };
 
     public Dictionary<string, string> GetModelProviders() => new()
     {
-        ["Deepseek v3"] = "Chutes",
-        ["Deepseek R1 0528"] = "Chutes",
-        ["Gemini 2.5 Flash"] = "AI Studio",
-        ["Gemini 2.0 Flash"] = "AI Studio",
-        ["Devstral Small"] = "Mistral AI",
-        ["Mistral Medium"] = "Mistral AI",
-        ["Gemma 3 27B"] = "Openrouter",
-        ["Llama 4 Maverick"] = "Openrouter",
-        ["Llama 3.1 8B"] = "Groq",
-        ["Llama 4 Scout"] = "Groq"
+        ["Deepseek v3 (Chutes)"] = "Chutes",
+        ["Deepseek R1 0528 (Chutes)"] = "Chutes",
+        ["Gemini 2.5 Flash (AI Studio)"] = "AI Studio",
+        ["Gemini 2.0 Flash (AI Studio)"] = "AI Studio",
+        ["Devstral Small (Mistral AI)"] = "Mistral AI",
+        ["Mistral Medium (Mistral AI)"] = "Mistral AI",
+        ["Gemini 2.5 Flash (OpenRouter)"] = "Openrouter",
+        ["Gemma 3 27B (OpenRouter)"] = "Openrouter",
+        ["Llama 4 Maverick (OpenRouter)"] = "Openrouter",
+        ["Llama 3.1 8B (Groq)"] = "Groq",
+        ["Llama 4 Scout (Groq)"] = "Groq"
     };
 }

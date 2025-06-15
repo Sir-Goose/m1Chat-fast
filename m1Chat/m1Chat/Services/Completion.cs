@@ -140,7 +140,7 @@ namespace m1Chat.Services
             reasoningEffort = reasoningEffort.ToLower();
             switch (model)
             {
-                case "Deepseek v3":
+                case "Deepseek v3 (Chutes)":
                     model = "deepseek-ai/DeepSeek-V3-0324";
                     _provider = Provider.Chutes;
                     break;
@@ -156,17 +156,21 @@ namespace m1Chat.Services
                     model = "deepseek/deepseek-r1:free";
                     _provider = Provider.OpenRouter;
                     break;
-                case "Deepseek R1 0528":
+                case "Deepseek R1 0528 (Chutes)":
                     model = "deepseek-ai/DeepSeek-R1-0528";
                     _provider = Provider.Chutes;
                     break;
-                case "Gemini 2.0 Flash":
+                case "Gemini 2.0 Flash (AI Studio)":
                     model = "gemini-2.0-flash";
                     _provider = Provider.AiStudio;
                     break;
-                case "Gemini 2.5 Flash":
+                case "Gemini 2.5 Flash (AI Studio)":
                     model = "gemini-2.5-flash-preview-05-20";
                     _provider = Provider.AiStudio;
+                    break;
+                case "Gemini 2.5 Flash (OpenRouter)":
+                    model = "gemini-2.5-flash-preview-05-20";
+                    _provider = Provider.OpenRouter;
                     break;
                 case "Qwen3 235B":
                     model = "qwen/qwen3-235b-a22b:free";
@@ -176,7 +180,7 @@ namespace m1Chat.Services
                     model = "tngtech/deepseek-r1t-chimera:free";
                     _provider = Provider.OpenRouter;
                     break;
-                case "Gemma 3 27B":
+                case "Gemma 3 27B (OpenRouter)":
                     model = "google/gemma-3-27b-it:free";
                     _provider = Provider.OpenRouter;
                     break;
@@ -184,19 +188,19 @@ namespace m1Chat.Services
                     model = "qwen/qwen3-30b-a3b:free";
                     _provider = Provider.OpenRouter;
                     break;
-                case "Llama 4 Maverick":
+                case "Llama 4 Maverick (OpenRouter)":
                     model = "meta-llama/llama-4-maverick:free";
                     _provider = Provider.OpenRouter;
                     break;
-                case "Llama 3.1 8B":
+                case "Llama 3.1 8B (Groq)":
                     model = "llama-3.1-8b-instant";
                     _provider = Provider.Groq;
                     break;
-                case "Llama 4 Scout":
+                case "Llama 4 Scout (Groq)":
                     model = "meta-llama/llama-4-scout-17b-16e-instruct";
                     _provider = Provider.Groq;
                     break;
-                case "Devstral Small":
+                case "Devstral Small (Mistral AI)":
                     model = "devstral-small-latest";
                     _provider = Provider.Mistral;
                     break;
@@ -204,7 +208,7 @@ namespace m1Chat.Services
                     model = "magistral-small-latest";
                     _provider = Provider.Mistral;
                     break;
-                case "Mistral Medium":
+                case "Mistral Medium (Mistral AI)":
                     model = "mistral-medium-latest";
                     _provider = Provider.Mistral;
                     break;
