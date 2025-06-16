@@ -34,6 +34,7 @@
   <MudMainContent
     Class="d-flex flex-column p-0 chat-main-content-bg"
     Style="height:100vh;overflow:hidden;"
+    @onkeydown="HandleKeyDown"
   >
     @if (!_drawerOpen)
     {
@@ -211,6 +212,7 @@
                 Class="flex-grow-1"
                 Immediate="false"
                 OnKeyUp="HandleKeyUp"
+                OnKeyDown="HandleKeyDown"
               />
             </div>
             <div
@@ -738,6 +740,31 @@
         await SendMessage();
       }
     }
+  }
+  
+  private async Task HandleKeyDown(KeyboardEventArgs e)
+  {
+    bool isModifierPressed = e.CtrlKey || e.MetaKey;
+    
+    if (isModifierPressed && e.Key == "k")
+    {
+      await FocusSearchFieldInDrawer();
+      // search
+    }
+    
+    if (isModifierPressed && e.Key == "b")
+    {
+      _drawerOpen = !_drawerOpen;
+      StateHasChanged();
+      // sidebar 
+    }
+    
+    if (isModifierPressed && e.Key == "O")
+    {
+      await CreateNewChat();
+      // new chat
+    }
+    
   }
 
   private async Task SendMessage()
