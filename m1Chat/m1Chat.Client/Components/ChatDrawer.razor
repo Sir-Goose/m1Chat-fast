@@ -90,14 +90,14 @@
         <ChatList TItem="SidebarChat"
                   Items="pinnedChats"
                   ActiveItemId="ActiveChatId"
-                  OnItemSelected="@(chat => HandleSelectChat(chat))"
-                  OnItemPinned="@(chat => HandlePinChat(chat))"
-                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  OnItemSelected="HandleSelectChat"
+                  OnItemPinned="HandlePinChat"
+                  OnItemDeleted="HandleDeleteChat"
+                  OnItemRenamed="HandleRenameChat"
+                  OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
+                  OnItemMouseEnter="HandleChatHover"/>
       }
 
       @if (todayChats.Any())
@@ -110,14 +110,14 @@
         <ChatList TItem="SidebarChat"
                   Items="todayChats"
                   ActiveItemId="ActiveChatId"
-                  OnItemSelected="@(chat => HandleSelectChat(chat))"
-                  OnItemPinned="@(chat => HandlePinChat(chat))"
-                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  OnItemSelected="HandleSelectChat"
+                  OnItemPinned="HandlePinChat"
+                  OnItemDeleted="HandleDeleteChat"
+                  OnItemRenamed="HandleRenameChat"
+                  OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
+                  OnItemMouseEnter="HandleChatHover"/>
       }
 
       @if (yesterdayChats.Any())
@@ -130,14 +130,14 @@
         <ChatList TItem="SidebarChat"
                   Items="yesterdayChats"
                   ActiveItemId="ActiveChatId"
-                  OnItemSelected="@(chat => HandleSelectChat(chat))"
-                  OnItemPinned="@(chat => HandlePinChat(chat))"
-                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  OnItemSelected="HandleSelectChat"
+                  OnItemPinned="HandlePinChat"
+                  OnItemDeleted="HandleDeleteChat"
+                  OnItemRenamed="HandleRenameChat"
+                  OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
+                  OnItemMouseEnter="HandleChatHover"/>
       }
 
       @if (last7DaysChats.Any())
@@ -150,14 +150,14 @@
         <ChatList TItem="SidebarChat"
                   Items="last7DaysChats"
                   ActiveItemId="ActiveChatId"
-                  OnItemSelected="@(chat => HandleSelectChat(chat))"
-                  OnItemPinned="@(chat => HandlePinChat(chat))"
-                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  OnItemSelected="HandleSelectChat"
+                  OnItemPinned="HandlePinChat"
+                  OnItemDeleted="HandleDeleteChat"
+                  OnItemRenamed="HandleRenameChat"
+                  OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
+                  OnItemMouseEnter="HandleChatHover"/>
       }
 
       @if (olderChats.Any())
@@ -170,14 +170,14 @@
         <ChatList TItem="SidebarChat"
                   Items="olderChats"
                   ActiveItemId="ActiveChatId"
-                  OnItemSelected="@(chat => HandleSelectChat(chat))"
-                  OnItemPinned="@(chat => HandlePinChat(chat))"
-                  OnItemDeleted="@(chat => HandleDeleteChat(chat))"
-                  OnItemRenamed="@(chat => HandleRenameChat(chat))"
-                  OnItemExported="@(chat => HandleExportChat(chat))"
+                  OnItemSelected="HandleSelectChat"
+                  OnItemPinned="HandlePinChat"
+                  OnItemDeleted="HandleDeleteChat"
+                  OnItemRenamed="HandleRenameChat"
+                  OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
                   GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="@(chat => HandleChatHover(chat))"/>
+                  OnItemMouseEnter="HandleChatHover"/>
       }
     }
   </div>
@@ -286,11 +286,21 @@
 
   private async Task HandleChatHover(SidebarChat chat)
   {
-    if (Guid.TryParse(chat.Id, out var chatId))
+    try
     {
-      await ChatCacheService.PrefetchChatAsync(chatId);
+      if (Guid.TryParse(chat.Id, out var chatId))
+      {
+        // Fire-and-forget the prefetch operation without awaiting it
+        _ = Task.Run(() => ChatCacheService.PrefetchChatAsync(chatId))
+          .ConfigureAwait(false);
+      }
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Error prefetching chat: {ex.Message}");
     }
   }
+
 
   private async Task HandleRenameChat(SidebarChat chat)
   {
