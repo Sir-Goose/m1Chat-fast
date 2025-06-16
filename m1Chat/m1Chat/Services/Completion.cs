@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -58,32 +59,70 @@ namespace m1Chat.Services
         public Completion(ApiKeyService apiKeyService)
         {
             _httpClient = new HttpClient();
-            _openRouterApiKey =
-                "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";
-            _groqApiKey =
-                "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";
-            _aiStudioApiKey = "AIzaSyDpr4nFieUgQ08NlnQOGyMQ4CYHnEm-7hw";
-            _chutesApiKey =
-                "cpk_d1c9605d36354f7697c33b118005c996.ec62a91ca96e58f8a6d6ddc854bfd71b.DG1hrwmJ1Q2BekstSUJruw2v7wMAWAhm";
-            _mistralApiKey = "7pENTY2DoHpnna2SGvSIaA0K9rEfBAxA";
-            _openRouterUri = "https://openrouter.ai/api/v1/chat/completions";
-            _groqUri = "https://api.groq.com/openai/v1/chat/completions";
+
+            // --- Retrieve API Keys from Environment Variables ---
+            _openRouterApiKey = GetEnvironmentVariableOrThrow(
+                "OPENROUTER_API_KEY",
+                "OpenRouter API key"
+            );
+            _groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
+            _aiStudioApiKey = GetEnvironmentVariableOrThrow(
+                "AISTUDIO_API_KEY",
+                "AI Studio API key"
+            );
+            _chutesApiKey = GetEnvironmentVariableOrThrow(
+                "CHUTES_API_KEY",
+                "Chutes API key"
+            );
+            _mistralApiKey = GetEnvironmentVariableOrThrow(
+                "MISTRAL_API_KEY",
+                "Mistral API key"
+            );
+
+            // --- Retrieve URIs from Environment Variables or use defaults ---
+            _openRouterUri =
+                Environment.GetEnvironmentVariable("OPENROUTER_URI")
+                ?? "https://openrouter.ai/api/v1/chat/completions";
+            _groqUri =
+                Environment.GetEnvironmentVariable("GROQ_URI")
+                ?? "https://api.groq.com/openai/v1/chat/completions";
             _aiStudioUri =
-                "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-            _chutesUri = "https://llm.chutes.ai/v1/chat/completions";
-            _mistralUri = "https://api.mistral.ai/v1/chat/completions";
+                Environment.GetEnvironmentVariable("AISTUDIO_URI")
+                ?? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+            _chutesUri =
+                Environment.GetEnvironmentVariable("CHUTES_URI")
+                ?? "https://llm.chutes.ai/v1/chat/completions";
+            _mistralUri =
+                Environment.GetEnvironmentVariable("MISTRAL_URI")
+                ?? "https://api.mistral.ai/v1/chat/completions";
+
             _provider = Provider.OpenRouter; // Default provider
             _dateTime = DateTime.Now;
             _systemPrompt =
                 $"You are M1 Chat, an AI assistant. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.\n- The current date and time including timezone is {_dateTime}.\n- Always use LaTeX for mathematical expressions:\n    - Inline math must be wrapped in single dollar signs: $ content $ \n    - Display math must be wrapped in double dollar signs: $$ content $$\n-   \n- When generating code:\n    - Ensure it is properly formatted using Prettier with a print width of 80 characters\n    - Present it in Markdown code blocks with the correct language extension indicated";
             _apiKeyService = apiKeyService;
+        }
 
-            if (string.IsNullOrEmpty(_openRouterApiKey))
+        /// <summary>
+        /// Retrieves an environment variable and throws an InvalidOperationException if it's null or empty.
+        /// </summary>
+        /// <param name="variableName">The name of the environment variable.</param>
+        /// <param name="friendlyName">A friendly name for the variable, used in error messages.</param>
+        /// <returns>The value of the environment variable.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the environment variable is not found or is empty.</exception>
+        private string GetEnvironmentVariableOrThrow(
+            string variableName,
+            string friendlyName
+        )
+        {
+            var value = Environment.GetEnvironmentVariable(variableName);
+            if (string.IsNullOrEmpty(value))
             {
                 throw new InvalidOperationException(
-                    "OpenRouter API key not found."
+                    $"{friendlyName} not found. Please set the '{variableName}' environment variable."
                 );
             }
+            return value;
         }
 
         public async IAsyncEnumerable<string> CompleteAsync(
@@ -91,16 +130,15 @@ namespace m1Chat.Services
             string model,
             string reasoningEffort,
             ChatDbContext db,
-            string userEmail)
+            string userEmail
+        )
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
             // Add system prompt if provided
-            processedMessages.Add(new ChatMessageDto
-            {
-                Role = "system",
-                Content = _systemPrompt
-            });
+            processedMessages.Add(
+                new ChatMessageDto { Role = "system", Content = _systemPrompt }
+            );
 
             foreach (var message in messages)
             {
@@ -118,14 +156,19 @@ namespace m1Chat.Services
                             var file = await db.UploadedFiles.FindAsync(fileId);
                             if (file != null && File.Exists(file.FilePath))
                             {
-                                var fileContent = await File.ReadAllTextAsync(file.FilePath);
+                                var fileContent = await File.ReadAllTextAsync(
+                                    file.FilePath
+                                );
                                 fileContents.Add(
-                                    $"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n");
+                                    $"--- File: {file.OriginalFileName} ---\n{fileContent}\n--- End of {file.OriginalFileName} ---\n"
+                                );
                             }
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error reading file {fileId}: {ex.Message}");
+                            Console.WriteLine(
+                                $"Error reading file {fileId}: {ex.Message}"
+                            );
                         }
                     }
 
@@ -134,7 +177,9 @@ namespace m1Chat.Services
                         content = string.Join("\n", fileContents) + "\n" + content;
                     }
                 }
-                processedMessages.Add(new ChatMessageDto { Role = message.Role, Content = content });
+                processedMessages.Add(
+                    new ChatMessageDto { Role = message.Role, Content = content }
+                );
             }
 
             reasoningEffort = reasoningEffort.ToLower();
@@ -252,11 +297,7 @@ namespace m1Chat.Services
                     break;
                 case Provider.Groq:
                     await foreach (
-                        var chunk in StreamGroqAsync(
-                            processedMessages,
-                            model,
-                            userEmail
-                        )
+                        var chunk in StreamGroqAsync(processedMessages, model, userEmail)
                     )
                     {
                         yield return chunk;
@@ -264,11 +305,7 @@ namespace m1Chat.Services
                     break;
                 case Provider.Chutes:
                     await foreach (
-                        var chunk in StreamChutesAsync(
-                            processedMessages,
-                            model,
-                            userEmail
-                        )
+                        var chunk in StreamChutesAsync(processedMessages, model, userEmail)
                     )
                     {
                         yield return chunk;
@@ -276,11 +313,7 @@ namespace m1Chat.Services
                     break;
                 case Provider.Mistral:
                     await foreach (
-                        var chunk in StreamMistralAsync(
-                            processedMessages,
-                            model,
-                            userEmail
-                        )
+                        var chunk in StreamMistralAsync(processedMessages, model, userEmail)
                     )
                     {
                         yield return chunk;
@@ -306,13 +339,17 @@ namespace m1Chat.Services
             List<ChatMessageDto> messages,
             string model,
             string reasoningEffort,
-            string userEmail)
+            string userEmail
+        )
         {
             var requestBody = new
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
                 stream = true
             };
 
@@ -320,15 +357,14 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter) ?? _openRouterApiKey;
+            var apiKey =
+                await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter)
+                ?? _openRouterApiKey;
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
@@ -340,9 +376,7 @@ namespace m1Chat.Services
                 HttpCompletionOption.ResponseHeadersRead
             );
 
-            Console.WriteLine(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -361,14 +395,17 @@ namespace m1Chat.Services
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
 
                 if (line.StartsWith("data: "))
                 {
                     var jsonData = line["data: ".Length..].Trim();
-                    if (jsonData == "[DONE]") break;
+                    if (jsonData == "[DONE]")
+                        break;
 
-                    var (contentChunk, reasoning) = TryParseContentChunkOpenrouter(jsonData);
+                    var (contentChunk, reasoning) =
+                        TryParseContentChunkOpenrouter(jsonData);
                     if (!string.IsNullOrEmpty(reasoning))
                     {
                         if (!inReasoningBlock)
@@ -401,12 +438,16 @@ namespace m1Chat.Services
         private async IAsyncEnumerable<string> StreamChutesAsync(
             List<ChatMessageDto> messages,
             string model,
-            string userEmail)
+            string userEmail
+        )
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
                 stream = true
             };
 
@@ -414,15 +455,14 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes) ?? _chutesApiKey;
+            var apiKey =
+                await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes)
+                ?? _chutesApiKey;
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
@@ -434,9 +474,7 @@ namespace m1Chat.Services
                 HttpCompletionOption.ResponseHeadersRead
             );
 
-            Console.WriteLine(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -455,13 +493,17 @@ namespace m1Chat.Services
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
 
-                if (!line.StartsWith("data: ")) continue;
+                if (!line.StartsWith("data: "))
+                    continue;
                 var jsonData = line["data: ".Length..].Trim();
-                if (jsonData == "[DONE]") break;
+                if (jsonData == "[DONE]")
+                    break;
                 var contentChunk = TryParseContentChunk(jsonData);
-                if (string.IsNullOrEmpty(contentChunk)) continue;
+                if (string.IsNullOrEmpty(contentChunk))
+                    continue;
                 switch (contentChunk)
                 {
                     case "<think>":
@@ -469,23 +511,22 @@ namespace m1Chat.Services
                         inReasoningBlock = true;
                         break;
                     case "</think>":
-                        yield return "```\n" +
-                                     "\n";
+                        yield return "```\n" + "\n";
                         inReasoningBlock = false;
                         break;
                     default:
-                    {
-                        if (!inReasoningBlock)
                         {
-                            yield return contentChunk;
-                        }
-                        else
-                        {
-                            yield return contentChunk.Replace("```", "'''");
-                        }
+                            if (!inReasoningBlock)
+                            {
+                                yield return contentChunk;
+                            }
+                            else
+                            {
+                                yield return contentChunk.Replace("```", "'''");
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
             }
         }
@@ -493,12 +534,16 @@ namespace m1Chat.Services
         private async IAsyncEnumerable<string> StreamGroqAsync(
             List<ChatMessageDto> messages,
             string model,
-            string userEmail)
+            string userEmail
+        )
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
                 stream = true
             };
 
@@ -506,15 +551,13 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq) ?? _groqApiKey;
+            var apiKey =
+                await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq) ?? _groqApiKey;
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
@@ -526,17 +569,13 @@ namespace m1Chat.Services
                 HttpCompletionOption.ResponseHeadersRead
             );
 
-            Console.WriteLine(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Error response content: {error}");
-                throw new Exception(
-                    $"Groq API error: {response.StatusCode} - {error}"
-                );
+                throw new Exception($"Groq API error: {response.StatusCode} - {error}");
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync();
@@ -564,13 +603,17 @@ namespace m1Chat.Services
             List<ChatMessageDto> messages,
             string model,
             string reasoningEffort,
-            string userEmail)
+            string userEmail
+        )
         {
             var requestBody = new
             {
                 model,
                 reasoningEffort,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
                 stream = true,
             };
 
@@ -578,15 +621,14 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio) ?? _aiStudioApiKey;
+            var apiKey =
+                await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio)
+                ?? _aiStudioApiKey;
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
@@ -598,9 +640,7 @@ namespace m1Chat.Services
                 HttpCompletionOption.ResponseHeadersRead
             );
 
-            Console.WriteLine(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -635,12 +675,16 @@ namespace m1Chat.Services
         private async IAsyncEnumerable<string> StreamMistralAsync(
             List<ChatMessageDto> messages,
             string model,
-            string userEmail)
+            string userEmail
+        )
         {
             var requestBody = new
             {
                 model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
                 stream = true
             };
 
@@ -648,15 +692,14 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral) ?? _mistralApiKey;
+            var apiKey =
+                await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral)
+                ?? _mistralApiKey;
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add(
-                "HTTP-Referer",
-                "https://chat.mattdev.im"
-            );
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
 
@@ -668,9 +711,7 @@ namespace m1Chat.Services
                 HttpCompletionOption.ResponseHeadersRead
             );
 
-            Console.WriteLine(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
-            );
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -689,13 +730,17 @@ namespace m1Chat.Services
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
 
-                if (!line.StartsWith("data: ")) continue;
+                if (!line.StartsWith("data: "))
+                    continue;
                 var jsonData = line["data: ".Length..].Trim();
-                if (jsonData == "[DONE]") break;
+                if (jsonData == "[DONE]")
+                    break;
                 var contentChunk = TryParseContentChunk(jsonData);
-                if (string.IsNullOrEmpty(contentChunk)) continue;
+                if (string.IsNullOrEmpty(contentChunk))
+                    continue;
                 switch (contentChunk)
                 {
                     case "<think>":
@@ -703,23 +748,22 @@ namespace m1Chat.Services
                         inReasoningBlock = true;
                         break;
                     case "</think>":
-                        yield return "```\n" +
-                                     "\n";
+                        yield return "```\n" + "\n";
                         inReasoningBlock = false;
                         break;
                     default:
-                    {
-                        if (!inReasoningBlock)
                         {
-                            yield return contentChunk;
-                        }
-                        else
-                        {
-                            yield return contentChunk.Replace("```", "'''");
-                        }
+                            if (!inReasoningBlock)
+                            {
+                                yield return contentChunk;
+                            }
+                            else
+                            {
+                                yield return contentChunk.Replace("```", "'''");
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
             }
         }
@@ -745,17 +789,23 @@ namespace m1Chat.Services
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}");
+                Console.WriteLine(
+                    $"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}"
+                );
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Generic error parsing chunk: {ex.Message}. Data: {jsonData}");
+                Console.WriteLine(
+                    $"Generic error parsing chunk: {ex.Message}. Data: {jsonData}"
+                );
             }
 
             return null;
         }
 
-        private (string? content, string? reasoning) TryParseContentChunkOpenrouter(string jsonData)
+        private (string? content, string? reasoning) TryParseContentChunkOpenrouter(
+            string jsonData
+        )
         {
             try
             {
@@ -769,13 +819,19 @@ namespace m1Chat.Services
                     string? reasoning = null;
 
                     // Extract content if present
-                    if (delta.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.String)
+                    if (
+                        delta.TryGetProperty("content", out var c) &&
+                        c.ValueKind == JsonValueKind.String
+                    )
                     {
                         content = c.GetString();
                     }
 
                     // Extract reasoning if present
-                    if (delta.TryGetProperty("reasoning", out var r) && r.ValueKind == JsonValueKind.String)
+                    if (
+                        delta.TryGetProperty("reasoning", out var r) &&
+                        r.ValueKind == JsonValueKind.String
+                    )
                     {
                         reasoning = r.GetString();
                     }
@@ -785,7 +841,9 @@ namespace m1Chat.Services
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}");
+                Console.WriteLine(
+                    $"Error parsing JSON chunk: {ex.Message}. Data: {jsonData}"
+                );
             }
 
             return (null, null);
