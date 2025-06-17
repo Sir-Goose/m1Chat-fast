@@ -9,7 +9,9 @@ If you are just testing I recommend just trying it out at the link above, compil
 If you really want to run it locally:
 
 git clone the repo
+
 cd in 
+
 run the below command
 
 brew install --cask dotnet-sdk && dotnet workload install wasm-tools && dotnet publish -c Release
