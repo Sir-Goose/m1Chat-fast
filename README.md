@@ -14,6 +14,6 @@ cd in
 
 run the below command
 
-brew install --cask dotnet-sdk && dotnet workload install wasm-tools && dotnet publish -c Release
+brew install --cask dotnet-sdk && sudo dotnet workload install wasm-tools && dotnet publish -c Release
 
 
