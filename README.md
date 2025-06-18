@@ -1,6 +1,8 @@
 # M1 Chat
 
-Visit at https://chat.mattdev.im
+My submission to the T3 Chat Cloneathon
+
+**Visit at** https://chat.mattdev.im
 
 <img width="959" alt="Screenshot 2025-06-17 at 22 17 53" src="https://github.com/user-attachments/assets/540e24b0-1dcc-476c-b427-85270b738198" />
 
