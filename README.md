@@ -4,6 +4,14 @@ My submission to the T3 Chat Cloneathon
 
 **Visit at** https://chat.mattdev.im
 
+## Hosting
+
+The site is dutifully hosted by a 8th gen i3 mini PC running Arch btw. It is exposed to the outside world through a Cloudflare tunnel. 
+
+![IMG_7706](https://github.com/user-attachments/assets/a50053e6-a3f8-4460-aa5c-55ebab3fe1cd)
+
+## Screenshots
+
 <img width="959" alt="Screenshot 2025-06-17 at 22 17 53" src="https://github.com/user-attachments/assets/540e24b0-1dcc-476c-b427-85270b738198" />
 
 <img width="959" alt="Screenshot 2025-06-17 at 22 18 26" src="https://github.com/user-attachments/assets/99ac9a0a-21e9-4b5a-a2bf-cbebaa25939f" />
