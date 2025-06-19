@@ -8,10 +8,10 @@
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=chat.db"
+    "DefaultConnection": "Data Source=/home/matt/m1chat_data/chat.db"
   },
   "FileUpload": {
-    "Path": "uploads",
-    "BaseUrl": "http://localhost:5000"
+    "Path": "/home/matt/m1chat_data/uploads",
+    "BaseUrl": "https://chat.mattdev.im"
   }
 }
