@@ -4,6 +4,7 @@
 @using System.Text
 @using AngleSharp.Css
 @using m1Chat.Client.Components
+@using m1Chat.Client.Models
 @using m1Chat.Client.Services
 @inject IScrollManager ScrollManager
 @inject ChatCompletionService CompletionService
@@ -70,102 +71,12 @@
         <MudStack Spacing="4">
           @foreach (var m in _chatHistory)
           {
-            if (m.IsUser)
-            {
-              <MudStack @key="m.Id">
-                <div class="user-message-container">
-                  @if (m.FileIds != null && m.FileIds.Any())
-                  {
-                    <div class="attached-files-display mb-2">
-                      <MudText Typo="Typo.caption" Color="Color.Secondary">Attached Files:</MudText>
-                      @foreach (var fileId in m.FileIds)
-                      {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                 Icon="@Icons.Material.Filled.AttachFile">
-                          File: @(fileId.ToString().Length > 8 ? fileId.ToString()[..8] + "..." : fileId.ToString())
-                        </MudChip>
-                      }
-                    </div>
-                  }
-                  <MudChat ChatPosition="ChatBubblePosition.Start" ArrowPosition="ChatArrowPosition.None">
-                    <MudChatBubble
-                      Variant="Variant.Text"
-                      Class="user-message rounded-xl text-align-left"
-                    >
-                      <UserMarkdown Markdown="@m.Text"/>
-                    </MudChatBubble>
-                  </MudChat>
-                  <div class="message-actions">
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Retry message">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.Refresh"
-                          Size="Size.Small"
-                          OnClick="@(() => HandleRegenerateMessage(m))"
-                          aria-label="Regenerate"/>
-                      </MudTooltip>
-                    </span>
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Edit message">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.Edit"
-                          Size="Size.Small"
-                          OnClick="@(() => HandleEditMessage(m))"
-                          aria-label="Edit"/>
-                      </MudTooltip>
-                    </span>
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Copy message">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.ContentCopy"
-                          Size="Size.Small"
-                          OnClick="@(async () => await HandleCopyMessage(m))"
-                          aria-label="Copy"/>
-                      </MudTooltip>
-                    </span>
-                  </div>
-                  <div class="user-message-hoverzone"></div>
-                </div>
-              </MudStack>
-            }
-            else
-            {
-              <MudStack @key="m.Id">
-                <div class="ai-message-container">
-                  <AiMarkdown Markdown="@m.Text" IsStreaming="@m.IsStreaming"/>
-                  <div class="message-actions">
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Copy message">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.ContentCopy"
-                          Size="Size.Small"
-                          OnClick="@(async () => await HandleCopyMessage(m))"
-                          aria-label="Copy"/>
-                      </MudTooltip>
-                    </span>
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Branch off">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.MergeType"
-                          Size="Size.Small"
-                          OnClick="@(() => HandleBranchMessage(m))"
-                          aria-label="Branch"/>
-                      </MudTooltip>
-                    </span>
-                    <span @onclick:stopPropagation="true">
-                      <MudTooltip Text="Retry message">
-                        <MudIconButton
-                          Icon="@Icons.Material.Filled.Refresh"
-                          Size="Size.Small"
-                          OnClick="@(() => HandleRegenerateMessage(m))"
-                          aria-label="Regenerate"/>
-                      </MudTooltip>
-                    </span>
-                  </div>
-                  <div class="ai-message-hoverzone"></div>
-                </div>
-              </MudStack>
-            }
+            <ChatMessageItem 
+              Message="m"
+              OnEdit="HandleEditMessage"
+              OnRegenerate="HandleRegenerateMessage"
+              OnCopy="HandleCopyMessage"
+              OnBranch="HandleBranchMessage" />
           }
         </MudStack>
       </MudPaper>
@@ -320,7 +231,7 @@
   private MudSelect<string> _modelSelect; // Correct: Declare the MudSelect reference here!
 
 
-  private ChatMessage? _messageBeingEdited; // New state variable to track the message being edited
+  private ClientChatMessage? _messageBeingEdited; // New state variable to track the message being edited
 
   // File upload properties
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
@@ -396,7 +307,7 @@
 
   private string? _chatId;
   private string _chatName = "New Chat";
-  private List<ChatMessage?> _chatHistory = new();
+  private List<ClientChatMessage> _chatHistory = new();
   private bool _chatIsPinned;
   private MudTextField<string> _messageTextField;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
@@ -656,7 +567,7 @@
     ApplyThinkingOptionsForModel(fullChat.Model);
     _chatIsPinned = fullChat.IsPinned;
     _chatHistory = fullChat.Messages
-      .Select(m => new ChatMessage // m here is ChatService.ChatMessageDto
+      .Select(m => new ClientChatMessage()// m here is ChatService.ChatMessageDto
       {
         IsUser = m.Role == "user",
         Text = m.Content, // Correct: DTO has Content, local record has Text
@@ -678,7 +589,7 @@
     ApplyThinkingOptionsForModel(cached.Model);
     _chatIsPinned = cached.IsPinned;
     _chatHistory = cached.Messages
-      .Select(m => new ChatMessage
+      .Select(m => new ClientChatMessage
       {
         IsUser = m.Role == "user",
         Text = m.Content,
@@ -858,7 +769,7 @@
     }
     else
     {
-      _chatHistory.Add(new ChatMessage
+      _chatHistory.Add(new ClientChatMessage() 
       {
         IsUser = true,
         Text = textToSend,
@@ -939,7 +850,7 @@
     }
 
     // Create new AI message with streaming enabled
-    var aiMessage = new ChatMessage
+    var aiMessage = new ClientChatMessage 
     {
       IsUser = false,
       Text = "",
@@ -1106,7 +1017,7 @@
     StateHasChanged();
   }
 
-  private async Task HandleRegenerateMessage(ChatMessage? messageToRegen)
+  private async Task HandleRegenerateMessage(ClientChatMessage? messageToRegen)
   {
     if (_isSendingMessage) return;
     _isSendingMessage = true;
@@ -1122,7 +1033,7 @@
     }
 
     List<ServiceChatMessage> messagesToSendForAi;
-    ChatMessage? targetAiMessage;
+    ClientChatMessage? targetAiMessage;
 
     if (messageToRegen.IsUser)
     {
@@ -1141,13 +1052,13 @@
         })
         .ToList();
 
-      targetAiMessage = new ChatMessage { IsUser = false, Text = "", IsStreaming = true };
+      targetAiMessage = new ClientChatMessage { IsUser = false, Text = "", IsStreaming = true };
       if (idx + 1 < _chatHistory.Count) _chatHistory.Insert(idx + 1, targetAiMessage);
       else _chatHistory.Add(targetAiMessage);
     }
     else
     {
-      _chatHistory[idx] = new ChatMessage { IsUser = false, Text = "", IsStreaming = true };
+      _chatHistory[idx] = new ClientChatMessage { IsUser = false, Text = "", IsStreaming = true };
       targetAiMessage = _chatHistory[idx];
 
       messagesToSendForAi = _chatHistory.Take(idx)
@@ -1228,7 +1139,7 @@
   }
 
 
-  private void HandleEditMessage(ChatMessage? m)
+  private void HandleEditMessage(ClientChatMessage? m)
   {
     _messageBeingEdited = m; // Set the message being edited
     MessageText = m.Text;
@@ -1248,7 +1159,7 @@
   }
 
 
-  private async Task HandleCopyMessage(ChatMessage? m)
+  private async Task HandleCopyMessage(ClientChatMessage? m)
   {
     try
     {
@@ -1261,7 +1172,7 @@
     }
   }
 
-  private async Task HandleBranchMessage(ChatMessage? messageToBranchFrom)
+  private async Task HandleBranchMessage(ClientChatMessage? messageToBranchFrom)
   {
     var idx = _chatHistory.IndexOf(messageToBranchFrom);
     if (idx == -1) return;
@@ -1310,15 +1221,4 @@
     // SignalRService.OnStreamCompleted -= HandleStreamCompleted;
     // SignalRService.OnStreamError -= HandleStreamError;
   }
-
-  // This is the local record for UI state in Chat.razor
-  private record ChatMessage
-  {
-    public string Id { get; init; } = Guid.NewGuid().ToString();
-    public bool IsUser { get; init; }
-    public string Text { get; set; } = ""; // Property is 'Text'
-    public List<Guid> FileIds { get; init; } = new();
-    public bool IsStreaming { get; set; }
-  }
-
 }
