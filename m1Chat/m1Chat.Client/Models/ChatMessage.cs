@@ -1,10 +1,14 @@
+// ChatMessage.cs
 namespace m1Chat.Client.Models;
 
-public class ClientChatMessage
+public record ClientChatMessage
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string UserId { get; set; } = string.Empty;
-    public string Author { get; set; } = string.Empty; // Or use UserId to lookup Author Name/Avatar
-    public DateTime Timestamp { get; set; }
+    public string Author { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string Text { get; set; } = string.Empty;
-    // Add other properties like IsRead, etc. if needed
+    public bool IsUser { get; set; }
+    public List<Guid> FileIds { get; set; } = new();
+    public bool IsStreaming { get; set; }
 }
