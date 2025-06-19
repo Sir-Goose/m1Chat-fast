@@ -1,0 +1,104 @@
+@using m1Chat.Client.Models
+@inject IJSRuntime Js
+
+<MudStack @key="Message.Id">
+@if (Message.IsUser)
+{
+    <div class="user-message-container">
+        @if (Message.FileIds != null && Message.FileIds.Any())
+        {
+            <div class="attached-files-display mb-2">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Attached Files:</MudText>
+                @foreach (var fileId in Message.FileIds)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Icon="@Icons.Material.Filled.AttachFile">
+                        File: @(fileId.ToString().Length > 8 ? fileId.ToString()[..8] + "..." : fileId.ToString())
+                    </MudChip>
+                }
+            </div>
+        }
+        <MudChat ChatPosition="ChatBubblePosition.Start" ArrowPosition="ChatArrowPosition.None">
+            <MudChatBubble
+                Variant="Variant.Text"
+                Class="user-message rounded-xl text-align-left">
+                <UserMarkdown Markdown="@Message.Text"/>
+            </MudChatBubble>
+        </MudChat>
+        <div class="message-actions">
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Retry message">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
+                        aria-label="Regenerate"/>
+                </MudTooltip>
+            </span>
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Edit message">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.Edit"
+                        Size="Size.Small"
+                        OnClick="@(() => OnEdit.InvokeAsync(Message))"
+                        aria-label="Edit"/>
+                </MudTooltip>
+            </span>
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Copy message">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
+                        aria-label="Copy"/>
+                </MudTooltip>
+            </span>
+        </div>
+        <div class="user-message-hoverzone"></div>
+    </div>
+}
+else
+{
+    <div class="ai-message-container">
+        <AiMarkdown Markdown="@Message.Text" IsStreaming="@Message.IsStreaming"/>
+        <div class="message-actions">
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Copy message">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.ContentCopy"
+                        Size="Size.Small"
+                        OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
+                        aria-label="Copy"/>
+                </MudTooltip>
+            </span>
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Branch off">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.MergeType"
+                        Size="Size.Small"
+                        OnClick="@(() => OnBranch.InvokeAsync(Message))"
+                        aria-label="Branch"/>
+                </MudTooltip>
+            </span>
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Retry message">
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.Refresh"
+                        Size="Size.Small"
+                        OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
+                        aria-label="Regenerate"/>
+                </MudTooltip>
+            </span>
+        </div>
+        <div class="ai-message-hoverzone"></div>
+    </div>
+}
+</MudStack>
+
+@code {
+    [Parameter] public ClientChatMessage Message { get; set; } = default!;
+    [Parameter] public EventCallback<ClientChatMessage> OnEdit { get; set; }
+    [Parameter] public EventCallback<ClientChatMessage> OnRegenerate { get; set; }
+    [Parameter] public EventCallback<ClientChatMessage> OnCopy { get; set; }
+    [Parameter] public EventCallback<ClientChatMessage> OnBranch { get; set; }
+}
