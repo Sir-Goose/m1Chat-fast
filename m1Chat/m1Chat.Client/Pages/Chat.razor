@@ -6,6 +6,8 @@
 @using m1Chat.Client.Components
 @using m1Chat.Client.Models
 @using m1Chat.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IScrollManager ScrollManager
 @inject ChatCompletionService CompletionService
 @inject ChatService ChatService
@@ -317,6 +319,12 @@
 
   protected override async Task OnInitializedAsync()
   {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    if (authState.User.Identity?.IsAuthenticated != true)
+    {
+      NavigationManager.NavigateTo("/");
+      return;
+    }
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
     await LoadSidebarChatsAsync();
     _ = Should_sidebar_be_open();

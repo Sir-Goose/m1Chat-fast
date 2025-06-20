@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager NavigationManager
 @inject IJSRuntime Js
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <CascadingAuthenticationState>
     <AuthorizeView>
@@ -11,29 +12,26 @@
                 <MudContainer>
                     <MudText>Redirecting to chat...</MudText>
                 </MudContainer>
-                <script>
-                    setTimeout(() => {
-                        window.location.href = '/Chat';
-                    }, 100);
-                </script>
             }
         </Authorized>
         <NotAuthorized>
-            <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column align-center justify-center mud-height-full">
-                <MudPaper Class="pa-8 rounded-lg text-center" Elevation="3">
-                    <img src="m1chat-small.png" alt="M1 Chat" style="max-width: 150px; margin-bottom: 24px;" />
-                    <MudText Typo="Typo.h5" Class="mb-4">Welcome to M1 Chat</MudText>
-                    <MudText Typo="Typo.body2" Class="mb-6">Please sign in to continue.</MudText>
-                    <MudButton OnClick="SignInWithGoogle"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Size="Size.Large"
-                               StartIcon="@Icons.Custom.Brands.Google"
-                               Class="rounded-xl">
-                        Sign in with Google
-                    </MudButton>
-                </MudPaper>
-            </MudContainer>
+            <div class="d-flex align-center justify-center" style="height: 100vh;">
+                <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column align-center justify-center">
+                    <MudPaper Class="pa-8 rounded-lg d-flex flex-column align-items-center" Elevation="3">
+                        <img src="m1chat-small.png" alt="M1 Chat" style="width: 150px; height: auto; display: block; margin: 0 auto 24px;" />
+                        <MudText Typo="Typo.h5" Class="mb-4 text-center">Welcome to M1 Chat</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-6 text-center">Please sign in to continue.</MudText>
+                        <MudButton OnClick="SignInWithGoogle"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Custom.Brands.Google"
+                                   Class="rounded-xl">
+                            Sign in with Google
+                        </MudButton>
+                    </MudPaper>
+                </MudContainer>
+            </div>
         </NotAuthorized>
     </AuthorizeView>
 </CascadingAuthenticationState>
@@ -41,12 +39,18 @@
 @code {
     private bool isInitialized = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         isInitialized = true;
         if (OperatingSystem.IsBrowser())
         {
-            Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
+            await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
+        }
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            NavigationManager.NavigateTo("/Chat");
         }
     }
 
