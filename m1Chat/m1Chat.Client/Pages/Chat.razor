@@ -403,9 +403,6 @@
     {
       _drawerOpen = true;
       await InvokeAsync(StateHasChanged);
-
-      // Small delay to ensure drawer is rendered
-      //await Task.Delay(50);
     }
 
     if (_chatDrawerRef != null)
@@ -415,7 +412,6 @@
   }
 
 
-  // Changed this method to async Task as it will be called by SignalRService.OnStreamCompleted (which is now Func<Task>)
   private async Task HandleStreamCompleted()
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -428,7 +424,6 @@
     }
   }
 
-  // HandleChunkReceived and HandleStreamError remain the same, as they are passed as Actions.
   private void HandleChunkReceived(string chunk)
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -538,7 +533,6 @@
       .ThenByDescending(c => c.LastUpdatedAt)
       .Select(c => new ChatDrawer.SidebarChat(c.Id.ToString(), c.Name, c.Model, c.IsPinned, c.LastUpdatedAt))
       .ToList();
-    // No StateHasChanged here, as it's typically called by the caller after this
   }
 
   private async Task CreateNewChat()
@@ -648,7 +642,7 @@
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
     //return;
-    if (args.Key == "Enter" && !args.ShiftKey)
+    if (args is { Key: "Enter", ShiftKey: false })
     {
       await _messageTextField.BlurAsync();
       await _messageTextField.FocusAsync();
@@ -1220,13 +1214,5 @@
       Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);
       StateHasChanged();
     }
-  }
-
-  public void Dispose()
-  {
-    // Unsubscribe from SignalR events - these are now handled per-stream in ChatCompletionService
-    // SignalRService.OnChunkReceived -= HandleChunkReceived;
-    // SignalRService.OnStreamCompleted -= HandleStreamCompleted;
-    // SignalRService.OnStreamError -= HandleStreamError;
   }
 }
