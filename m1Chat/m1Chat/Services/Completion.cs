@@ -65,7 +65,9 @@ namespace m1Chat.Services
                 "OPENROUTER_API_KEY",
                 "OpenRouter API key"
             );
-            _groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
+            //_groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
+            _groqApiKey = "[REDACTED_GROQ_API_KEY]";
+            
             _aiStudioApiKey = GetEnvironmentVariableOrThrow(
                 "AISTUDIO_API_KEY",
                 "AI Studio API key"
@@ -357,9 +359,12 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey =
-                await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter)
-                ?? _openRouterApiKey;
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _openRouterApiKey;
+            }
+
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -455,9 +460,11 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey =
-                await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes)
-                ?? _chutesApiKey;
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _chutesApiKey;
+            }
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -550,9 +557,11 @@ namespace m1Chat.Services
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Get user's API key or use default
-            var apiKey =
-                await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq) ?? _groqApiKey;
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _groqApiKey;
+            }
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -621,9 +630,11 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey =
-                await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio)
-                ?? _aiStudioApiKey;
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _aiStudioApiKey;
+            }
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -692,9 +703,11 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey =
-                await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral)
-                ?? _mistralApiKey;
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _mistralApiKey;
+            }
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
