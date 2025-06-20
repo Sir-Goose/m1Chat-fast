@@ -1,6 +1,7 @@
 @page "/"
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager NavigationManager
+@inject IJSRuntime Js
 
 <CascadingAuthenticationState>
     <AuthorizeView>
@@ -43,6 +44,10 @@
     protected override void OnInitialized()
     {
         isInitialized = true;
+        if (OperatingSystem.IsBrowser())
+        {
+            Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
+        }
     }
 
     private void SignInWithGoogle()
