@@ -196,7 +196,11 @@
 
     private void OnSelectedItemsChanged(HashSet<Model> items) => selectedModels = items;
 
-    private void Logout() => NavigationManager.NavigateTo("/", forceLoad: true);
+    private void Logout()
+    {
+        // Redirect to the server-side logout endpoint
+        NavigationManager.NavigateTo("/auth/logout", forceLoad: true);
+    }
 
     private void NavigateToChat() => NavigationManager.NavigateTo("/Chat");
 

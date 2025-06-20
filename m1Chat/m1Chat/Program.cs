@@ -1,6 +1,5 @@
 using System;
 using System.Net.Http;
-using m1Chat.Authentication;
 using m1Chat.Client;
 using m1Chat.Client.Services;
 using MudBlazor.Services;
@@ -8,14 +7,16 @@ using m1Chat.Components;
 using m1Chat.Services;
 using m1Chat.Data;
 using m1Chat.Hubs;
-using m1Chat.Middleware;
+using m1Chat.Middleware; 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.Google; 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Services Registration --- // 
+// --- Services Registration --- //
 
 // 1) Make HttpContext available in DI
 builder.Services.AddHttpContextAccessor();
@@ -69,27 +70,19 @@ builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ModelPreferencesService>();
 
-// --- Conditional Authentication Registration --- //
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = DevAuthenticationHandler.SchemeName;
-        options.DefaultChallengeScheme    = DevAuthenticationHandler.SchemeName;
+builder.Services.AddAuthentication(options => {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
     })
-    .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(
-        DevAuthenticationHandler.SchemeName, _ => { });
-}
-else
-{
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = CloudflareAccessAuthenticationHandler.SchemeName;
-        options.DefaultChallengeScheme    = CloudflareAccessAuthenticationHandler.SchemeName;
-    })
-    .AddScheme<AuthenticationSchemeOptions, CloudflareAccessAuthenticationHandler>(
-        CloudflareAccessAuthenticationHandler.SchemeName, _ => { });
-}
+    .AddCookie()
+    .AddGoogle(googleOptions => {
+        googleOptions.ClientId = builder.Configuration["Google:ClientId"];
+        googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
+        googleOptions.CallbackPath = "/signin-google";
+        googleOptions.SaveTokens = true;
+    });
+
+
 
 builder.Services.AddAuthorization();
 
@@ -127,11 +120,14 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRouting();
 app.UseAntiforgery();
 
+app.UseCookiePolicy();
 app.UseAuthentication();
-app.UseMiddleware<CloudflareUserSyncMiddleware>();
 app.UseAuthorization();
+
+app.UseMiddleware<UserCreationOrSyncMiddleware>();
 
 app.MapControllers();
 app.MapStaticAssets();
