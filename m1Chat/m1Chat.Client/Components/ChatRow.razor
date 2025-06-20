@@ -1,0 +1,77 @@
+@using MudBlazor
+@inherits ComponentBase
+
+<MudMenu
+    Style="width:100%;"
+    ActivationEvent="@MouseEvent.RightClick"
+    AnchorOrigin="Origin.BottomLeft"
+    TransformOrigin="Origin.TopLeft">
+    <ActivatorContent>
+        <MudListItem T="ChatDrawer.SidebarChat"
+                     Dense="true"
+                     Class="sidebar-chat-row"
+                     Style="display: flex; align-items: center; justify-content: space-between;"
+                     OnClick="() => OnSelect.InvokeAsync(chat)"
+                     @onmouseenter="() => OnMouseEnter.InvokeAsync(chat)"
+                     @oncontextmenu:preventDefault>
+
+            <MudText
+                Color="@(ActiveChatId == chat.Id ? Color.Primary : Color.Default)"
+                Typo="Typo.body2"
+                Class="chat-name-text"
+                Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color:#b2b0bf">
+                @chat.Name
+            </MudText>
+            <span class="chat-actions" style="display: flex; gap: 2px;">
+                <span @onclick:stopPropagation="true">
+                    <MudTooltip Text="Pin Thread">
+                    <MudIconButton
+                        Icon="@Icons.Material.Outlined.PushPin"
+                        Color="Color.Primary"
+                        Size="Size.Small"
+                        OnClick="() => OnPin.InvokeAsync(chat)"
+                        aria-label="Pin chat"/>
+                    </MudTooltip>
+                </span>
+                <span @onclick:stopPropagation="true">
+                    <MudTooltip Text="Delete Thread">
+                    <MudIconButton
+                        Icon="@Icons.Material.Outlined.Delete"
+                        Color="Color.Error"
+                        Size="Size.Small"
+                        OnClick="() => OnDelete.InvokeAsync(chat)"
+                        aria-label="Delete chat"/>
+                    </MudTooltip>
+                </span>
+            </span>
+        </MudListItem>
+    </ActivatorContent>
+    <ChildContent>
+        <MudMenuItem
+            Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
+            OnClick="() => OnRename.InvokeAsync(chat)">
+            Rename
+        </MudMenuItem>
+        <MudMenuItem
+            Icon="@Icons.Material.Outlined.Delete"
+            OnClick="() => OnDelete.InvokeAsync(chat)">
+            Delete
+        </MudMenuItem>
+        <MudMenuItem
+            Icon="@Icons.Material.Outlined.ArrowOutward"
+            OnClick="() => OnExport.InvokeAsync(chat)">
+            Export
+        </MudMenuItem>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    [Parameter] public ChatDrawer.SidebarChat chat { get; set; } = default!;
+    [Parameter] public string? ActiveChatId { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnSelect { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnPin { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnDelete { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnRename { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnExport { get; set; }
+    [Parameter] public EventCallback<ChatDrawer.SidebarChat> OnMouseEnter { get; set; }
+}

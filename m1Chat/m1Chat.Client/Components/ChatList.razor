@@ -1,77 +1,57 @@
 @using MudBlazor
 @typeparam TItem
 
-<MudList T="TItem" Dense="true">
-    @foreach (var chat in Items)
-    {
-        <MudMenu
-            Style="width:100%;"
-            ActivationEvent="@MouseEvent.RightClick"
-            AnchorOrigin="Origin.BottomLeft"
-            TransformOrigin="Origin.TopLeft">
-            <ActivatorContent>
-                <MudListItem
-                    Dense="true"
-                    Class="sidebar-chat-row"
-                    Style="display: flex; align-items: center; justify-content: space-between;"
-                    OnClick="() => OnItemSelected.InvokeAsync(chat)"
-                    @onmouseenter="() => OnItemMouseEnter.InvokeAsync(chat)"
-                    @oncontextmenu:preventDefault>
-                    <MudText
-                        Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
-                        Typo="Typo.body2"
-                        Class="chat-name-text"
-                        Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color:#b2b0bf">
-                        @GetItemName(chat)
-                    </MudText>
-                    <span class="chat-actions" style="display: flex; gap: 2px;">
-                        <span @onclick:stopPropagation="true">
-                            <MudTooltip Text="Pin Thread">
-                            <MudIconButton
-                                Icon="@Icons.Material.Outlined.PushPin"
-                                Color="Color.Primary"
-                                Size="Size.Small"
-                                OnClick="() => OnItemPinned.InvokeAsync(chat)"
-                                aria-label="Pin chat"/>
-                            </MudTooltip>
-                        </span>
-                        <span @onclick:stopPropagation="true">
-                            <MudTooltip Text="Delete Thread">
-                            <MudIconButton
-                                Icon="@Icons.Material.Outlined.Delete"
-                                Color="Color.Error"
-                                Size="Size.Small"
-                                OnClick="() => OnItemDeleted.InvokeAsync(chat)"
-                                aria-label="Delete chat"/>
-                            </MudTooltip>
-                        </span>
-                    </span>
-                </MudListItem>
-            </ActivatorContent>
-            <ChildContent>
-                <MudMenuItem
-                    Icon="@Icons.Material.Outlined.DriveFileRenameOutline"
-                    OnClick="() => OnItemRenamed.InvokeAsync(chat)">
-                    Rename
-                </MudMenuItem>
-                <MudMenuItem
-                    Icon="@Icons.Material.Outlined.Delete"
-                    OnClick="() => OnItemDeleted.InvokeAsync(chat)">
-                    Delete
-                </MudMenuItem>
-                <MudMenuItem
-                    Icon="@Icons.Material.Outlined.ArrowOutward"
-                    OnClick="() => OnItemExported.InvokeAsync(chat)">
-                    Export
-                </MudMenuItem>
-            </ChildContent>
-        </MudMenu>
-    }
+<MudList T="TItem" Dense="true" Style="height: 100%; overflow-y: auto;">
+    <Virtualize Items="@Items" 
+                TItem="TItem" 
+                Context="chat"
+                >
+
+        <!-- FIX: Added T="TItem" to MudListItem -->
+        <MudListItem T="TItem"
+                     Dense="true"
+                     Class="sidebar-chat-row"
+                     Style="display: flex; align-items: center; justify-content: space-between;"
+                     OnClick="() => OnItemSelected.InvokeAsync(chat)"
+                     @onmouseenter="() => OnItemMouseEnter.InvokeAsync(chat)"
+                     @oncontextmenu:preventDefault
+                     @key="GetItemId(chat)">
+            <MudText
+                Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
+                Typo="Typo.body2"
+                Class="chat-name-text"
+                Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color:#b2b0bf">
+                @GetItemName(chat)
+            </MudText>
+            <span class="chat-actions" style="display: flex; gap: 2px;">
+                <span @onclick:stopPropagation="true">
+                    <MudTooltip Text="Pin Thread">
+                        <MudIconButton
+                            Icon="@Icons.Material.Outlined.PushPin"
+                            Color="Color.Primary"
+                            Size="Size.Small"
+                            OnClick="() => OnItemPinned.InvokeAsync(chat)"
+                            aria-label="Pin chat"/>
+                    </MudTooltip>
+                </span>
+                <span @onclick:stopPropagation="true">
+                    <MudTooltip Text="Delete Thread">
+                        <MudIconButton
+                            Icon="@Icons.Material.Outlined.Delete"
+                            Color="Color.Error"
+                            Size="Size.Small"
+                            OnClick="() => OnItemDeleted.InvokeAsync(chat)"
+                            aria-label="Delete chat"/>
+                    </MudTooltip>
+                </span>
+            </span>
+        </MudListItem>
+    </Virtualize>
 </MudList>
 
 @code {
     [Parameter]
-    public IEnumerable<TItem> Items { get; set; } = new List<TItem>();
+    public ICollection<TItem>? Items { get; set; } = new List<TItem>();
 
     [Parameter]
     public string? ActiveItemId { get; set; }
