@@ -376,6 +376,7 @@
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
+    Console.WriteLine($"Chat rendered");
     if (firstRender)
     {
       await Js.InvokeVoidAsync(
@@ -395,18 +396,25 @@
     }
   }
 
-  private async Task HandleKeyUp(KeyboardEventArgs args)
+  private Task HandleKeyUp(KeyboardEventArgs args)
   {
     if (args is { Key: "Enter", ShiftKey: false })
     {
-      await _chatInputAreaRef.BlurAsync();
-      await _chatInputAreaRef.FocusAsync();
-      if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
-      {
-        await SendMessage();
-      }
+      return HandleEnterKeyAsync();
+    }
+    return Task.CompletedTask;
+  }
+
+  private async Task HandleEnterKeyAsync()
+  {
+    await _chatInputAreaRef.BlurAsync();
+    await _chatInputAreaRef.FocusAsync();
+    if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
+    {
+      await SendMessage();
     }
   }
+
   
   private async Task HandleKeyDown(KeyboardEventArgs e)
   {
