@@ -11,7 +11,7 @@
               Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
         <MudContainer Class="pa-0">
             <div style="display:flex;flex-direction:column;">
-                <!-- File Upload Component - Animate its appearance -->
+                <!-- File Upload Component -->
                 <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
                     <div class="mb-2">
                         <MudStack Row Class="mb-2 justify-space-between align-center">
@@ -33,8 +33,8 @@
                 <div style="display:flex;align-items:center;">
                     <MudTextField
                         @ref="_messageTextField"
-                        Value="@MessageText"
-                        ValueChanged="@(async (string value) => await OnMessageTextChanged(value))"
+                        Value="_messageTextInternal"
+                        ValueChanged="((string value) => _messageTextInternal = value)"
                         Label="Enter your message"
                         Margin="Margin.None"
                         Variant="Variant.Text"
@@ -49,7 +49,6 @@
                     />
                 </div>
                 <div style="display:flex;align-items:center;margin-top:8px;">
-                    
                     <MudSelect @ref="_modelSelect"
                                Value="@SelectedModel"
                                ValueChanged="@(async (string value) => await OnModelChanged(value))"
@@ -69,7 +68,6 @@
                             }
                         }
                     </MudSelect>
-                    
 
                     <div style="display:flex; align-items:center;"
                          class="@(_isThinkingSelectorDisabled ? "mud-text-secondary" : "mud-text-primary")">
@@ -137,8 +135,6 @@
 
 @code {
     // Parameters from parent
-    [Parameter] public string MessageText { get; set; } = "";
-    [Parameter] public EventCallback<string> MessageTextChanged { get; set; }
     [Parameter] public string SelectedModel { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedModelChanged { get; set; }
     [Parameter] public string ThinkingSelectedOption { get; set; } = "None";
@@ -151,10 +147,11 @@
     [Parameter] public EventCallback<bool> ShowFileUploadChanged { get; set; }
     
     // Callbacks
-    [Parameter] public EventCallback OnSendMessage { get; set; }
+    [Parameter] public EventCallback<string> OnMessageSubmitted { get; set; }
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyUp { get; set; }
 
     // Internal state
+    private string _messageTextInternal = "";
     private bool _showFileUpload;
     private bool _isThinkingSelectorDisabled = false;
     private List<string> _currentThinkingOptions = new();
@@ -202,6 +199,7 @@
 
     protected override void OnParametersSet()
     {
+        // Keep _showFileUpload in sync with parent's ShowFileUpload parameter
         if (_showFileUpload != ShowFileUpload)
         {
             _showFileUpload = ShowFileUpload;
@@ -265,11 +263,6 @@
         }
     }
 
-    private async Task OnMessageTextChanged(string value)
-    {
-        await MessageTextChanged.InvokeAsync(value);
-    }
-
     private async Task OnModelChanged(string value)
     {
         ApplyThinkingOptionsForModel(value);
@@ -300,18 +293,44 @@
 
     private async Task HandleKeyUp(KeyboardEventArgs args)
     {
-        if (OnKeyUp.HasDelegate)
+        
+        // Handle Enter key (without Shift) to send message
+        if (args is { Key: "Enter", ShiftKey: false })
         {
-            await OnKeyUp.InvokeAsync(args);
+            _ = BlurAsync();
+            _ = FocusAsync();
+            await Js.InvokeVoidAsync("event.preventDefault"); // Prevent newline in textarea
+            if (!string.IsNullOrWhiteSpace(_messageTextInternal) || CurrentMessageFiles.Any())
+            {
+                await HandleSendMessage();
+            }
+            await FocusAsync(); // Re-focus the text field after sending
         }
     }
 
     private async Task HandleSendMessage()
     {
-        if (OnSendMessage.HasDelegate)
+        if (OnMessageSubmitted.HasDelegate)
         {
-            await OnSendMessage.InvokeAsync();
+            // Invoke the OnMessageSubmitted callback with the current internal text
+            await OnMessageSubmitted.InvokeAsync(_messageTextInternal);
+
+            // Clear the input area internally AFTER the message has been submitted
+            _messageTextInternal = "";
+            // The parent (Chat.razor) will handle clearing CurrentMessageFiles and _showFileUpload,
+            // as those are bindable parameters owned by the parent.
         }
+    }
+
+    /// <summary>
+    /// Public method to programmatically set the message text in the input field.
+    /// Used by the parent component for "Edit Message" functionality.
+    /// </summary>
+    public async Task SetInputText(string text)
+    {
+        _messageTextInternal = text;
+        StateHasChanged(); // Re-render this component to reflect the new text
+        await FocusAsync(); // Focus the input field after setting its content
     }
 
     public async Task FocusAsync()
@@ -328,5 +347,10 @@
         {
             await _messageTextField.BlurAsync();
         }
+    }
+    
+    protected override void OnAfterRender(bool firstRender)
+    {
+        Console.WriteLine($"Input area rendered");
     }
 }
