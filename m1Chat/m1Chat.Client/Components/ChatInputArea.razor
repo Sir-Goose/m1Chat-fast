@@ -1,0 +1,332 @@
+@using m1Chat.Client.Services
+@using m1Chat.Client.Models
+@using Microsoft.AspNetCore.Components.Web
+@inject IJSRuntime Js
+@inject ISnackbar Snackbar
+@inject SvgIcons SvgIcons
+
+<div class="input-area-container">
+    <ScrollToBottomChip></ScrollToBottomChip>
+    <MudPaper Elevation="3" Outlined="true"
+              Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
+        <MudContainer Class="pa-0">
+            <div style="display:flex;flex-direction:column;">
+                <!-- File Upload Component - Animate its appearance -->
+                <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
+                    <div class="mb-2">
+                        <MudStack Row Class="mb-2 justify-space-between align-center">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                Attach Files
+                            </MudText>
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.Close"
+                                Size="Size.Small"
+                                OnClick="() => _showFileUpload = false"
+                                Color="Color.Secondary"
+                                aria-label="Close file upload"
+                            />
+                        </MudStack>
+                        <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;">
+                    <MudTextField
+                        @ref="_messageTextField"
+                        Value="@MessageText"
+                        ValueChanged="@(async (string value) => await OnMessageTextChanged(value))"
+                        Label="Enter your message"
+                        Margin="Margin.None"
+                        Variant="Variant.Text"
+                        AutoGrow="true"
+                        AutoFocus="true"
+                        Underline="false"
+                        Lines="2"
+                        MaxLines="10"
+                        Class="flex-grow-1"
+                        Immediate="false"
+                        OnKeyUp="HandleKeyUp"
+                    />
+                </div>
+                <div style="display:flex;align-items:center;margin-top:8px;">
+                    
+                    <MudSelect @ref="_modelSelect"
+                               Value="@SelectedModel"
+                               ValueChanged="@(async (string value) => await OnModelChanged(value))"
+                               Variant="Variant.Text"
+                               Margin="Margin.None"
+                               Underline="false"
+                               FitContent="true"
+                               Typo="Typo.body1"
+                               MaxHeight="int.MaxValue"
+                               Class="mr-2"
+                               AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var providerGroup in EnabledModelsByProvider.OrderBy(kvp => kvp.Key)) 
+                        {
+                            @foreach (var model in providerGroup.Value) 
+                            {
+                                <MudSelectItem Value="@model">@model</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                    
+
+                    <div style="display:flex; align-items:center;"
+                         class="@(_isThinkingSelectorDisabled ? "mud-text-secondary" : "mud-text-primary")">
+                        <div class="think-icon-text">
+                            <MudButton Variant="Variant.Text"
+                                       OnClick="ToggleMenuAsync"
+                                       Disabled="@_isThinkingSelectorDisabled">
+                                <MudText Typo="Typo.body1">
+                                    @ThinkingSelectedOption
+                                </MudText>
+                            </MudButton>
+                        </div>
+                        <MudMenu @ref="_mudMenu"
+                                 Icon="@CurrentThinkingIcon"
+                                 Color="Color.Primary"
+                                 AriaLabel="Thinking options"
+                                 Disabled="@_isThinkingSelectorDisabled"
+                                 AnchorOrigin="Origin.TopRight"
+                                 Class="rounded-xl"
+                                 TransformOrigin="Origin.BottomRight">
+                            @foreach (var opt in _currentThinkingOptions)
+                            {
+                                <MudMenuItem OnClick="() => SetThinkingOption(opt)" Class="px-3 py-1" Style="min-width: 120px;">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2"
+                                                 Style="margin-top: -2px;"/>
+                                        <MudText Typo="Typo.body1">@opt</MudText>
+                                    </div>
+                                </MudMenuItem>
+                            }
+                        </MudMenu>
+                    </div>
+
+                    <div style="margin-left:auto;display:flex;align-items:center;">
+                        <MudIconButton
+                            Icon="@(_showFileUpload ? Icons.Material.Filled.AttachFile : Icons.Material.Filled.AttachFile)"
+                            Color="@(_showFileUpload ? Color.Success : Color.Primary)"
+                            OnClick="ToggleFileUpload"
+                            aria-label="@(_showFileUpload ? "Hide file upload" : "Show file upload")"
+                            Class="mr-2"/>
+                        @if (CurrentMessageFiles.Any())
+                        {
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Primary"
+                                     Icon="@Icons.Material.Filled.AttachFile"
+                                     Class="mr-2">
+                                @CurrentMessageFiles.Count file@(CurrentMessageFiles.Count == 1 ? "" : "s")
+                            </MudChip>
+                        }
+                        <MudIconButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            Icon="@Icons.Material.Filled.Send"
+                            OnClick="HandleSendMessage"
+                            aria-label="Send message"
+                            Disabled="@IsSendingMessage">
+                        </MudIconButton>
+                    </div>
+                </div>
+            </div>
+        </MudContainer>
+    </MudPaper>
+</div>
+
+@code {
+    // Parameters from parent
+    [Parameter] public string MessageText { get; set; } = "";
+    [Parameter] public EventCallback<string> MessageTextChanged { get; set; }
+    [Parameter] public string SelectedModel { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedModelChanged { get; set; }
+    [Parameter] public string ThinkingSelectedOption { get; set; } = "None";
+    [Parameter] public EventCallback<string> ThinkingSelectedOptionChanged { get; set; }
+    [Parameter] public Dictionary<string, List<string>> EnabledModelsByProvider { get; set; } = new();
+    [Parameter] public List<FileUploadService.UploadedFileInfo> CurrentMessageFiles { get; set; } = new();
+    [Parameter] public EventCallback<List<FileUploadService.UploadedFileInfo>> CurrentMessageFilesChanged { get; set; }
+    [Parameter] public bool IsSendingMessage { get; set; }
+    [Parameter] public bool ShowFileUpload { get; set; }
+    [Parameter] public EventCallback<bool> ShowFileUploadChanged { get; set; }
+    
+    // Callbacks
+    [Parameter] public EventCallback OnSendMessage { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyUp { get; set; }
+
+    // Internal state
+    private bool _showFileUpload;
+    private bool _isThinkingSelectorDisabled = false;
+    private List<string> _currentThinkingOptions = new();
+    private Dictionary<string, List<string>> _modelThinkingOptionsMap = new();
+    
+    // Component references
+    private MudTextField<string> _messageTextField;
+    private MudSelect<string> _modelSelect;
+    private FileUploadComponent _fileUploadComponentRef;
+    private MudMenu _mudMenu;
+
+    // Static options
+    private static readonly List<string> ThinkingOptionsLowMediumHigh = new() { "Low", "Medium", "High" };
+    private static readonly List<string> ThinkingOptionsNoneLowMediumHigh = new() { "None", "Low", "Medium", "High" };
+    private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" };
+
+    protected override void OnInitialized()
+    {
+        _showFileUpload = ShowFileUpload;
+        
+        _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
+        {
+            { "Deepseek v3 (Chutes)", ThinkingOptionsNoneOnly },
+            { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh },
+            { "Deepseek r1", ThinkingOptionsLowMediumHigh },
+            { "Deepseek R1 0528 (Chutes)", ThinkingOptionsNoneOnly },
+            { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh },
+            { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly },
+            { "Gemini 2.5 Flash (AI Studio)", ThinkingOptionsNoneLowMediumHigh },
+            { "Gemini 2.0 Flash (AI Studio)", ThinkingOptionsNoneOnly },
+            { "Qwen3 235B", ThinkingOptionsLowMediumHigh },
+            { "Qwen3 30B", ThinkingOptionsLowMediumHigh },
+            { "Gemma 3 27B (OpenRouter)", ThinkingOptionsNoneOnly },
+            { "Devstral Small (Mistral AI)", ThinkingOptionsNoneOnly },
+            { "Magistral Small (Mistral AI)", ThinkingOptionsNoneOnly },
+            { "Mistral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
+            { "Magistral Medium", ThinkingOptionsNoneOnly },
+            { "Llama 3.1 8B (Groq)", ThinkingOptionsNoneOnly },
+            { "Llama 4 Scout (Groq)", ThinkingOptionsNoneOnly },
+            { "Llama 4 Maverick (OpenRouter)", ThinkingOptionsNoneOnly }
+        };
+
+        ApplyThinkingOptionsForModel(SelectedModel);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_showFileUpload != ShowFileUpload)
+        {
+            _showFileUpload = ShowFileUpload;
+        }
+    }
+
+    private string CurrentThinkingIcon
+    {
+        get
+        {
+            return ThinkingSelectedOption switch
+            {
+                "None" => SvgIcons.BrainIcons[0],
+                "Low" => SvgIcons.BrainIcons[1],
+                "Medium" => SvgIcons.BrainIcons[2],
+                "High" => SvgIcons.BrainIcons[3],
+                _ => SvgIcons.BrainIcons[0]
+            };
+        }
+    }
+
+    private string GetThinkingOptionIcon(string option)
+    {
+        return option switch
+        {
+            "None" => SvgIcons.BrainIcons[0],
+            "Low" => SvgIcons.BrainIcons[1],
+            "Medium" => SvgIcons.BrainIcons[2],
+            "High" => SvgIcons.BrainIcons[3],
+            _ => SvgIcons.BrainIcons[0]
+        };
+    }
+
+    private void ApplyThinkingOptionsForModel(string modelName)
+    {
+        if (_modelThinkingOptionsMap.TryGetValue(modelName, out var options))
+        {
+            _currentThinkingOptions = options;
+            if (modelName == "llama-3.1-8b-instant")
+            {
+                _isThinkingSelectorDisabled = true;
+                SetThinkingOption("None");
+            }
+            else
+            {
+                _isThinkingSelectorDisabled = false;
+                if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
+                {
+                    SetThinkingOption(_currentThinkingOptions.FirstOrDefault() ?? "None");
+                }
+            }
+        }
+        else
+        {
+            _currentThinkingOptions = ThinkingOptionsNoneLowMediumHigh;
+            _isThinkingSelectorDisabled = false;
+            if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
+            {
+                SetThinkingOption("None");
+            }
+        }
+    }
+
+    private async Task OnMessageTextChanged(string value)
+    {
+        await MessageTextChanged.InvokeAsync(value);
+    }
+
+    private async Task OnModelChanged(string value)
+    {
+        ApplyThinkingOptionsForModel(value);
+        await SelectedModelChanged.InvokeAsync(value);
+    }
+
+    private async Task SetThinkingOption(string option)
+    {
+        if (ThinkingSelectedOption != option)
+        {
+            await ThinkingSelectedOptionChanged.InvokeAsync(option);
+        }
+    }
+
+    private async Task ToggleFileUpload()
+    {
+        _showFileUpload = !_showFileUpload;
+        await ShowFileUploadChanged.InvokeAsync(_showFileUpload);
+    }
+
+    private async Task ToggleMenuAsync(MouseEventArgs args)
+    {
+        if (_mudMenu != null)
+        {
+            await _mudMenu.ToggleMenuAsync(args);
+        }
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs args)
+    {
+        if (OnKeyUp.HasDelegate)
+        {
+            await OnKeyUp.InvokeAsync(args);
+        }
+    }
+
+    private async Task HandleSendMessage()
+    {
+        if (OnSendMessage.HasDelegate)
+        {
+            await OnSendMessage.InvokeAsync();
+        }
+    }
+
+    public async Task FocusAsync()
+    {
+        if (_messageTextField != null)
+        {
+            await _messageTextField.FocusAsync();
+        }
+    }
+
+    public async Task BlurAsync()
+    {
+        if (_messageTextField != null)
+        {
+            await _messageTextField.BlurAsync();
+        }
+    }
+}
