@@ -41,11 +41,11 @@ namespace m1Chat.Services
         private readonly ApiKeyService _apiKeyService;
 
         // Provider constants
-        public const string ProviderOpenRouter = "OpenRouter";
-        public const string ProviderGroq = "Groq";
-        public const string ProviderAIStudio = "AIStudio";
-        public const string ProviderChutes = "Chutes";
-        public const string ProviderMistral = "Mistral";
+        private const string ProviderOpenRouter = "OpenRouter";
+        private const string ProviderGroq = "Groq";
+        private const string ProviderAiStudio = "AIStudio";
+        private const string ProviderChutes = "Chutes";
+        private const string ProviderMistral = "Mistral";
 
         private enum Provider
         {
@@ -630,7 +630,7 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAIStudio);
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAiStudio);
             if (string.IsNullOrEmpty(apiKey))
             {
                 apiKey = _aiStudioApiKey;
