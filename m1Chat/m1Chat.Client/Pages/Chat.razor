@@ -84,15 +84,14 @@
       </MudPaper>
     </div>
 
-    <ChatInputArea @bind-MessageText="MessageText"
-                   @bind-SelectedModel="ChatSelectedModel"
+    <ChatInputArea @bind-SelectedModel="ChatSelectedModel"
                    @bind-ThinkingSelectedOption="ThinkingSelectedOption"
                    @bind-CurrentMessageFiles="CurrentMessageFiles"
                    @bind-ShowFileUpload="_showFileUpload"
                    EnabledModelsByProvider="_enabledModelsByProvider"
                    IsSendingMessage="_isSendingMessage"
-                   OnSendMessage="SendMessage"
-                   OnKeyUp="HandleKeyUp"
+                   OnMessageSubmitted="SendMessage"
+                   OnKeyUp="HandleChatGlobalKeyUp"
                    @ref="_chatInputAreaRef" />
   </MudMainContent>
 </MudLayout>
@@ -107,14 +106,13 @@
   private ElementReference _chatContainerRef;
 
   private string UserEmail { get; set; } = "";
-  private string MessageText { get; set; } = "";
 
   private ChatDrawer _chatDrawerRef;
   private ChatInputArea _chatInputAreaRef;
 
   private ClientChatMessage? _messageBeingEdited;
 
-  // File upload properties
+  // File upload properties (these are bindable to ChatInputArea)
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
 
   private string _chatSelectedModel = "";
@@ -280,9 +278,9 @@
 
   private int EstimateTokens()
   {
-    var characters = MessageText.Length;
-    var tokens = characters / 4.2;
-    return (int)Math.Round(tokens);
+    // This method is no longer directly used in the current setup to estimate tokens from MessageText.
+    // Consider if it's still needed or how it integrates with the new input flow.
+    return 0; 
   }
 
   private async Task LoadSidebarChatsAsync()
@@ -304,6 +302,11 @@
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
+    // Call SetInputText to clear the ChatInputArea's internal text
+    if (_chatInputAreaRef != null)
+    {
+        await _chatInputAreaRef.SetInputText("");
+    }
     StateHasChanged();
   }
 
@@ -339,6 +342,11 @@
     _showFileUpload = false;
     _messageBeingEdited = null;
     _needsScroll = true;
+    // Call SetInputText to clear the ChatInputArea's internal text
+    if (_chatInputAreaRef != null)
+    {
+        await _chatInputAreaRef.SetInputText("");
+    }
     StateHasChanged();
   }
 
@@ -361,6 +369,11 @@
     _showFileUpload = false;
     _messageBeingEdited = null;
     _needsScroll = true;
+    // Call SetInputText to clear the ChatInputArea's internal text
+    if (_chatInputAreaRef != null)
+    {
+        _ = _chatInputAreaRef.SetInputText(""); // Don't await in a void method
+    }
     StateHasChanged();
   }
 
@@ -396,53 +409,36 @@
     }
   }
 
-  private Task HandleKeyUp(KeyboardEventArgs args)
+  private Task HandleChatGlobalKeyUp(KeyboardEventArgs args) // Catches global hotkeys from ChatInputArea
   {
-    if (args is { Key: "Enter", ShiftKey: false })
-    {
-      return HandleEnterKeyAsync();
-    }
-    return Task.CompletedTask;
-  }
+    bool isModifierPressed = args.CtrlKey || args.MetaKey; // Ctrl or Command key
 
-  private async Task HandleEnterKeyAsync()
-  {
-    await _chatInputAreaRef.BlurAsync();
-    await _chatInputAreaRef.FocusAsync();
-    if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
+    if (isModifierPressed && args.Key == "k")
     {
-      await SendMessage();
-    }
-  }
-
-  
-  private async Task HandleKeyDown(KeyboardEventArgs e)
-  {
-    bool isModifierPressed = e.CtrlKey || e.MetaKey;
-    
-    if (isModifierPressed && e.Key == "k")
-    {
-      await FocusSearchFieldInDrawer();
+      return FocusSearchFieldInDrawer();
     }
     
-    if (isModifierPressed && e.Key == "b")
+    if (isModifierPressed && args.Key == "b")
     {
       _drawerOpen = !_drawerOpen;
       StateHasChanged();
+      return Task.CompletedTask;
     }
     
-    if (isModifierPressed && e.Key == "O")
+    if (isModifierPressed && args.Key == "O")
     {
-      await CreateNewChat();
+      return CreateNewChat();
     }
+
+    return Task.CompletedTask;
   }
 
-  private async Task SendMessage()
+  private async Task SendMessage(string submittedMessageText) // Now takes message text as a parameter from ChatInputArea
   {
     if (_isSendingMessage) return;
     await SignalRService.EnsureConnectionAsync();
 
-    var textToSend = MessageText.Trim();
+    var textToSend = submittedMessageText.Trim(); // Use the text received from ChatInputArea
     if (string.IsNullOrWhiteSpace(textToSend) && !CurrentMessageFiles.Any())
     {
       return;
@@ -516,6 +512,7 @@
           Text = textToSend,
           FileIds = fileIds
         };
+        // If a user message was edited, remove any AI replies that came after it
         if (_messageBeingEdited.IsUser)
         {
           _chatHistory.RemoveAll(m => _chatHistory.IndexOf(m) > originalMessageIndex && !m.IsUser);
@@ -534,9 +531,8 @@
       });
     }
 
-    MessageText = "";
-    CurrentMessageFiles.Clear();
-    _showFileUpload = false;
+    CurrentMessageFiles.Clear(); // Clear files from Chat.razor's state (this will propagate to ChatInputArea)
+    _showFileUpload = false;     // Hide file upload (this will propagate to ChatInputArea)
     _isAtBottom = true;
     _needsScroll = true;
     StateHasChanged();
@@ -570,8 +566,11 @@
         var nameGenerationCompleteFunc = new Func<Task>(async () =>
         {
           _chatName = !string.IsNullOrWhiteSpace(generatedName)
-            ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
+            ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ")
             : tempName;
+
+          // Ensure the generated name doesn't exceed database limits
+          if (_chatName.Length > 50) _chatName = _chatName.Substring(0, 50);
 
           var updateNameReq = new ChatService.UpdateChatRequest(
             _chatName,
@@ -862,23 +861,28 @@
     }
   }
 
-  private void HandleEditMessage(ClientChatMessage? m)
+  private async Task HandleEditMessage(ClientChatMessage? m)
   {
+    if (m == null || _chatInputAreaRef == null) return;
+
     _messageBeingEdited = m;
-    MessageText = m.Text;
-    // Restore files for editing if they were part of this message
+
+    // Set the files in Chat.razor's state, which will flow down via @bind-CurrentMessageFiles
     CurrentMessageFiles = m.FileIds
       .Select(fid => new FileUploadService.UploadedFileInfo { Id = fid, OriginalFileName = $"File_{fid.ToString()[..4]}..." })
       .ToList();
 
-    // Show file upload if there are files to edit
-    if (CurrentMessageFiles.Any())
-    {
-      _showFileUpload = true;
-    }
+    // Set the show file upload state, which will flow down via @bind-ShowFileUpload
+    _showFileUpload = CurrentMessageFiles.Any();
+
+    // Directly call the public method on ChatInputArea to set its internal text field content
+    await _chatInputAreaRef.SetInputText(m.Text);
 
     Snackbar.Add("Message content and associated files (if any) restored for editing.", Severity.Info);
-    StateHasChanged();
+    // StateHasChanged() is implicitly called by setting CurrentMessageFiles and _showFileUpload
+    // due to their binding, but explicitly calling it here ensures everything is in sync
+    // if other properties of Chat.razor's UI need immediate refresh.
+    StateHasChanged(); 
   }
 
   private async Task HandleCopyMessage(ClientChatMessage? m)
@@ -930,6 +934,11 @@
       _chatIsPinned = false;
       CurrentMessageFiles.Clear();
       _showFileUpload = false;
+      // Call SetInputText to clear the ChatInputArea's internal text
+      if (_chatInputAreaRef != null)
+      {
+          await _chatInputAreaRef.SetInputText("");
+      }
       NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
       Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);
       StateHasChanged();
