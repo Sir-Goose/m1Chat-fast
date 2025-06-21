@@ -329,4 +329,9 @@
             await _messageTextField.BlurAsync();
         }
     }
+    
+    protected override void OnAfterRender(bool firstRender)
+    {
+        Console.WriteLine($"Input area rendered");
+    }
 }
