@@ -84,136 +84,16 @@
       </MudPaper>
     </div>
 
-    <div class="input-area-container">
-      <ScrollToBottomChip></ScrollToBottomChip>
-      <MudPaper Elevation="3" Outlined="true"
-                Class="border-solid border-1 border-b-0 mud-border-primary rounded-t-xl px-4 pt-4 translucent-paper background-hack">
-        <MudContainer Class="pa-0">
-          <div style="display:flex;flex-direction:column;">
-            <!-- File Upload Component - Animate its appearance -->
-            <div class="file-upload-container @(_showFileUpload ? "file-upload-visible" : "file-upload-hidden")">
-              <div class="mb-2">
-                <MudStack Row Class="mb-2 justify-space-between align-center">
-                  <MudText Typo="Typo.subtitle2" Color="Color.Primary">
-                    Attach Files
-                  </MudText>
-                  <MudIconButton
-                    Icon="@Icons.Material.Filled.Close"
-                    Size="Size.Small"
-                    OnClick="() => _showFileUpload = false"
-                    Color="Color.Secondary"
-                    aria-label="Close file upload"
-                  />
-                </MudStack>
-                <FileUploadComponent @ref="_fileUploadComponentRef" @bind-UploadedFiles="CurrentMessageFiles"/>
-              </div>
-            </div>
-
-            <div style="display:flex;align-items:center;">
-              <MudTextField
-                @ref="_messageTextField"
-                @bind-Value="MessageText"
-                Label="Enter your message"
-                Margin="Margin.None"
-                Variant="Variant.Text"
-                AutoGrow="true"
-                AutoFocus="true"
-                Underline="false"
-                Lines="2"
-                MaxLines="10"
-                Class="flex-grow-1"
-                Immediate="false"
-                OnKeyUp="HandleKeyUp"
-              />
-            </div>
-            <div
-              style="display:flex;align-items:center;margin-top:8px;">
-              
-              <MudSelect @ref="_modelSelect"
-                         @bind-Value="ChatSelectedModel"
-                         Variant="Variant.Text"
-                         Margin="Margin.None"
-                         Underline="false"
-                         FitContent="true"
-                         Typo="Typo.body1"
-                         MaxHeight="int.MaxValue"
-                         Class="mr-2"
-                         AnchorOrigin="Origin.BottomCenter">
-                @foreach (var providerGroup in _enabledModelsByProvider.OrderBy(kvp => kvp.Key)) 
-                {
-                    @foreach (var model in providerGroup.Value) 
-                    {
-                        <MudSelectItem Value="@model">@model</MudSelectItem>
-                    }
-                }
-              </MudSelect>
-              
-
-              <div style="display:flex; align-items:center;"
-                   class="@(_isThinkingSelectorDisabled ? "mud-text-secondary" : "mud-text-primary")">
-                <div class="think-icon-text">
-                  <MudButton Variant="Variant.Text"
-                             OnClick="ToggleMenuAsync"
-                             Disabled="@_isThinkingSelectorDisabled">
-                    <MudText Typo="Typo.body1">
-                      @ThinkingSelectedOption
-                    </MudText>
-                  </MudButton>
-                </div>
-                <MudMenu @ref="_mudMenu"
-                         Icon="@CurrentThinkingIcon"
-                         Color="Color.Primary"
-                         AriaLabel="Thinking options"
-                         Disabled="@_isThinkingSelectorDisabled"
-                         AnchorOrigin="Origin.TopRight"
-                         Class="rounded-xl"
-                         TransformOrigin="Origin.BottomRight">
-                  @foreach (var opt in _currentThinkingOptions)
-                  {
-                    <MudMenuItem OnClick="() => SetThinkingOption(opt)" Class="px-3 py-1" Style="min-width: 120px;">
-                      <div class="d-flex align-center">
-                        <MudIcon Icon="@GetThinkingOptionIcon(opt)" Size="Size.Small" Class="mr-2"
-                                 Style="margin-top: -2px;"/>
-                        <MudText Typo="Typo.body1">@opt</MudText>
-                      </div>
-                    </MudMenuItem>
-                  }
-                </MudMenu>
-              </div>
-
-
-              <div
-                style="margin-left:auto;display:flex;align-items:center;">
-                <MudIconButton
-                  Icon="@(_showFileUpload ? Icons.Material.Filled.AttachFile : Icons.Material.Filled.AttachFile)"
-                  Color="@(_showFileUpload ? Color.Success : Color.Primary)"
-                  OnClick="ToggleFileUpload"
-                  aria-label="@(_showFileUpload ? "Hide file upload" : "Show file upload")"
-                  Class="mr-2"/>
-                @if (CurrentMessageFiles.Any())
-                {
-                  <MudChip T="string"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           Icon="@Icons.Material.Filled.AttachFile"
-                           Class="mr-2">
-                    @CurrentMessageFiles.Count file@(CurrentMessageFiles.Count == 1 ? "" : "s")
-                  </MudChip>
-                }
-                <MudIconButton
-                  Variant="Variant.Filled"
-                  Color="Color.Primary"
-                  Icon="@Icons.Material.Filled.Send"
-                  OnClick="SendMessage"
-                  aria-label="Send message"
-                  Disabled="@_isSendingMessage">
-                </MudIconButton>
-              </div>
-            </div>
-          </div>
-        </MudContainer>
-      </MudPaper>
-    </div>
+    <ChatInputArea @bind-MessageText="MessageText"
+                   @bind-SelectedModel="ChatSelectedModel"
+                   @bind-ThinkingSelectedOption="ThinkingSelectedOption"
+                   @bind-CurrentMessageFiles="CurrentMessageFiles"
+                   @bind-ShowFileUpload="_showFileUpload"
+                   EnabledModelsByProvider="_enabledModelsByProvider"
+                   IsSendingMessage="_isSendingMessage"
+                   OnSendMessage="SendMessage"
+                   OnKeyUp="HandleKeyUp"
+                   @ref="_chatInputAreaRef" />
   </MudMainContent>
 </MudLayout>
 
@@ -222,7 +102,7 @@
   private bool _needsScroll;
   private bool _isAtBottom = true;
   private bool _isSendingMessage = false;
-  private bool _showFileUpload = false; // New state for showing/hiding file upload
+  private bool _showFileUpload = false;
 
   private ElementReference _chatContainerRef;
 
@@ -230,16 +110,14 @@
   private string MessageText { get; set; } = "";
 
   private ChatDrawer _chatDrawerRef;
-  private MudSelect<string> _modelSelect; // Correct: Declare the MudSelect reference here!
+  private ChatInputArea _chatInputAreaRef;
 
-
-  private ClientChatMessage? _messageBeingEdited; // New state variable to track the message being edited
+  private ClientChatMessage? _messageBeingEdited;
 
   // File upload properties
   private List<FileUploadService.UploadedFileInfo> CurrentMessageFiles = new();
-  private FileUploadComponent _fileUploadComponentRef;
 
-  private string _chatSelectedModel = ""; // Initialize with an empty string or default
+  private string _chatSelectedModel = "";
 
   private async Task Should_sidebar_be_open()
   {
@@ -255,63 +133,22 @@
       if (_chatSelectedModel != value)
       {
         _chatSelectedModel = value;
-        ApplyThinkingOptionsForModel(value);
-        StateHasChanged();
       }
     }
   }
 
   private string ThinkingSelectedOption { get; set; } = "None";
 
-  private string CurrentThinkingIcon
-  {
-    get
-    {
-      return ThinkingSelectedOption switch
-      {
-        "None" => SvgIcons.BrainIcons[0],
-        "Low" => SvgIcons.BrainIcons[1],
-        "Medium" => SvgIcons.BrainIcons[2],
-        "High" => SvgIcons.BrainIcons[3],
-        _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
-      };
-    }
-  }
-
-  private string GetThinkingOptionIcon(string option)
-  {
-    return option switch
-    {
-      "None" => SvgIcons.BrainIcons[0],
-      "Low" => SvgIcons.BrainIcons[1],
-      "Medium" => SvgIcons.BrainIcons[2],
-      "High" => SvgIcons.BrainIcons[3],
-      _ => SvgIcons.BrainIcons[0] // Default case, e.g., if option is not recognized
-    };
-  }
-
-  private bool _isThinkingSelectorDisabled = false;
-  private List<string> _currentThinkingOptions = new();
-
-  private static readonly List<string> ThinkingOptionsLowMediumHigh = new() { "Low", "Medium", "High" };
-  private static readonly List<string> ThinkingOptionsNoneLowMediumHigh = new() { "None", "Low", "Medium", "High" };
-  private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" };
-
-  private Dictionary<string, List<string>> _modelThinkingOptionsMap;
-
   // This will hold the models grouped by provider for the MudSelect
   private Dictionary<string, List<string>> _enabledModelsByProvider = new();
 
   // The full list of models, used for internal mapping and initial population
-  // Correct: Access GetAllAvailableModels() via the injected instance
   private List<string> _allAiModelOptions;
-
 
   private string? _chatId;
   private string _chatName = "New Chat";
   private List<ClientChatMessage> _chatHistory = new();
   private bool _chatIsPinned;
-  private MudTextField<string> _messageTextField;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
   [Inject] private SignalRService SignalRService { get; set; } = null!;
@@ -331,7 +168,6 @@
 
     // Initialize ModelPreferences service and load enabled models
     await ModelPreferences.InitializeAsync();
-    // Correct: Populate _allAiModelOptions from the service instance
     _allAiModelOptions = ModelPreferences.GetAllAvailableModels(); 
     GroupEnabledModelsByProvider();
 
@@ -355,30 +191,6 @@
         _chatSelectedModel = _enabledModelsByProvider.Values.SelectMany(x => x).FirstOrDefault() ?? "";
     }
 
-
-    _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
-    {
-      { "Deepseek v3 (Chutes)", ThinkingOptionsNoneOnly },
-      { "DeepSeek Prover v2", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Deepseek r1", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Deepseek R1 0528 (Chutes)", ThinkingOptionsNoneOnly },
-      { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Gemini 2.5 Pro", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Gemini 2.5 Flash (AI Studio)", ThinkingOptionsNoneLowMediumHigh },
-      { "Gemini 2.0 Flash (AI Studio)", ThinkingOptionsNoneOnly },
-      { "Qwen3 235B", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Qwen3 30B", ThinkingOptionsLowMediumHigh }, // Keeping this here for future use or full context
-      { "Gemma 3 27B (OpenRouter)", ThinkingOptionsNoneOnly },
-      { "Devstral Small (Mistral AI)", ThinkingOptionsNoneOnly },
-      { "Magistral Small (Mistral AI)", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Mistral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
-      { "Magistral Medium", ThinkingOptionsNoneOnly }, // Keeping this here for future use or full context
-      { "Llama 3.1 8B (Groq)", ThinkingOptionsNoneOnly },
-      { "Llama 4 Scout (Groq)", ThinkingOptionsNoneOnly },
-      { "Llama 4 Maverick (OpenRouter)", ThinkingOptionsNoneOnly }
-    };
-
-    ApplyThinkingOptionsForModel(ChatSelectedModel);
     if (OperatingSystem.IsBrowser())
     {
       await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
@@ -388,10 +200,9 @@
 
   private void GroupEnabledModelsByProvider()
   {
-      // Correct: Access GetModelProviders() via the injected instance
       var providerMap = ModelPreferences.GetModelProviders(); 
       _enabledModelsByProvider = ModelPreferences.EnabledModels
-          .Where(modelName => providerMap.ContainsKey(modelName)) // Ensure model exists in provider map
+          .Where(modelName => providerMap.ContainsKey(modelName))
           .GroupBy(modelName => providerMap[modelName])
           .ToDictionary(group => group.Key, group => group.ToList());
   }
@@ -411,7 +222,6 @@
     }
   }
 
-
   private async Task HandleStreamCompleted()
   {
     var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
@@ -420,7 +230,7 @@
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
       StateHasChanged();
-      await SaveChatAfterStreaming(); // Await this now
+      await SaveChatAfterStreaming();
     }
   }
 
@@ -464,65 +274,15 @@
       );
       await ChatService.UpdateChatAsync(cId, updateReq);
       ChatCacheService.InvalidateCache(cId);
-      await LoadSidebarChatsAsync(); // Await this to ensure sidebar is updated
+      await LoadSidebarChatsAsync();
     }
   }
-
-  private void SetThinkingOption(string option)
-  {
-    if (ThinkingSelectedOption != option)
-    {
-      ThinkingSelectedOption = option;
-      StateHasChanged(); // Essential to re-render the component and update the displayed text
-    }
-  }
-
 
   private int EstimateTokens()
   {
     var characters = MessageText.Length;
     var tokens = characters / 4.2;
     return (int)Math.Round(tokens);
-  }
-
-
-  private void HandleChatModelChanged(string newModel)
-  {
-    ChatSelectedModel = newModel;
-    ApplyThinkingOptionsForModel(newModel);
-    StateHasChanged();
-  }
-
-  private void ApplyThinkingOptionsForModel(string modelName)
-  {
-    if (_modelThinkingOptionsMap.TryGetValue(modelName, out var options))
-    {
-      _currentThinkingOptions = options;
-      // Special case for 'llama-3.1-8b-instant' - ensure it's not removed if present in the map
-      if (modelName == "llama-3.1-8b-instant")
-      {
-        _isThinkingSelectorDisabled = true;
-        ThinkingSelectedOption = "None";
-      }
-      else
-      {
-        _isThinkingSelectorDisabled = false;
-        if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
-        {
-          ThinkingSelectedOption = _currentThinkingOptions.FirstOrDefault() ?? "None";
-        }
-      }
-    }
-    else
-    {
-      // Fallback for models not explicitly mapped or if modelName is empty/invalid
-      _currentThinkingOptions = ThinkingOptionsNoneLowMediumHigh;
-      _isThinkingSelectorDisabled = false;
-      if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
-        {
-            ThinkingSelectedOption = "None";
-        }
-    }
   }
 
   private async Task LoadSidebarChatsAsync()
@@ -542,8 +302,8 @@
     _chatHistory.Clear();
     _chatIsPinned = false;
     CurrentMessageFiles.Clear();
-    _showFileUpload = false; // Hide file upload when creating new chat
-    _messageBeingEdited = null; // Clear editing state
+    _showFileUpload = false;
+    _messageBeingEdited = null;
     StateHasChanged();
   }
 
@@ -566,19 +326,18 @@
     _chatId = fullChat.Id.ToString();
     _chatName = fullChat.Name;
     ChatSelectedModel = fullChat.Model;
-    ApplyThinkingOptionsForModel(fullChat.Model);
     _chatIsPinned = fullChat.IsPinned;
     _chatHistory = fullChat.Messages
-      .Select(m => new ClientChatMessage()// m here is ChatService.ChatMessageDto
+      .Select(m => new ClientChatMessage()
       {
         IsUser = m.Role == "user",
-        Text = m.Content, // Correct: DTO has Content, local record has Text
+        Text = m.Content,
         FileIds = m.FileIds?.ToList() ?? new List<Guid>()
       })
       .ToList();
     CurrentMessageFiles.Clear();
-    _showFileUpload = false; // Hide file upload when loading chat
-    _messageBeingEdited = null; // Clear editing state
+    _showFileUpload = false;
+    _messageBeingEdited = null;
     _needsScroll = true;
     StateHasChanged();
   }
@@ -588,7 +347,6 @@
     _chatId = cached.Id.ToString();
     _chatName = cached.Name;
     ChatSelectedModel = cached.Model;
-    ApplyThinkingOptionsForModel(cached.Model);
     _chatIsPinned = cached.IsPinned;
     _chatHistory = cached.Messages
       .Select(m => new ClientChatMessage
@@ -606,13 +364,11 @@
     StateHasChanged();
   }
 
-
-  private List<ServiceChatMessage> ToServiceChatMessages() => // Renamed for clarity
-    _chatHistory.Select(m => new ServiceChatMessage // This is m1Chat.Client.Services.ChatMessage
+  private List<ServiceChatMessage> ToServiceChatMessages() =>
+    _chatHistory.Select(m => new ServiceChatMessage
     {
       Role = m.IsUser ? "user" : "assistant",
-      Content = m.Text, // m is local ChatMessage record, which has Text
-      // FileIds are handled by ToSharedMessagesWithFilesForDb when saving
+      Content = m.Text,
     }).ToList();
 
   [JSInvokable]
@@ -641,11 +397,10 @@
 
   private async Task HandleKeyUp(KeyboardEventArgs args)
   {
-    //return;
     if (args is { Key: "Enter", ShiftKey: false })
     {
-      await _messageTextField.BlurAsync();
-      await _messageTextField.FocusAsync();
+      await _chatInputAreaRef.BlurAsync();
+      await _chatInputAreaRef.FocusAsync();
       if (!string.IsNullOrWhiteSpace(MessageText) || CurrentMessageFiles.Any())
       {
         await SendMessage();
@@ -660,22 +415,18 @@
     if (isModifierPressed && e.Key == "k")
     {
       await FocusSearchFieldInDrawer();
-      // search
     }
     
     if (isModifierPressed && e.Key == "b")
     {
       _drawerOpen = !_drawerOpen;
       StateHasChanged();
-      // sidebar 
     }
     
     if (isModifierPressed && e.Key == "O")
     {
       await CreateNewChat();
-      // new chat
     }
-    
   }
 
   private async Task SendMessage()
@@ -693,11 +444,8 @@
     StateHasChanged();
     
     // --- API Key Check ---
-    // Get the provider for the selected model
     var modelProvider = ModelPreferences.GetModelProviders().GetValueOrDefault(ChatSelectedModel, "Unknown");
 
-    // Define which providers require an API key from the user
-    // This set should match the providers that correspond to API key fields in Profile.razor
     var providersRequiringApiKey = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Openrouter",
@@ -711,7 +459,7 @@
     {
         var userApiKeys = await UserService.GetUserApiKeysAsync();
         string requiredKey = "";
-        string keyNameInStorage = ""; // To map provider name to the key name used in UserService storage
+        string keyNameInStorage = "";
 
         switch (modelProvider)
         {
@@ -724,8 +472,8 @@
             case "Chutes":
                 keyNameInStorage = "Chutes";
                 break;
-            case "Mistral AI": // This is the provider name
-                keyNameInStorage = "Mistral"; // This is the key name stored in UserService
+            case "Mistral AI":
+                keyNameInStorage = "Mistral";
                 break;
             case "Groq":
               keyNameInStorage = "Groq";
@@ -736,15 +484,14 @@
 
         if (string.IsNullOrWhiteSpace(requiredKey))
         {
-            // API key is missing, show dialog
             var parameters = new DialogParameters();
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, BackgroundClass = "blur-background" };
             var dialog = await DialogService.ShowAsync<ApiKeyRequiredDialog>("API Key Required", parameters, options);
             var result = await dialog.Result;
             if (!result.Canceled && result.Data is bool goToProfile && goToProfile) { NavigationManager.NavigateTo("/Profile"); }
-            _isSendingMessage = false; // Reset sending state as we didn't send
-            StateHasChanged(); // Re-render to update UI, like re-enabling send button
-            return; // Stop further execution of SendMessage
+            _isSendingMessage = false;
+            StateHasChanged();
+            return;
         }
     }
 
@@ -812,8 +559,7 @@
       string generatedName = "";
       try
       {
-        // Use an async Func<Task> for the completion callback
-        var nameGenerationCompleteFunc = new Func<Task>(async () => // Changed to Func<Task>
+        var nameGenerationCompleteFunc = new Func<Task>(async () =>
         {
           _chatName = !string.IsNullOrWhiteSpace(generatedName)
             ? generatedName.Trim().Trim('"', '\'').Replace("\n", " ").Truncate(50)
@@ -825,19 +571,18 @@
             new ChatService.ChatMessageDto[] { new ChatService.ChatMessageDto("user", userMessageTextForName, fileIds) },
             _chatIsPinned
           );
-          await ChatService.UpdateChatAsync(newChatGuid, updateNameReq); // Await this update
-          ChatCacheService.InvalidateCache(newChatGuid); // Invalidate cache so next sidebar load is fresh
-          await LoadSidebarChatsAsync(); // Await loading sidebar chats
-          StateHasChanged(); // Re-render Chat component (and thus ChatDrawer)
+          await ChatService.UpdateChatAsync(newChatGuid, updateNameReq);
+          ChatCacheService.InvalidateCache(newChatGuid);
+          await LoadSidebarChatsAsync();
+          StateHasChanged();
         });
 
-        // Start name generation streaming
         await ChatCompletionService.StreamCompletion(
           initialMessagesForName,
           "Llama 4 Scout (Groq)",
-          "Low", // Or "None" if 'reasoningEffort' is not applicable to name generation model
+          "Low",
           chunk => generatedName += chunk,
-          nameGenerationCompleteFunc, // Pass the Func<Task>
+          nameGenerationCompleteFunc,
           null
         );
       }
@@ -845,7 +590,6 @@
       {
         Console.WriteLine($"Name generation failed: {ex.Message}");
         _chatName = tempName;
-        // Ensure sidebar is loaded even if name generation failed
         await LoadSidebarChatsAsync();
         StateHasChanged();
       }
@@ -899,7 +643,7 @@
             StateHasChanged();
           }
         },
-        async () => // This also needs to be async Func<Task> now
+        async () =>
         {
           // Flush any remaining buffered content
           if (buffer.Length > 0)
@@ -911,7 +655,7 @@
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
-          await SaveChatAfterStreaming(); // Await this as well
+          await SaveChatAfterStreaming();
         },
         error =>
         {
@@ -922,7 +666,7 @@
           }
 
           aiMessage.Text = $"[Error: {error}]";
-          aiMessage.IsStreaming = false; // Should be false on error
+          aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
         }
@@ -931,50 +675,20 @@
     catch (Exception ex)
     {
       aiMessage.Text = $"[Error: {ex.Message}]";
-      aiMessage.IsStreaming = true; // Should be false on error
+      aiMessage.IsStreaming = false;
       _isSendingMessage = false;
       Console.WriteLine($"Error streaming completion: {ex}");
       StateHasChanged();
     }
   }
 
-
   // Used for saving to DB via ChatService (expects DTOs with FileIds)
   private List<ChatService.ChatMessageDto> ToSharedMessagesWithFilesForDb() =>
     _chatHistory.Select(m => new ChatService.ChatMessageDto(
       m.IsUser ? "user" : "assistant",
-      m.Text, // Corrected: m is local ChatMessage, which has .Text
+      m.Text,
       m.FileIds
     )).ToList();
-
-  private void ToggleFileUpload()
-  {
-    _showFileUpload = !_showFileUpload;
-    StateHasChanged();
-  }
-
-  private MudMenu _mudMenu;
-
-  private async Task ToggleMenuAsync(MouseEventArgs args)
-  {
-    if (_mudMenu != null)
-    {
-      await _mudMenu.ToggleMenuAsync(args);
-    }
-  }
-
-
-  private async Task TriggerFileUpload()
-  {
-    if (_fileUploadComponentRef != null)
-    {
-      await _fileUploadComponentRef.TriggerUploadAsync();
-    }
-    else
-    {
-      Snackbar.Add("File upload component not ready. Please try again.", Severity.Warning);
-    }
-  }
 
   private async Task PinChat(ChatDrawer.SidebarChat chat)
   {
@@ -1010,7 +724,7 @@
     var updateReq = new ChatService.UpdateChatRequest(
       updatedChat.Name,
       updatedChat.Model,
-      fullChat.Messages, // These are ChatService.ChatMessageDto
+      fullChat.Messages,
       updatedChat.IsPinned
     );
     await ChatService.UpdateChatAsync(Guid.Parse(updatedChat.Id), updateReq);
@@ -1102,7 +816,7 @@
             StateHasChanged();
           }
         },
-        async () => // This needs to be async Func<Task> as well
+        async () =>
         {
           // Flush any remaining buffered content
           if (buffer.Length > 0)
@@ -1114,7 +828,7 @@
           targetAiMessage.IsStreaming = false;
           _isSendingMessage = false;
           StateHasChanged();
-          await SaveChatAfterStreaming(); // Await this
+          await SaveChatAfterStreaming();
         },
         error =>
         {
@@ -1140,14 +854,13 @@
     }
   }
 
-
   private void HandleEditMessage(ClientChatMessage? m)
   {
-    _messageBeingEdited = m; // Set the message being edited
+    _messageBeingEdited = m;
     MessageText = m.Text;
     // Restore files for editing if they were part of this message
     CurrentMessageFiles = m.FileIds
-      .Select(fid => new FileUploadService.UploadedFileInfo { Id = fid, OriginalFileName = $"File_{fid.ToString()[..4]}..." }) // Placeholder name, real info not stored here
+      .Select(fid => new FileUploadService.UploadedFileInfo { Id = fid, OriginalFileName = $"File_{fid.ToString()[..4]}..." })
       .ToList();
 
     // Show file upload if there are files to edit
@@ -1159,7 +872,6 @@
     Snackbar.Add("Message content and associated files (if any) restored for editing.", Severity.Info);
     StateHasChanged();
   }
-
 
   private async Task HandleCopyMessage(ClientChatMessage? m)
   {
@@ -1179,7 +891,7 @@
     var idx = _chatHistory.IndexOf(messageToBranchFrom);
     if (idx == -1) return;
 
-    var branchChatHistory = _chatHistory.Take(idx + 1).ToList(); // List of local ChatMessage
+    var branchChatHistory = _chatHistory.Take(idx + 1).ToList();
 
     var branchName = $"Branch: {_chatName}".Truncate(50);
     var createReq = new ChatService.CreateChatRequest(
@@ -1206,10 +918,10 @@
     {
       _chatId = newId.ToString();
       _chatName = branchName;
-      _chatHistory = branchChatHistory; // Assign the branched history
+      _chatHistory = branchChatHistory;
       _chatIsPinned = false;
-      CurrentMessageFiles.Clear(); // Clear any pending files for the new branch
-      _showFileUpload = false; // Hide file upload for new branch
+      CurrentMessageFiles.Clear();
+      _showFileUpload = false;
       NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
       Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);
       StateHasChanged();
