@@ -260,6 +260,60 @@
       .OrderByDescending(c => c.LastUpdatedAt)
       .ToList();
 
+  // --- Rendering Optimization State ---
+  private bool _lastDrawerOpen;
+  private List<SidebarChat> _lastSidebarChats = new();
+  private string? _lastActiveChatId;
+  private string _lastUserEmail = "";
+
+  // New state variables to cache search-related state
+  private string _lastSearchQuery = "";
+  private List<SidebarChat> _lastSearchResults = new(); // Use reference equality for list instance
+  private bool _lastIsSearching;
+  // ----------------------------------
+
+  protected override void OnInitialized()
+  {
+      // Initialize previous values on first load
+      _lastDrawerOpen = DrawerOpen;
+      _lastSidebarChats = SidebarChats;
+      _lastActiveChatId = ActiveChatId;
+      _lastUserEmail = UserEmail;
+
+      // Initialize search-related previous values
+      _lastSearchQuery = _searchQuery;
+      _lastSearchResults = _searchResults;
+      _lastIsSearching = _isSearching;
+  }
+
+  protected override bool ShouldRender()
+  {
+      // Determine if any parameter or relevant internal state has changed that warrants a re-render.
+      bool shouldRender =
+          DrawerOpen != _lastDrawerOpen ||
+          ActiveChatId != _lastActiveChatId ||
+          UserEmail != _lastUserEmail ||
+          !ReferenceEquals(SidebarChats, _lastSidebarChats) || // Check if the list instance itself has changed (e.g., chat added/deleted)
+          _searchQuery != _lastSearchQuery || // Check if search query changed
+          !ReferenceEquals(_searchResults, _lastSearchResults) || // Check if search results list instance changed
+          _isSearching != _lastIsSearching; // Check if search mode changed
+
+      // Update the 'last' values for the next render cycle.
+      _lastDrawerOpen = DrawerOpen;
+      _lastActiveChatId = ActiveChatId;
+      _lastUserEmail = UserEmail;
+      _lastSidebarChats = SidebarChats;
+
+      // Update search-related 'last' values
+      _lastSearchQuery = _searchQuery;
+      _lastSearchResults = _searchResults;
+      _lastIsSearching = _isSearching;
+
+      // Console.WriteLine($"ChatDrawer ShouldRender: {shouldRender}"); // Optional debug log
+
+      return shouldRender;
+  }
+
   private async Task ToggleDrawer()
   {
     DrawerOpen = !DrawerOpen;
@@ -372,7 +426,10 @@
   {
     if (string.IsNullOrWhiteSpace(_searchQuery))
     {
-      _searchResults.Clear();
+      _searchResults.Clear(); // Clear the list if search query is empty
+      // We need to explicitly trigger a re-render here because clearing the list
+      // doesn't change the list *instance* reference, but changes its *content*.
+      // And we just returned false in ShouldRender for parameters changing, so need to force.
       StateHasChanged();
       return;
     }
@@ -388,7 +445,8 @@
         r.LastUpdatedAt
       )).ToList();
 
-      // Sort by score descending and then by last updated
+      // IMPORTANT: Assign a NEW list instance to _searchResults
+      // This ensures that `!ReferenceEquals(_searchResults, _lastSearchResults)` in ShouldRender will be true
       _searchResults = sidebarResults
         .OrderByDescending(r => r.LastUpdatedAt)
         .ToList();
@@ -415,6 +473,7 @@
       await _searchField.FocusAsync();
     }
 
+    // Explicitly call StateHasChanged to update the UI after clearing search state
     StateHasChanged();
   }
   
@@ -435,7 +494,7 @@
   
   protected override void OnAfterRender(bool firstRender)
   {
-    Console.WriteLine($"Chat drawer rendered");
+    Console.WriteLine($"Chat drawer rendered"); // Keep this if you want to verify `ShouldRender` behavior
   }
 
   public record SidebarChat(
