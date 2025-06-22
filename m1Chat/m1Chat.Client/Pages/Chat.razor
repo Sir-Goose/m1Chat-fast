@@ -433,7 +433,7 @@
     return Task.CompletedTask;
   }
 
-  private async Task SendMessage(string submittedMessageText) // Now takes message text as a parameter from ChatInputArea
+  private async Task SendMessage(string submittedMessageText) 
   {
     if (_isSendingMessage) return;
     await SignalRService.EnsureConnectionAsync();
