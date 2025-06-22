@@ -1,8 +1,5 @@
 @using m1Chat.Client.Services
-@using m1Chat.Client.Models
-@using Microsoft.AspNetCore.Components.Web
 @inject IJSRuntime Js
-@inject ISnackbar Snackbar
 @inject SvgIcons SvgIcons
 
 <div class="input-area-container">
@@ -103,7 +100,7 @@
 
                     <div style="margin-left:auto;display:flex;align-items:center;">
                         <MudIconButton
-                            Icon="@(_showFileUpload ? Icons.Material.Filled.AttachFile : Icons.Material.Filled.AttachFile)"
+                            Icon="@(Icons.Material.Filled.AttachFile)"
                             Color="@(_showFileUpload ? Color.Success : Color.Primary)"
                             OnClick="ToggleFileUpload"
                             aria-label="@(_showFileUpload ? "Hide file upload" : "Show file upload")"
@@ -153,15 +150,15 @@
     // Internal state
     private string _messageTextInternal = "";
     private bool _showFileUpload;
-    private bool _isThinkingSelectorDisabled = false;
+    private bool _isThinkingSelectorDisabled;
     private List<string> _currentThinkingOptions = new();
     private Dictionary<string, List<string>> _modelThinkingOptionsMap = new();
     
     // Component references
-    private MudTextField<string> _messageTextField;
-    private MudSelect<string> _modelSelect;
-    private FileUploadComponent _fileUploadComponentRef;
-    private MudMenu _mudMenu;
+    private MudTextField<string>? _messageTextField;
+    private MudSelect<string>? _modelSelect;
+    private FileUploadComponent? _fileUploadComponentRef;
+    private MudMenu? _mudMenu;
 
     // Static options
     private static readonly List<string> ThinkingOptionsLowMediumHigh = new() { "Low", "Medium", "High" };
@@ -200,10 +197,7 @@
     protected override void OnParametersSet()
     {
         // Keep _showFileUpload in sync with parent's ShowFileUpload parameter
-        if (_showFileUpload != ShowFileUpload)
-        {
             _showFileUpload = ShowFileUpload;
-        }
     }
 
     private string CurrentThinkingIcon
@@ -241,14 +235,14 @@
             if (modelName == "llama-3.1-8b-instant")
             {
                 _isThinkingSelectorDisabled = true;
-                SetThinkingOption("None");
+                _ = SetThinkingOption("None");
             }
             else
             {
                 _isThinkingSelectorDisabled = false;
                 if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
                 {
-                    SetThinkingOption(_currentThinkingOptions.FirstOrDefault() ?? "None");
+                    _ = SetThinkingOption(_currentThinkingOptions.FirstOrDefault() ?? "None");
                 }
             }
         }
@@ -258,7 +252,7 @@
             _isThinkingSelectorDisabled = false;
             if (!_currentThinkingOptions.Contains(ThinkingSelectedOption))
             {
-                SetThinkingOption("None");
+                _ = SetThinkingOption("None");
             }
         }
     }
@@ -333,7 +327,7 @@
         await FocusAsync(); // Focus the input field after setting its content
     }
 
-    public async Task FocusAsync()
+    private async Task FocusAsync()
     {
         if (_messageTextField != null)
         {
@@ -341,7 +335,7 @@
         }
     }
 
-    public async Task BlurAsync()
+    private async Task BlurAsync()
     {
         if (_messageTextField != null)
         {
