@@ -38,6 +38,7 @@ public class ModelPreferencesService
     {
         "Deepseek v3 (Chutes)",
         "Deepseek R1 0528 (Chutes)",
+        "Kimi Dev (Chutes)",
         "Gemini 2.5 Flash (AI Studio)",
         "Gemini 2.0 Flash (AI Studio)",
         "Devstral Small (Mistral AI)",
@@ -53,6 +54,7 @@ public class ModelPreferencesService
     {
         ["Deepseek v3 (Chutes)"] = "Chutes",
         ["Deepseek R1 0528 (Chutes)"] = "Chutes",
+        ["Kimi Dev (Chutes)"] = "Chutes",
         ["Gemini 2.5 Flash (AI Studio)"] = "AI Studio",
         ["Gemini 2.0 Flash (AI Studio)"] = "AI Studio",
         ["Devstral Small (Mistral AI)"] = "Mistral AI",

@@ -165,6 +165,14 @@
     private static readonly List<string> ThinkingOptionsNoneLowMediumHigh = new() { "None", "Low", "Medium", "High" };
     private static readonly List<string> ThinkingOptionsNoneOnly = new() { "None" };
 
+    // Rendering optimization state
+    private bool _prevIsSendingMessage;
+    private string _prevSelectedModel = "";
+    private string _prevThinkingSelectedOption = "";
+    private bool _prevShowFileUpload;
+    private List<FileUploadService.UploadedFileInfo> _prevCurrentMessageFiles = new();
+    private bool _forceRender;
+
     protected override void OnInitialized()
     {
         _showFileUpload = ShowFileUpload;
@@ -197,7 +205,33 @@
     protected override void OnParametersSet()
     {
         // Keep _showFileUpload in sync with parent's ShowFileUpload parameter
-            _showFileUpload = ShowFileUpload;
+        _showFileUpload = ShowFileUpload;
+    }
+
+    // Rendering optimization: Only re-render when critical parameters change
+    protected override bool ShouldRender()
+    {
+        if (_forceRender)
+        {
+            _forceRender = false;
+            return true;
+        }
+
+        bool shouldRender = 
+            _prevIsSendingMessage != IsSendingMessage ||
+            _prevSelectedModel != SelectedModel ||
+            _prevThinkingSelectedOption != ThinkingSelectedOption ||
+            _prevShowFileUpload != ShowFileUpload ||
+            !ReferenceEquals(_prevCurrentMessageFiles, CurrentMessageFiles);
+
+        // Update previous values
+        _prevIsSendingMessage = IsSendingMessage;
+        _prevSelectedModel = SelectedModel;
+        _prevThinkingSelectedOption = ThinkingSelectedOption;
+        _prevShowFileUpload = ShowFileUpload;
+        _prevCurrentMessageFiles = CurrentMessageFiles;
+
+        return shouldRender;
     }
 
     private string CurrentThinkingIcon
@@ -310,7 +344,7 @@
             await OnMessageSubmitted.InvokeAsync(_messageTextInternal);
 
             // Clear the input area internally AFTER the message has been submitted
-            _messageTextInternal = "";
+            await SetInputText("");
             // The parent (Chat.razor) will handle clearing CurrentMessageFiles and _showFileUpload,
             // as those are bindable parameters owned by the parent.
         }
@@ -323,6 +357,7 @@
     public async Task SetInputText(string text)
     {
         _messageTextInternal = text;
+        _forceRender = true;
         StateHasChanged(); // Re-render this component to reflect the new text
         await FocusAsync(); // Focus the input field after setting its content
     }

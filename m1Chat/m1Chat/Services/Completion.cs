@@ -50,6 +50,7 @@ namespace m1Chat.Services
         private enum Provider
         {
             Chutes,
+            ChutesKimi,
             OpenRouter,
             AiStudio,
             Groq,
@@ -191,6 +192,10 @@ namespace m1Chat.Services
                     model = "deepseek-ai/DeepSeek-V3-0324";
                     _provider = Provider.Chutes;
                     break;
+                case "Kimi Dev (Chutes)":
+                    model = "moonshotai/Kimi-Dev-72B";
+                    _provider = Provider.ChutesKimi;
+                    break;
                 case "DeepSeek Prover v2":
                     model = "deepseek/deepseek-prover-v2:free";
                     _provider = Provider.OpenRouter;
@@ -308,6 +313,14 @@ namespace m1Chat.Services
                 case Provider.Chutes:
                     await foreach (
                         var chunk in StreamChutesAsync(processedMessages, model, userEmail)
+                    )
+                    {
+                        yield return chunk;
+                    }
+                    break;
+                case Provider.ChutesKimi:
+                    await foreach (
+                        var chunk in StreamChutesKimiAsync(processedMessages, model, userEmail)
                     )
                     {
                         yield return chunk;
@@ -534,6 +547,101 @@ namespace m1Chat.Services
 
                             break;
                         }
+                }
+            }
+        }
+        
+        private async IAsyncEnumerable<string> StreamChutesKimiAsync(
+            List<ChatMessageDto> messages,
+            string model,
+            string userEmail
+        )
+        {
+            var requestBody = new
+            {
+                model,
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
+                stream = true
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Get user's API key or use default
+            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                apiKey = _chutesApiKey;
+            }
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", apiKey);
+            _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Remove("X-Title");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+
+            using var response = await _httpClient.SendAsync(
+                new HttpRequestMessage(HttpMethod.Post, _chutesUri)
+                {
+                    Content = content
+                },
+                HttpCompletionOption.ResponseHeadersRead
+            );
+
+            Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response content: {error}");
+                throw new Exception(
+                    $"Chutes API error: {response.StatusCode} - {error}"
+                );
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+            var inReasoningBlock = false;
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                if (!line.StartsWith("data: "))
+                    continue;
+                var jsonData = line["data: ".Length..].Trim();
+                if (jsonData == "[DONE]")
+                    break;
+                var contentChunk = TryParseContentChunk(jsonData);
+                if (string.IsNullOrEmpty(contentChunk))
+                    continue;
+                if (contentChunk == "◁")
+                {
+                    if (!inReasoningBlock)
+                    {
+                        yield return "```Thinking ";
+                        inReasoningBlock = true;
+                    }
+                    else
+                    {
+                        yield return "```\n" + "\n";
+                        inReasoningBlock = false;
+                    }
+                }
+                if (!inReasoningBlock)
+                {
+                    yield return contentChunk;
+                }
+                else
+                {
+                    yield return contentChunk.Replace("```", "'''");
                 }
             }
         }
