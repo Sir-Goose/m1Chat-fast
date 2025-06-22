@@ -432,6 +432,11 @@
     _debounceCts?.Cancel();
     _debounceCts?.Dispose();
   }
+  
+  protected override void OnAfterRender(bool firstRender)
+  {
+    Console.WriteLine($"Chat drawer rendered");
+  }
 
   public record SidebarChat(
     string Id,
