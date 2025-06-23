@@ -45,7 +45,7 @@
                         OnKeyUp="HandleKeyUp"
                     />
                 </div>
-                <div style="display:flex;align-items:center;margin-top:8px;">
+                <div style="display:flex;align-items:center;margin-top:8px;" class="input-bottom">
                     <MudSelect @ref="_modelSelect"
                                Value="@SelectedModel"
                                ValueChanged="@(async (string value) => await OnModelChanged(value))"
