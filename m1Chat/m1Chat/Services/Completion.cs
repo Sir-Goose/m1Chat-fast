@@ -37,6 +37,7 @@ namespace m1Chat.Services
         private readonly string _mistralUri;
         private Provider _provider;
         private readonly string _systemPrompt;
+        private readonly string _magistralSystemPrompt;
         private DateTime _dateTime;
         private readonly ApiKeyService _apiKeyService;
 
@@ -103,6 +104,7 @@ namespace m1Chat.Services
             _dateTime = DateTime.Now;
             _systemPrompt =
                 $"You are M1 Chat, an AI assistant. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.\n- The current date and time including timezone is {_dateTime}.\n- Always use LaTeX for mathematical expressions:\n    - Inline math must be wrapped in single dollar signs: $ content $ \n    - Display math must be wrapped in double dollar signs: $$ content $$\n-   \n- When generating code:\n    - Ensure it is properly formatted using Prettier with a print width of 80 characters\n    - Present it in Markdown code blocks with the correct language extension indicated";
+            _magistralSystemPrompt = $"You are M1 Chat, an AI assistant. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.\n- The current date and time including timezone is {_dateTime}.\n- Always use LaTeX for mathematical expressions:\n    - Inline math must be wrapped in single dollar signs: $ content $ \n    - Display math must be wrapped in double dollar signs: $$ content $$\n-   \n- When generating code:\n    - Ensure it is properly formatted using Prettier with a print width of 80 characters\n    - Present it in Markdown code blocks with the correct language extension indicated\n A user will ask you to solve a task. You should first draft your thinking process (inner monologue) until you have derived the final answer. Afterwards, write a self-contained summary of your thoughts (i.e. your summary should be succinct but contain all the critical steps you needed to reach the conclusion). You should use Markdown to format your response. Write both your thoughts and summary in the same language as the task posed by the user. NEVER use \\boxed{{}} in your response.\n\nYour thinking process must follow the template below:\n<think>\nYour thoughts or/and draft, like working through an exercise on scratch paper. Be as casual and as long as you want until you are confident to generate a correct answer.\n</think>\n\nHere, provide a concise summary that reflects your reasoning and presents a clear final answer to the user. Don't mention that this is a summary.\n\nProblem:\n\n";
             _apiKeyService = apiKeyService;
         }
 
@@ -139,9 +141,19 @@ namespace m1Chat.Services
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
             // Add system prompt if provided
-            processedMessages.Add(
-                new ChatMessageDto { Role = "system", Content = _systemPrompt }
-            );
+            if (model != "Magistral Medium (Mistral AI)")
+            {
+                processedMessages.Add(
+                    new ChatMessageDto { Role = "system", Content = _systemPrompt }
+                );
+            }
+            else
+            {
+                processedMessages.Add(
+                    new ChatMessageDto { Role = "system", Content = _magistralSystemPrompt }
+                ); 
+            }
+            
 
             foreach (var message in messages)
             {
@@ -264,7 +276,7 @@ namespace m1Chat.Services
                     model = "mistral-medium-latest";
                     _provider = Provider.Mistral;
                     break;
-                case "Magistral Medium":
+                case "Magistral Medium (Mistral AI)":
                     model = "magistral-medium-latest";
                     _provider = Provider.Mistral;
                     break;
@@ -864,11 +876,11 @@ namespace m1Chat.Services
                     continue;
                 switch (contentChunk)
                 {
-                    case "<think>":
+                    case "<th":
                         yield return "```Thinking ";
                         inReasoningBlock = true;
                         break;
-                    case "</think>":
+                    case "</":
                         yield return "```\n" + "\n";
                         inReasoningBlock = false;
                         break;
