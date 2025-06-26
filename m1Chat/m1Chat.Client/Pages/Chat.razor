@@ -709,7 +709,7 @@
     {
       await ChatService.DeleteChatAsync(chatId);
       ChatCacheService.InvalidateCache(chatId);
-      SidebarChats.RemoveAll(c => c.Id == chat.Id);
+      SidebarChats = SidebarChats.Where(c => c.Id != chat.Id).ToList();
       if (_chatId == chat.Id)
       {
         await CreateNewChat();
