@@ -152,6 +152,18 @@
   [Inject] private SignalRService SignalRService { get; set; } = null!;
   [Inject] private ChatCompletionService ChatCompletionService { get; set; } = null!;
 
+  private volatile bool _isRenderScheduled = false;
+
+  private async Task ScheduleRenderAsync()
+  {
+    if (_isRenderScheduled) return;
+    _isRenderScheduled = true;
+    
+    await Task.Yield();
+    _isRenderScheduled = false;
+    await InvokeAsync(StateHasChanged);
+  }
+
   protected override async Task OnInitializedAsync()
   {
     var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -227,7 +239,7 @@
     {
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
       await SaveChatAfterStreaming();
     }
   }
@@ -239,7 +251,7 @@
     {
       aiMessage.Text += chunk;
       _needsScroll = true;
-      StateHasChanged();
+      _ = ScheduleRenderAsync();
     }
   }
 
@@ -256,7 +268,7 @@
       aiMessage.Text = $"[Error: {error}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
-      StateHasChanged();
+      _ = ScheduleRenderAsync();
     }
   }
 
@@ -383,7 +395,6 @@
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    Console.WriteLine($"Chat rendered");
     if (firstRender)
     {
       await Js.InvokeVoidAsync(
@@ -450,7 +461,7 @@
             buffer.Clear();
             lastUpdateTime = now;
             _needsScroll = true;
-            StateHasChanged();
+            _ = ScheduleRenderAsync();
           }
         },
         async () =>
@@ -462,7 +473,7 @@
           }
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
-          StateHasChanged();
+          await InvokeAsync(StateHasChanged);
           if (onComplete != null) await onComplete();
         },
         error =>
@@ -475,7 +486,7 @@
           aiMessage.Text = $"[Error: {error}]";
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
-          StateHasChanged();
+          _ = ScheduleRenderAsync();
           onError?.Invoke(error);
         }
       );
@@ -486,7 +497,7 @@
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
       Console.WriteLine($"Error streaming completion: {ex}");
-      StateHasChanged();
+      _ = ScheduleRenderAsync();
       onError?.Invoke(ex.Message);
     }
   }
