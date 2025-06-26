@@ -427,6 +427,70 @@
     return Task.CompletedTask;
   }
 
+  private async Task StreamAiMessage(List<ServiceChatMessage> messagesForAi, ClientChatMessage aiMessage, Func<Task> onComplete = null, Action<string> onError = null)
+  {
+    var buffer = new System.Text.StringBuilder();
+    var lastUpdateTime = DateTime.MinValue;
+    try
+    {
+      await ChatCompletionService.StreamCompletion(
+        messagesForAi,
+        ChatSelectedModel,
+        ThinkingSelectedOption,
+        chunk =>
+        {
+          buffer.Append(chunk);
+          var now = DateTime.UtcNow;
+          var timeSinceLast = now - lastUpdateTime;
+          double idealIntervalMs = 1000.0 * chunk.Length / 60;
+          var desiredInterval = TimeSpan.FromMilliseconds(Math.Max(17, idealIntervalMs));
+          if (timeSinceLast >= desiredInterval)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+            lastUpdateTime = now;
+            _needsScroll = true;
+            StateHasChanged();
+          }
+        },
+        async () =>
+        {
+          if (buffer.Length > 0)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+          aiMessage.IsStreaming = false;
+          _isSendingMessage = false;
+          StateHasChanged();
+          if (onComplete != null) await onComplete();
+        },
+        error =>
+        {
+          if (buffer.Length > 0)
+          {
+            aiMessage.Text += buffer.ToString();
+            buffer.Clear();
+          }
+          aiMessage.Text = $"[Error: {error}]";
+          aiMessage.IsStreaming = false;
+          _isSendingMessage = false;
+          StateHasChanged();
+          onError?.Invoke(error);
+        }
+      );
+    }
+    catch (Exception ex)
+    {
+      aiMessage.Text = $"[Error: {ex.Message}]";
+      aiMessage.IsStreaming = false;
+      _isSendingMessage = false;
+      Console.WriteLine($"Error streaming completion: {ex}");
+      StateHasChanged();
+      onError?.Invoke(ex.Message);
+    }
+  }
+
   private async Task SendMessage(string submittedMessageText) 
   {
     if (_isSendingMessage) return;
@@ -607,86 +671,18 @@
     _needsScroll = true;
     StateHasChanged();
 
-    try
-    {
-      // Prepare messages for AI
-      var messagesForAiStartIdx = _messageBeingEdited != null ? _chatHistory.IndexOf(_messageBeingEdited) : 0;
-      var messagesForAi = _chatHistory
-        .Take(_chatHistory.Count - 1)
-        .Select(m => new ServiceChatMessage
-        {
-          Role = m.IsUser ? "user" : "assistant",
-          Content = m.Text,
-          FileIds = m.FileIds
-        }).Skip(messagesForAiStartIdx).ToList();
+    // Prepare messages for AI
+    var messagesForAiStartIdx = _messageBeingEdited != null ? _chatHistory.IndexOf(_messageBeingEdited) : 0;
+    var messagesForAi = _chatHistory
+      .Take(_chatHistory.Count - 1)
+      .Select(m => new ServiceChatMessage
+      {
+        Role = m.IsUser ? "user" : "assistant",
+        Content = m.Text,
+        FileIds = m.FileIds
+      }).Skip(messagesForAiStartIdx).ToList();
 
-      // Buffering implementation
-      var buffer = new System.Text.StringBuilder();
-      var lastUpdateTime = DateTime.MinValue;
-
-      // Start streaming via SignalR
-      await ChatCompletionService.StreamCompletion(
-        messagesForAi,
-        ChatSelectedModel,
-        ThinkingSelectedOption,
-        chunk =>
-        {
-          buffer.Append(chunk);
-
-          var now = DateTime.UtcNow;
-          var timeSinceLast = now - lastUpdateTime;
-
-          // Calculate the desired interval based on chunk size and time since last update
-          // We aim for a constant display rate of 60 characters per second (approximately 16.67ms per character)
-          double idealIntervalMs = 1000.0 * chunk.Length / 60; 
-          var desiredInterval = TimeSpan.FromMilliseconds(Math.Max(17, idealIntervalMs));
-
-          if (timeSinceLast >= desiredInterval)
-          {
-            aiMessage.Text += buffer.ToString();
-            buffer.Clear();
-            lastUpdateTime = now;
-            _needsScroll = true;
-            StateHasChanged();
-          }
-        },
-        async () =>
-        {
-          // Flush any remaining buffered content
-          if (buffer.Length > 0)
-          {
-            aiMessage.Text += buffer.ToString();
-            buffer.Clear();
-          }
-
-          aiMessage.IsStreaming = false;
-          _isSendingMessage = false;
-          StateHasChanged();
-          await SaveChatAfterStreaming();
-        },
-        error =>
-        {
-          if (buffer.Length > 0)
-          {
-            aiMessage.Text += buffer.ToString();
-            buffer.Clear();
-          }
-
-          aiMessage.Text = $"[Error: {error}]";
-          aiMessage.IsStreaming = false;
-          _isSendingMessage = false;
-          StateHasChanged();
-        }
-      );
-    }
-    catch (Exception ex)
-    {
-      aiMessage.Text = $"[Error: {ex.Message}]";
-      aiMessage.IsStreaming = false;
-      _isSendingMessage = false;
-      Console.WriteLine($"Error streaming completion: {ex}");
-      StateHasChanged();
-    }
+    await StreamAiMessage(messagesForAi, aiMessage, SaveChatAfterStreaming);
   }
 
   // Used for saving to DB via ChatService (expects DTOs with FileIds)
@@ -797,74 +793,7 @@
     _needsScroll = true;
     StateHasChanged();
 
-    try
-    {
-      // Buffering implementation
-      var buffer = new System.Text.StringBuilder();
-      var lastUpdateTime = DateTime.MinValue;
-
-      // Start streaming via SignalR
-      await ChatCompletionService.StreamCompletion(
-        messagesToSendForAi,
-        ChatSelectedModel,
-        ThinkingSelectedOption,
-        chunk =>
-        {
-          buffer.Append(chunk);
-
-          var now = DateTime.UtcNow;
-          var timeSinceLast = now - lastUpdateTime;
-
-          // Calculate the desired interval based on chunk size and time since last update
-          // We aim for a constant display rate of 60 characters per second (approximately 16.67ms per character)
-          double idealIntervalMs = 1000.0 * chunk.Length / 60; 
-          var desiredInterval = TimeSpan.FromMilliseconds(Math.Max(17, idealIntervalMs));
-
-          if (timeSinceLast >= desiredInterval)
-          {
-            targetAiMessage.Text += buffer.ToString();
-            buffer.Clear();
-            lastUpdateTime = now;
-            _needsScroll = true;
-            StateHasChanged();
-          }
-        },
-        async () =>
-        {
-          // Flush any remaining buffered content
-          if (buffer.Length > 0)
-          {
-            targetAiMessage.Text += buffer.ToString();
-            buffer.Clear();
-          }
-
-          targetAiMessage.IsStreaming = false;
-          _isSendingMessage = false;
-          StateHasChanged();
-          await SaveChatAfterStreaming();
-        },
-        error =>
-        {
-          if (buffer.Length > 0)
-          {
-            targetAiMessage.Text += buffer.ToString();
-            buffer.Clear();
-          }
-
-          targetAiMessage.Text = $"[Error: {error}]";
-          targetAiMessage.IsStreaming = false;
-          _isSendingMessage = false;
-          StateHasChanged();
-        }
-      );
-    }
-    catch (Exception ex)
-    {
-      targetAiMessage.Text = $"[Error regenerating: {ex.Message}]";
-      Console.WriteLine($"Error regenerating message: {ex}");
-      StateHasChanged();
-      _isSendingMessage = false;
-    }
+    await StreamAiMessage(messagesToSendForAi, targetAiMessage, SaveChatAfterStreaming, err => targetAiMessage.Text = $"[Error regenerating: {err}]");
   }
 
   private async Task HandleEditMessage(ClientChatMessage? m)
