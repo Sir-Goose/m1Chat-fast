@@ -623,7 +623,6 @@
       // Buffering implementation
       var buffer = new System.Text.StringBuilder();
       var lastUpdateTime = DateTime.MinValue;
-      var updateInterval = TimeSpan.FromMilliseconds(200);
 
       // Start streaming via SignalR
       await ChatCompletionService.StreamCompletion(
@@ -635,7 +634,14 @@
           buffer.Append(chunk);
 
           var now = DateTime.UtcNow;
-          if (now - lastUpdateTime >= updateInterval)
+          var timeSinceLast = now - lastUpdateTime;
+
+          // Calculate the desired interval based on chunk size and time since last update
+          // We aim for a constant display rate of 60 characters per second (approximately 16.67ms per character)
+          double idealIntervalMs = 1000.0 * chunk.Length / 60; 
+          var desiredInterval = TimeSpan.FromMilliseconds(Math.Max(17, idealIntervalMs));
+
+          if (timeSinceLast >= desiredInterval)
           {
             aiMessage.Text += buffer.ToString();
             buffer.Clear();
@@ -796,7 +802,6 @@
       // Buffering implementation
       var buffer = new System.Text.StringBuilder();
       var lastUpdateTime = DateTime.MinValue;
-      var updateInterval = TimeSpan.FromMilliseconds(17);
 
       // Start streaming via SignalR
       await ChatCompletionService.StreamCompletion(
@@ -808,7 +813,14 @@
           buffer.Append(chunk);
 
           var now = DateTime.UtcNow;
-          if (now - lastUpdateTime >= updateInterval)
+          var timeSinceLast = now - lastUpdateTime;
+
+          // Calculate the desired interval based on chunk size and time since last update
+          // We aim for a constant display rate of 60 characters per second (approximately 16.67ms per character)
+          double idealIntervalMs = 1000.0 * chunk.Length / 60; 
+          var desiredInterval = TimeSpan.FromMilliseconds(Math.Max(17, idealIntervalMs));
+
+          if (timeSinceLast >= desiredInterval)
           {
             targetAiMessage.Text += buffer.ToString();
             buffer.Clear();
