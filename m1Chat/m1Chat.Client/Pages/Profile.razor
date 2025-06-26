@@ -14,7 +14,7 @@
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                Color="Color.Inherit"
                                OnClick="NavigateToChat"
-                               Edge="Edge.Start" />
+                               Edge="Edge.Start"/>
                 <MudText Typo="Typo.h4" Class="flex-grow-1 text-center pr-10">
                     User Profile
                 </MudText>
@@ -28,7 +28,7 @@
                             Account Information
                         </MudText>
                         <MudText Typo="Typo.h6" Color="Color.Primary">
-                           Email
+                            Email
                         </MudText>
                         <MudText>
                             @UserEmail
@@ -68,7 +68,7 @@
                              SelectedItemsChanged="@(EventCallback.Factory.Create<HashSet<Model>>(this, OnSelectedItemsChanged))">
                     <Columns>
                         <SelectColumn T="Model"/>
-                        <PropertyColumn Property="x => x.Name" Title="Model" />
+                        <PropertyColumn Property="x => x.Name" Title="Model"/>
                         <PropertyColumn Property="x => x.Provider"/>
                     </Columns>
                 </MudDataGrid>
@@ -91,24 +91,23 @@
                         <MudText Class="mt-2">OpenRouter</MudText>
                         <MudTextField @bind-Value="Openrouterkey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
-                                      Disabled="@isSaving"></MudTextField>
+                                      Disabled="@isSaving" InputType="InputType.Password"></MudTextField>
                         <MudText Class="mt-4">AI Studio</MudText>
                         <MudTextField @bind-Value="AiStudioKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
-                                      Disabled="@isSaving"></MudTextField>
+                                      Disabled="@isSaving" InputType="InputType.Password"></MudTextField>
                         <MudText Class="mt-4">Chutes</MudText>
                         <MudTextField @bind-Value="ChutesKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
-                                      Disabled="@isSaving"></MudTextField>
+                                      Disabled="@isSaving" InputType="InputType.Password"></MudTextField>
                         <MudText Class="mt-4">Mistral</MudText>
                         <MudTextField @bind-Value="MistralKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
-                                      Disabled="@isSaving"></MudTextField>
+                                      Disabled="@isSaving" InputType="InputType.Password"></MudTextField>
                         <MudText Class="mt-4">Groq</MudText>
                         <MudTextField @bind-Value="GroqKey" Label="sk-1234...."
                                       Variant="Variant.Outlined" Class="rounded-xl"
-                                      Disabled="@isSaving"></MudTextField>
-
+                                      Disabled="@isSaving" InputType="InputType.Password"></MudTextField>
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    FullWidth="true"
@@ -249,4 +248,5 @@
             isSaving = false;
         }
     }
+
 }
