@@ -152,22 +152,19 @@
   [Inject] private SignalRService SignalRService { get; set; } = null!;
   [Inject] private ChatCompletionService ChatCompletionService { get; set; } = null!;
 
-  private volatile bool _isRenderScheduled = false;
+  
   private readonly System.Diagnostics.Stopwatch _streamingStopwatch = new();
   private const int TARGET_FPS = 60;
   private const int MIN_INTERVAL_MS = 16; // ~60fps
-  private const int MAX_CHARS_PER_SECOND = 150;
-  private const int BURST_THRESHOLD = 100;
+  private const int MAX_CHARS_PER_SECOND = 1500; // Increased max for high-speed providers
+  private const int MIN_CHARS_PER_SECOND = 5;   // Minimum speed to feel responsive
+  private const int BURST_THRESHOLD = 200;
+  private const double EMA_SMOOTHING_FACTOR = 0.15;
+
+  private double _emaCharsPerSecond = MIN_CHARS_PER_SECOND;
+  private long _lastChunkTime = 0;
   
-  private async Task ScheduleRenderAsync()
-  {
-    if (_isRenderScheduled) return;
-    _isRenderScheduled = true;
-    
-    await Task.Yield();
-    _isRenderScheduled = false;
-    await InvokeAsync(StateHasChanged);
-  }
+  
 
   protected override async Task OnInitializedAsync()
   {
@@ -249,18 +246,7 @@
     }
   }
 
-  private void HandleChunkReceived(string chunk)
-  {
-    var aiMessage = _chatHistory.LastOrDefault(m => !m.IsUser && m.IsStreaming);
-    if (aiMessage != null)
-    {
-      // This method is now primarily used as a fallback
-      // The main streaming logic is handled in StreamAiMessage
-      aiMessage.Text += chunk;
-      _needsScroll = true;
-      _ = ScheduleRenderAsync();
-    }
-  }
+  
 
   private async Task ScrollToBottom()
   {
@@ -275,7 +261,7 @@
       aiMessage.Text = $"[Error: {error}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
-      _ = ScheduleRenderAsync();
+      _ = InvokeAsync(StateHasChanged);
     }
   }
 
@@ -446,15 +432,67 @@
     return Task.CompletedTask;
   }
 
+  private readonly System.Text.StringBuilder _streamBuffer = new();
+  private bool _streamIsActive = false;
+  private bool _isProcessingBuffer = false;
+
+  private async Task ProcessStreamBuffer(ClientChatMessage aiMessage)
+  {
+    if (_isProcessingBuffer) return;
+    _isProcessingBuffer = true;
+
+    try
+    {
+      while (_streamIsActive || _streamBuffer.Length > 0)
+      {
+        string contentToRender;
+        lock (_streamBuffer)
+        {
+          if (_streamBuffer.Length == 0)
+          {
+            contentToRender = string.Empty;
+          }
+          else
+          {
+            // Calculate how many chars to render this frame based on the smoothed speed
+            var charsPerFrame = _emaCharsPerSecond * (MIN_INTERVAL_MS / 1000.0);
+            var charsToRenderCount = (int)Math.Ceiling(Math.Min(_streamBuffer.Length, charsPerFrame));
+            
+            contentToRender = _streamBuffer.ToString(0, charsToRenderCount);
+            _streamBuffer.Remove(0, charsToRenderCount);
+          }
+        }
+
+        if (!string.IsNullOrEmpty(contentToRender))
+        {
+          aiMessage.Text += contentToRender;
+          _needsScroll = true;
+          await InvokeAsync(StateHasChanged);
+        }
+
+        await Task.Delay(MIN_INTERVAL_MS);
+      }
+    }
+    finally
+    {
+      _isProcessingBuffer = false;
+    }
+  }
+
   private async Task StreamAiMessage(List<ServiceChatMessage> messagesForAi, ClientChatMessage aiMessage, Func<Task> onComplete = null, Action<string> onError = null)
   {
-    var buffer = new System.Text.StringBuilder(512); // Pre-allocated capacity
-    var charsInCurrentSecond = 0;
-    var lastRenderTime = 0L;
-    var burstBuffer = new System.Text.StringBuilder(256);
-    
     _streamingStopwatch.Restart();
+    _streamIsActive = true;
+    _lastChunkTime = _streamingStopwatch.ElapsedMilliseconds;
+    _emaCharsPerSecond = MIN_CHARS_PER_SECOND; // Reset for new stream
     
+    lock (_streamBuffer)
+    {
+        _streamBuffer.Clear();
+    }
+
+    _ = ProcessStreamBuffer(aiMessage);
+
     try
     {
       await ChatCompletionService.StreamCompletion(
@@ -463,63 +501,35 @@
         ThinkingSelectedOption,
         chunk =>
         {
-          buffer.Append(chunk);
-          var elapsedMs = _streamingStopwatch.ElapsedMilliseconds;
-          var timeSinceLastRender = elapsedMs - lastRenderTime;
-          
-          // Reset character counter every second
-          if (elapsedMs > 0 && elapsedMs % 1000 < MIN_INTERVAL_MS)
-          {
-            charsInCurrentSecond = 0;
-          }
-          
-          var shouldRender = false;
-          var bufferLength = buffer.Length;
-          
-          // Determine if we should render based on multiple factors
-          if (bufferLength > BURST_THRESHOLD)
-          {
-            // Handle burst: render immediately but throttle content
-            var charsToRender = Math.Min(bufferLength, MAX_CHARS_PER_SECOND / 4);
-            burstBuffer.Clear();
-            burstBuffer.Append(buffer.ToString(0, charsToRender));
-            buffer.Remove(0, charsToRender);
-            
-            aiMessage.Text += burstBuffer.ToString();
-            shouldRender = true;
-          }
-          else if (timeSinceLastRender >= MIN_INTERVAL_MS && 
-                   charsInCurrentSecond < MAX_CHARS_PER_SECOND)
-          {
-            // Normal rendering: respect timing and character limits
-            var maxCharsThisFrame = Math.Min(bufferLength, 
-              Math.Max(1, (MAX_CHARS_PER_SECOND * (int)timeSinceLastRender) / 1000));
-            
-            if (maxCharsThisFrame > 0)
+            var now = _streamingStopwatch.ElapsedMilliseconds;
+            var timeSinceLastChunk = now - _lastChunkTime;
+            _lastChunkTime = now;
+
+            if (timeSinceLastChunk > 0 && !string.IsNullOrEmpty(chunk))
             {
-              var contentToRender = buffer.ToString(0, maxCharsThisFrame);
-              aiMessage.Text += contentToRender;
-              buffer.Remove(0, maxCharsThisFrame);
-              charsInCurrentSecond += maxCharsThisFrame;
-              shouldRender = true;
+                var instantaneousCps = (double)chunk.Length / (timeSinceLastChunk / 1000.0);
+                // Update EMA
+                _emaCharsPerSecond = (EMA_SMOOTHING_FACTOR * instantaneousCps) + (1 - EMA_SMOOTHING_FACTOR) * _emaCharsPerSecond;
             }
-          }
-          
-          if (shouldRender)
-          {
-            lastRenderTime = elapsedMs;
-            _needsScroll = true;
-            _ = ScheduleRenderAsync();
-          }
+            else if (string.IsNullOrEmpty(chunk))
+            {
+                // If we receive an empty chunk, gently decay the speed towards the minimum
+                _emaCharsPerSecond = (EMA_SMOOTHING_FACTOR * MIN_CHARS_PER_SECOND) + (1 - EMA_SMOOTHING_FACTOR) * _emaCharsPerSecond;
+            }
+
+            // Clamp the speed to prevent extreme values
+            _emaCharsPerSecond = Math.Clamp(_emaCharsPerSecond, MIN_CHARS_PER_SECOND, MAX_CHARS_PER_SECOND);
+
+            lock (_streamBuffer)
+            {
+                _streamBuffer.Append(chunk);
+            }
         },
         async () =>
         {
-          // Flush any remaining content
-          if (buffer.Length > 0)
-          {
-            aiMessage.Text += buffer.ToString();
-            buffer.Clear();
-          }
+          _streamIsActive = false;
+          while (_isProcessingBuffer) await Task.Delay(50);
+
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           _streamingStopwatch.Stop();
@@ -528,28 +538,37 @@
         },
         error =>
         {
-          if (buffer.Length > 0)
+          _streamIsActive = false;
+          
+          string remainingContent;
+          lock(_streamBuffer) 
           {
-            aiMessage.Text += buffer.ToString();
-            buffer.Clear();
+              remainingContent = _streamBuffer.ToString();
+              _streamBuffer.Clear();
           }
-          aiMessage.Text = $"[Error: {error}]";
+
+          if (!string.IsNullOrEmpty(remainingContent)) {
+            aiMessage.Text += remainingContent;
+          }
+
+          aiMessage.Text += $"[Error: {error}]";
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           _streamingStopwatch.Stop();
-          _ = ScheduleRenderAsync();
+          InvokeAsync(StateHasChanged);
           onError?.Invoke(error);
         }
       );
     }
     catch (Exception ex)
     {
+      _streamIsActive = false;
       aiMessage.Text = $"[Error: {ex.Message}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
       _streamingStopwatch.Stop();
       Console.WriteLine($"Error streaming completion: {ex}");
-      _ = ScheduleRenderAsync();
+      await InvokeAsync(StateHasChanged);
       onError?.Invoke(ex.Message);
     }
   }
