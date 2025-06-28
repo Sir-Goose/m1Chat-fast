@@ -228,6 +228,10 @@ namespace m1Chat.Services
                     model = "gemini-2.0-flash";
                     _provider = Provider.AiStudio;
                     break;
+                case "Gemini 2.5 Pro (AI Studio)":
+                    model = "gemini-2.5-pro";
+                    _provider = Provider.AiStudio;
+                    break;
                 case "Gemini 2.5 Flash (AI Studio)":
                     model = "gemini-2.5-flash-preview-05-20";
                     _provider = Provider.AiStudio;
