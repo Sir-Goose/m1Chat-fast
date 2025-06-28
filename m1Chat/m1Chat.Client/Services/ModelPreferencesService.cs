@@ -36,9 +36,9 @@ public class ModelPreferencesService
 
     public List<string> GetAllAvailableModels() => new()
     {
-        "Gemini 2.5 Pro (AI Studio)",
         "Gemini 2.5 Flash (AI Studio)",
         "Gemini 2.0 Flash (AI Studio)",
+        "Gemini 2.5 Pro (AI Studio)",
         "Deepseek v3 (Chutes)",
         "Deepseek R1 0528 (Chutes)",
         "Kimi Dev (Chutes)",
