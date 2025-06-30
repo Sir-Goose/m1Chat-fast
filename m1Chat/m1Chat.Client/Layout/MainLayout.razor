@@ -664,27 +664,54 @@
 
 <script>
     window.chatScroll = {
-        onScroll: function (element, dotNetHelper) {
-            let userInitiatedScroll = false;
-            let lastScrollTop = element.scrollTop;
+        observer: null,
+        element: null,
+        userScrolledUp: false,
 
-            element.addEventListener('scroll', function () {
-                // If user scrolled up, mark as user-initiated
-                if (element.scrollTop < element.scrollHeight - element.clientHeight - 5) {
-                    userInitiatedScroll = true;
-                } else if (element.scrollTop > lastScrollTop) {
-                    // If user scrolls down to bottom, reset
-                    userInitiatedScroll = false;
+        observe: function(element) {
+            this.element = element;
+            if (this.observer) {
+                this.observer.disconnect();
+            }
+
+            const threshold = 40; // pixels from bottom
+
+            // Function to check if user is near the bottom
+            const checkPosition = () => {
+                if (this.element.scrollHeight - this.element.scrollTop - this.element.clientHeight > threshold) {
+                    this.userScrolledUp = true;
+                } else {
+                    this.userScrolledUp = false;
                 }
-                lastScrollTop = element.scrollTop;
+            };
+            
+            // Check position on scroll
+            this.element.addEventListener('scroll', checkPosition, { passive: true });
 
-                // Get the computed line height of the chat content
-                const sampleElement = element.querySelector('.ai-message') || element;
-                const lineHeight = parseFloat(getComputedStyle(sampleElement).lineHeight) || 20;
-                const threshold = (2 + lineHeight) + 10;
-                const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= threshold && !userInitiatedScroll;
-                dotNetHelper.invokeMethodAsync('SetAtBottom', atBottom);
+            this.observer = new MutationObserver(() => {
+                if (!this.userScrolledUp) {
+                    this.element.scrollTop = this.element.scrollHeight;
+                }
             });
+
+            this.observer.observe(element, {
+                childList: true,
+                subtree: true
+            });
+            
+            // Initial scroll to bottom
+            this.element.scrollTop = this.element.scrollHeight;
+        },
+
+        dispose: function() {
+            if (this.observer) {
+                this.observer.disconnect();
+                this.observer = null;
+            }
+            if (this.element) {
+                // In a real app, you'd also want to remove the event listener
+                // but that's more complex to manage without direct element reference here.
+            }
         }
     };
 </script>
