@@ -98,8 +98,6 @@
 
 @code {
   private bool _drawerOpen = true;
-  private bool _needsScroll;
-  private bool _isAtBottom = true;
   private bool _isSendingMessage = false;
   private bool _showFileUpload = false;
 
@@ -248,10 +246,7 @@
 
   
 
-  private async Task ScrollToBottom()
-  {
-    await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Smooth);
-  }
+  
 
   private void HandleStreamError(string error)
   {
@@ -340,7 +335,7 @@
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
-    _needsScroll = true;
+    
     // Call SetInputText to clear the ChatInputArea's internal text
     if (_chatInputAreaRef != null)
     {
@@ -367,7 +362,7 @@
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
-    _needsScroll = true;
+    
     // Call SetInputText to clear the ChatInputArea's internal text
     if (_chatInputAreaRef != null)
     {
@@ -383,33 +378,13 @@
       Content = m.Text,
     }).ToList();
 
-  [JSInvokable]
-  public void SetAtBottom(bool atBottom) => _isAtBottom = atBottom;
+  
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    Console.WriteLine("Chat page rendered");
     if (firstRender)
     {
-      await Js.InvokeVoidAsync(
-        "chatScroll.onScroll",
-        _chatContainerRef,
-        DotNetObjectReference.Create(this)
-      );
-    }
-
-    if (_needsScroll && _isAtBottom)
-    {
-      await ScrollManager.ScrollToBottomAsync(
-        ".chat-container",
-        ScrollBehavior.Auto
-      );
-      _needsScroll = false;
-    }
-    else if (_needsScroll && !_isAtBottom)
-    {
-      // Don't scroll if user is not at bottom
-      _needsScroll = false;
+      await Js.InvokeVoidAsync("chatScroll.observe", _chatContainerRef);
     }
   }
 
@@ -471,7 +446,7 @@
         if (!string.IsNullOrEmpty(contentToRender))
         {
           aiMessage.Text += contentToRender;
-          _needsScroll = true;
+          
           await InvokeAsync(StateHasChanged);
         }
 
@@ -678,8 +653,8 @@
 
     CurrentMessageFiles.Clear(); // Clear files from Chat.razor's state (this will propagate to ChatInputArea)
     _showFileUpload = false;     // Hide file upload (this will propagate to ChatInputArea)
-    _isAtBottom = true;
-    _needsScroll = true;
+    
+    
     StateHasChanged();
 
     bool isNewChat = _chatId == null;
@@ -755,7 +730,7 @@
       IsStreaming = true
     };
     _chatHistory.Add(aiMessage);
-    _needsScroll = true;
+    
     StateHasChanged();
 
     // Prepare messages for AI
@@ -877,7 +852,7 @@
         .ToList();
     }
 
-    _needsScroll = true;
+    
     StateHasChanged();
 
     await StreamAiMessage(messagesToSendForAi, targetAiMessage, SaveChatAfterStreaming, err => targetAiMessage.Text = $"[Error regenerating: {err}]");
