@@ -36,6 +36,7 @@ public class ModelPreferencesService
 
     public List<string> GetAllAvailableModels() => new()
     {
+        "Devstral Small (Free Tier)",
         "Gemini 2.5 Flash (AI Studio)",
         "Gemini 2.0 Flash (AI Studio)",
         "Gemini 2.5 Pro (AI Studio)",
@@ -54,6 +55,7 @@ public class ModelPreferencesService
 
     public Dictionary<string, string> GetModelProviders() => new()
     {
+        ["Devstral Small (Free Tier)"] = "Free Tier",
         ["Deepseek v3 (Chutes)"] = "Chutes",
         ["Deepseek R1 0528 (Chutes)"] = "Chutes",
         ["Kimi Dev (Chutes)"] = "Chutes",
