@@ -30,11 +30,13 @@ namespace m1Chat.Services
         private readonly string _aiStudioApiKey;
         private readonly string _chutesApiKey;
         private readonly string _mistralApiKey;
+        private readonly string _freeTierApiKey;
         private readonly string _openRouterUri;
         private readonly string _groqUri;
         private readonly string _aiStudioUri;
         private readonly string _chutesUri;
         private readonly string _mistralUri;
+        private readonly string _freeTierUri;
         private Provider _provider;
         private readonly string _systemPrompt;
         private readonly string _magistralSystemPrompt;
@@ -47,6 +49,7 @@ namespace m1Chat.Services
         private const string ProviderAiStudio = "AIStudio";
         private const string ProviderChutes = "Chutes";
         private const string ProviderMistral = "Mistral";
+        private const string ProviderFreeTier = "Free Tier";
 
         private enum Provider
         {
@@ -55,7 +58,8 @@ namespace m1Chat.Services
             OpenRouter,
             AiStudio,
             Groq,
-            Mistral
+            Mistral,
+            FreeTier
         }
 
         public Completion(ApiKeyService apiKeyService)
@@ -67,8 +71,16 @@ namespace m1Chat.Services
                 "OPENROUTER_API_KEY",
                 "OpenRouter API key"
             );
-            //_groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
-            _groqApiKey = "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";
+            try
+            {
+
+                _groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
+            }
+            catch
+            {
+                
+                _groqApiKey = "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";
+            }
             
             _aiStudioApiKey = GetEnvironmentVariableOrThrow(
                 "AISTUDIO_API_KEY",
@@ -82,6 +94,7 @@ namespace m1Chat.Services
                 "MISTRAL_API_KEY",
                 "Mistral API key"
             );
+            _freeTierApiKey = "DkZQwcO9WYeyQUqvfqMl644laS30yt9G";
 
             // --- Retrieve URIs from Environment Variables or use defaults ---
             _openRouterUri =
@@ -99,8 +112,11 @@ namespace m1Chat.Services
             _mistralUri =
                 Environment.GetEnvironmentVariable("MISTRAL_URI")
                 ?? "https://api.mistral.ai/v1/chat/completions";
+            _freeTierUri=
+                Environment.GetEnvironmentVariable("MISTRAL_URI")
+                ?? "https://api.mistral.ai/v1/chat/completions";
 
-            _provider = Provider.OpenRouter; // Default provider
+            _provider = Provider.FreeTier; // Default provider
             _dateTime = DateTime.Now;
             _systemPrompt =
                 $"You are M1 Chat, an AI assistant. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.\n- The current date and time including timezone is {_dateTime}.\n- Always use LaTeX for mathematical expressions:\n    - Inline math must be wrapped in single dollar signs: $ content $ \n    - Display math must be wrapped in double dollar signs: $$ content $$\n-   \n- When generating code:\n    - Ensure it is properly formatted using Prettier with a print width of 80 characters\n    - Present it in Markdown code blocks with the correct language extension indicated";
@@ -140,6 +156,7 @@ namespace m1Chat.Services
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
+            
             // Add system prompt if provided
             if (model != "Magistral Medium (Mistral AI)")
             {
@@ -284,9 +301,13 @@ namespace m1Chat.Services
                     model = "magistral-medium-latest";
                     _provider = Provider.Mistral;
                     break;
+                case "Devstral Small (Free Tier)":
+                    model = "devstral-small-latest";
+                    _provider = Provider.FreeTier;
+                    break;
                 default:
-                    model = "google/gemma-3-27b-it:free";
-                    _provider = Provider.OpenRouter;
+                    model = "devstral-small-latest";
+                    _provider = Provider.FreeTier;
                     break;
             }
 
@@ -343,6 +364,7 @@ namespace m1Chat.Services
                     }
                     break;
                 case Provider.Mistral:
+                case Provider.FreeTier:
                     await foreach (
                         var chunk in StreamMistralAsync(processedMessages, model, userEmail)
                     )
@@ -352,12 +374,7 @@ namespace m1Chat.Services
                     break;
                 default:
                     await foreach (
-                        var chunk in StreamOpenRouterAsync(
-                            processedMessages,
-                            model,
-                            reasoningEffort,
-                            userEmail
-                        )
+                        var chunk in StreamMistralAsync(processedMessages, model, userEmail)
                     )
                     {
                         yield return chunk;
