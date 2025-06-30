@@ -406,6 +406,11 @@
       );
       _needsScroll = false;
     }
+    else if (_needsScroll && !_isAtBottom)
+    {
+      // Don't scroll if user is not at bottom
+      _needsScroll = false;
+    }
   }
 
   private Task HandleChatGlobalKeyUp(KeyboardEventArgs args) // Catches global hotkeys from ChatInputArea

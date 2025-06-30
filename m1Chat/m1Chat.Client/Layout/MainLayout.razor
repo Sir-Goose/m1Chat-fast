@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="@M1ChatTheme" IsDarkMode="true"/>
 <MudDialogProvider/>
@@ -665,17 +665,24 @@
 <script>
     window.chatScroll = {
         onScroll: function (element, dotNetHelper) {
+            let userInitiatedScroll = false;
+            let lastScrollTop = element.scrollTop;
+
             element.addEventListener('scroll', function () {
+                // If user scrolled up, mark as user-initiated
+                if (element.scrollTop < element.scrollHeight - element.clientHeight - 5) {
+                    userInitiatedScroll = true;
+                } else if (element.scrollTop > lastScrollTop) {
+                    // If user scrolls down to bottom, reset
+                    userInitiatedScroll = false;
+                }
+                lastScrollTop = element.scrollTop;
+
                 // Get the computed line height of the chat content
                 const sampleElement = element.querySelector('.ai-message') || element;
                 const lineHeight = parseFloat(getComputedStyle(sampleElement).lineHeight) || 20;
-
-                const threshold = (2 * lineHeight) + 10;
-
-                // Check if near bottom
-                const atBottom =
-                    element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
-
+                const threshold = (2 + lineHeight) + 10;
+                const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= threshold && !userInitiatedScroll;
                 dotNetHelper.invokeMethodAsync('SetAtBottom', atBottom);
             });
         }
