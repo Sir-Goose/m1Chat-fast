@@ -47,22 +47,19 @@ public class UserController : ControllerBase
 
         int totalChats = user.Chats.Count;
 
-        int totalMessages = 0;
-        foreach (var chat in user.Chats)
-        {
-            try
-            {
-                var messages = JsonSerializer.Deserialize<List<ChatMessageDto>>(chat.HistoryJson);
-                totalMessages += messages?.Count ?? 0;
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine($"Error deserializing chat history for chat {chat.Id}: {ex.Message}");
-            }
-        }
-
-        totalMessages /= 2;
-
+         int totalMessages = 0;
+         foreach (var chat in user.Chats)
+         {
+             try
+             {
+                 var messages = JsonSerializer.Deserialize<List<m1Chat.Controllers.ChatsController.ChatMessageDto>>(chat.HistoryJson);
+                 totalMessages += messages?.Count(m => m.Role == "user") ?? 0;
+             }
+             catch (JsonException ex)
+             {
+                 Console.WriteLine($"Error deserializing chat history for chat {chat.Id}: {ex.Message}");
+             }
+         }
         return Ok(new UserStatsResponseDto
         {
             TotalChats = totalChats,

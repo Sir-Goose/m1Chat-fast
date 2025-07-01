@@ -7,17 +7,15 @@ using m1Chat.Components;
 using m1Chat.Services;
 using m1Chat.Data;
 using m1Chat.Hubs;
-using m1Chat.Middleware; 
+using m1Chat.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Authentication.Google; 
-
+using Microsoft.AspNetCore.Authentication.Google;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Services Registration --- //
-
 // 1) Make HttpContext available in DI
 builder.Services.AddHttpContextAccessor();
 
@@ -34,27 +32,27 @@ builder.Services.AddScoped<SvgIcons>();
 // 3) Our dynamic‐BaseAddress HttpClient
 builder.Services.AddScoped<HttpClient>(sp =>
 {
-    var accessor    = sp.GetRequiredService<IHttpContextAccessor>();
-    var httpContext = accessor.HttpContext;
-    if (httpContext?.Request != null)
-    {
-        var req      = httpContext.Request;
-        var scheme   = req.Scheme;           // "http" or "https"
-        var host     = req.Host.Value;       // "localhost:5000" etc.
-        var basePath = req.PathBase.Value;   // e.g. "/myapp" or ""
-        // ensure trailing slash
-        var uri = $"{scheme}://{host}{basePath}/";
-        return new HttpClient { BaseAddress = new Uri(uri) };
-    }
+	var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+	var httpContext = accessor.HttpContext;
+	if (httpContext?.Request != null)
+	{
+		var req = httpContext.Request;
+		var scheme = req.Scheme;           // "http" or "https"
+		var host = req.Host.Value;       // "localhost:5000" etc.
+		var basePath = req.PathBase.Value;   // e.g. "/myapp" or ""
+						     // ensure trailing slash
+		var uri = $"{scheme}://{host}{basePath}/";
+		return new HttpClient { BaseAddress = new Uri(uri) };
+	}
 
-    // fallback (unlikely to be used):
-    return new HttpClient();
+	// fallback (unlikely to be used):
+	return new HttpClient();
 });
 
 // 4) EF Core
 builder.Services.AddDbContext<ChatDbContext>(options =>
     options.UseSqlite(builder.Configuration
-        .GetConnectionString("DefaultConnection")));
+	.GetConnectionString("DefaultConnection")));
 
 // 5) Your OpenRouter completion service
 builder.Services.AddScoped<Completion>();
@@ -70,16 +68,18 @@ builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ModelPreferencesService>();
 
-builder.Services.AddAuthentication(options => {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-    })
+builder.Services.AddAuthentication(options =>
+{
+	options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+	options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+})
     .AddCookie()
-    .AddGoogle(googleOptions => {
-        googleOptions.ClientId = builder.Configuration["Google:ClientId"];
-        googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
-        googleOptions.CallbackPath = "/signin-google";
-        googleOptions.SaveTokens = true;
+    .AddGoogle(googleOptions =>
+    {
+	    googleOptions.ClientId = builder.Configuration["Google:ClientId"];
+	    googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
+	    googleOptions.CallbackPath = "/signin-google";
+	    googleOptions.SaveTokens = true;
     });
 
 
@@ -95,27 +95,27 @@ var app = builder.Build();
 // --- Hybrid Database Initialization ---
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
-    try
-    {
-        db.Database.Migrate();
-    }
-    catch
-    {
-        db.Database.EnsureCreated();
-    }
+	var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
+	try
+	{
+		db.Database.Migrate();
+	}
+	catch
+	{
+		db.Database.EnsureCreated();
+	}
 }
 
 // --- Middleware Pipeline ---
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseWebAssemblyDebugging();
+	app.UseWebAssemblyDebugging();
 }
 else
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+	app.UseExceptionHandler("/Error", createScopeForErrors: true);
+	app.UseHsts();
 }
 
 app.UseHttpsRedirection();
