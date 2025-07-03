@@ -1,5 +1,3 @@
-@inject IScrollManager ScrollManager
-
 <MudScrollToTop
     Style="position: absolute; top: -50px; margin-right: auto; margin-left: auto; z-index: 4;"
     TopOffset="-100"
@@ -15,14 +13,3 @@
     </MudButton>
 </MudScrollToTop>
 
-@code {
-    private MudScrollToTop _scrollToBottomChip;
-    
-    private async Task ScrollToBottom()
-    {
-        _scrollToBottomChip.Visible = false;
-        await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Auto);
-        _scrollToBottomChip.Visible = false;
-    }
-
-}
