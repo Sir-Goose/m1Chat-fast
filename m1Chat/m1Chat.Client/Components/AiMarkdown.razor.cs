@@ -1,0 +1,61 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using Markdig;
+using Ganss.Xss;
+
+namespace m1Chat.Client.Components;
+
+public partial class AiMarkdown : ComponentBase
+{
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    [Parameter] public string Markdown { get; set; } = "";
+    [Parameter] public bool IsStreaming { get; set; } = false;
+
+    private ElementReference _aiDiv;
+    private string _lastMarkdown = "";
+    private string _lastProcessedHtml = ""; // Cache the final result
+    private bool _lastIsStreaming = false; // Cache streaming state
+    
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+        
+    // Configure sanitizer once as static
+    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    
+    static AiMarkdown()
+    {
+        // Configure sanitizer once in static constructor
+        HtmlSanitizer.AllowedTags.Add("pre");
+        HtmlSanitizer.AllowedTags.Add("code");
+        HtmlSanitizer.AllowedTags.Add("span");
+        HtmlSanitizer.AllowedAttributes.Add("class");
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Check if content or streaming state changed
+        if (Markdown != _lastMarkdown || IsStreaming != _lastIsStreaming)
+        {
+            _lastMarkdown = Markdown;
+            _lastIsStreaming = IsStreaming;
+            
+            var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
+            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+            
+            // Add streaming animation class if still streaming
+            if (IsStreaming)
+            {
+                safeHtml = $"<div class='ai-message-streaming-text'>{safeHtml}</div>";
+            }
+            
+            // Only call JS if the final HTML actually changed
+            if (safeHtml != _lastProcessedHtml)
+            {
+                _lastProcessedHtml = safeHtml;
+                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml);
+            }
+        }
+    }
+}

@@ -1,0 +1,71 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.ComponentModel.DataAnnotations;
+using Markdig;
+using Ganss.Xss;
+using System.Text.RegularExpressions;
+
+namespace m1Chat.Client.Components;
+
+public partial class UserMarkdown : ComponentBase
+{
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    [Parameter] public string Markdown { get; set; } = "";
+
+    private ElementReference _userDiv;
+    private string _lastMarkdown = "";
+    private string _lastProcessedHtml = ""; // Cache the final result
+
+    // Use the same pipeline configuration as AiMarkdown for consistency
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    // Configure sanitizer once as static
+    private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    
+    // Compile regex once for better performance
+    private static readonly Regex HtmlTagRegex = new Regex(@"<[^>]+>", RegexOptions.Compiled);
+    
+    static UserMarkdown()
+    {
+        // Configure sanitizer once in static constructor
+        HtmlSanitizer.AllowedTags.Add("pre");
+        HtmlSanitizer.AllowedTags.Add("code");
+        HtmlSanitizer.AllowedTags.Add("span");
+        HtmlSanitizer.AllowedAttributes.Add("class");
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Check if the markdown content has actually changed to avoid unnecessary JS calls
+        if (Markdown != _lastMarkdown)
+        {
+            _lastMarkdown = Markdown;
+            
+            // If content contains HTML tags, encode them so they display as text
+            var processedMarkdown = ContainsHtml(Markdown) 
+                ? System.Net.WebUtility.HtmlEncode(Markdown)
+                : Markdown;
+            
+            // 1. Convert Markdown to HTML
+            var unsafeHtml = Markdig.Markdown.ToHtml(processedMarkdown, Pipeline);
+            // 2. SANITIZE THE HTML OUTPUT
+            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+            
+            // Only call JS if the final HTML actually changed
+            if (safeHtml != _lastProcessedHtml)
+            {
+                _lastProcessedHtml = safeHtml;
+                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _userDiv, safeHtml);
+            }
+        }
+    }
+    
+    private static bool ContainsHtml(string content)
+    {
+        // Optimized: check for angle brackets first (cheapest check)
+        return content.Contains('<') && content.Contains('>') && HtmlTagRegex.IsMatch(content);
+    }
+}
