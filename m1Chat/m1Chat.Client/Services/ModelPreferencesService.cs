@@ -48,8 +48,9 @@ public class ModelPreferencesService
         "Mistral Medium (Mistral AI)",
         "Magistral Medium (Mistral AI)",
         "Gemini 2.5 Flash (OpenRouter)",
-        "Gemma 3 27B (OpenRouter",
+        "Gemma 3 27B (OpenRouter)",
         "Llama 4 Maverick (OpenRouter)",
+        "Cypher Alpha (OpenRouter)",
         "Llama 3.1 8B (Groq)",
         "Llama 4 Scout (Groq)"
     };
@@ -70,6 +71,7 @@ public class ModelPreferencesService
         ["Gemini 2.5 Flash (OpenRouter)"] = "Openrouter",
         ["Gemma 3 27B (OpenRouter)"] = "Openrouter",
         ["Llama 4 Maverick (OpenRouter)"] = "Openrouter",
+        ["Cypher Alpha (OpenRouter)"] = "Openrouter",
         ["Llama 3.1 8B (Groq)"] = "Groq",
         ["Llama 4 Scout (Groq)"] = "Groq"
     };

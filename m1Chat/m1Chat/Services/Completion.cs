@@ -281,6 +281,10 @@ namespace m1Chat.Services
                     model = "meta-llama/llama-4-maverick:free";
                     _provider = Provider.OpenRouter;
                     break;
+                case "Cypher Alpha (OpenRouter)":
+                    model = "openrouter/cypher-alpha:free";
+                    _provider = Provider.OpenRouter;
+                    break;
                 case "Llama 3.1 8B (Groq)":
                     model = "llama-3.1-8b-instant";
                     _provider = Provider.Groq;

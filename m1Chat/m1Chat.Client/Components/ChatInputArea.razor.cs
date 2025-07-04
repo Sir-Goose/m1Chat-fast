@@ -76,6 +76,7 @@ public partial class ChatInputArea : ComponentBase
             { "Magistral Small (Mistral AI)", ThinkingOptionsNoneOnly },
             { "Mistral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
             { "Magistral Medium", ThinkingOptionsNoneOnly },
+            { "Cypher Alpha (OpenRouter)", ThinkingOptionsNoneOnly },
             { "Llama 3.1 8B (Groq)", ThinkingOptionsNoneOnly },
             { "Llama 4 Scout (Groq)", ThinkingOptionsNoneOnly },
             { "Llama 4 Maverick (OpenRouter)", ThinkingOptionsNoneOnly }
