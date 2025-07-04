@@ -26,6 +26,7 @@ public partial class ChatInputArea : ComponentBase
     // Callbacks
     [Parameter] public EventCallback<string> OnMessageSubmitted { get; set; }
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyUp { get; set; }
+    [Parameter] public EventCallback OnMessageAccepted { get; set; }
 
     // Internal state
     private string _messageTextInternal = "";
@@ -223,14 +224,23 @@ public partial class ChatInputArea : ComponentBase
     {
         if (!IsSendingMessage && OnMessageSubmitted.HasDelegate)
         {
+            // Store the message text before attempting to send
+            var messageToSend = _messageTextInternal;
+            
             // Invoke the OnMessageSubmitted callback with the current internal text
-            _ = OnMessageSubmitted.InvokeAsync(_messageTextInternal);
-
-            // Clear the input area internally AFTER the message has been submitted
-            await SetInputText("");
-            // The parent (Chat.razor) will handle clearing CurrentMessageFiles and _showFileUpload,
-            // as those are bindable parameters owned by the parent.
+            await OnMessageSubmitted.InvokeAsync(messageToSend);
+            
+            // Note: Input clearing is now handled by the parent component
+            // after confirming the message was accepted
         }
+    }
+
+    /// <summary>
+    /// Public method to clear the input text. Called by parent when message is successfully accepted.
+    /// </summary>
+    public async Task ClearInput()
+    {
+        await SetInputText("");
     }
 
     /// <summary>
