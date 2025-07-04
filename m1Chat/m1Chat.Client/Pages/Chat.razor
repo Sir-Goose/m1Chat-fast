@@ -622,6 +622,9 @@
     var fileIds = CurrentMessageFiles.Select(f => f.Id).ToList();
     var userMessageTextForName = textToSend;
 
+    // Clear the input now that we know the message is accepted
+    await _chatInputAreaRef.ClearInput();
+
     if (_messageBeingEdited != null)
     {
       var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
