@@ -78,10 +78,10 @@ namespace m1Chat.Services
             }
             catch
             {
-                
+
                 _groqApiKey = "[REDACTED_GROQ_API_KEY]";
             }
-            
+
             _aiStudioApiKey = GetEnvironmentVariableOrThrow(
                 "AISTUDIO_API_KEY",
                 "AI Studio API key"
@@ -112,7 +112,7 @@ namespace m1Chat.Services
             _mistralUri =
                 Environment.GetEnvironmentVariable("MISTRAL_URI")
                 ?? "https://api.mistral.ai/v1/chat/completions";
-            _freeTierUri=
+            _freeTierUri =
                 Environment.GetEnvironmentVariable("MISTRAL_URI")
                 ?? "https://api.mistral.ai/v1/chat/completions";
 
@@ -156,7 +156,7 @@ namespace m1Chat.Services
         {
             // Process messages and include file content if database context is provided
             var processedMessages = new List<ChatMessageDto>();
-            
+
             // Add system prompt if provided
             if (model != "Magistral Medium (Mistral AI)")
             {
@@ -168,9 +168,9 @@ namespace m1Chat.Services
             {
                 processedMessages.Add(
                     new ChatMessageDto { Role = "system", Content = _magistralSystemPrompt }
-                ); 
+                );
             }
-            
+
 
             foreach (var message in messages)
             {
@@ -239,6 +239,10 @@ namespace m1Chat.Services
                     break;
                 case "Deepseek R1 0528 (Chutes)":
                     model = "deepseek-ai/DeepSeek-R1-0528";
+                    _provider = Provider.Chutes;
+                    break;
+                case "DeepSeek R1T2 Chimera (Chutes)":
+                    model = "tngtech/DeepSeek-TNG-R1T2-Chimera";
                     _provider = Provider.Chutes;
                     break;
                 case "Gemini 2.0 Flash (AI Studio)":
@@ -583,7 +587,7 @@ namespace m1Chat.Services
                 }
             }
         }
-        
+
         private async IAsyncEnumerable<string> StreamChutesKimiAsync(
             List<ChatMessageDto> messages,
             string model,

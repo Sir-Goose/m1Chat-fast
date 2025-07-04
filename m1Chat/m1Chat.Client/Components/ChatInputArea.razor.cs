@@ -22,7 +22,7 @@ public partial class ChatInputArea : ComponentBase
     [Parameter] public bool IsSendingMessage { get; set; }
     [Parameter] public bool ShowFileUpload { get; set; }
     [Parameter] public EventCallback<bool> ShowFileUploadChanged { get; set; }
-    
+
     // Callbacks
     [Parameter] public EventCallback<string> OnMessageSubmitted { get; set; }
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyUp { get; set; }
@@ -33,7 +33,7 @@ public partial class ChatInputArea : ComponentBase
     private bool _isThinkingSelectorDisabled;
     private List<string> _currentThinkingOptions = new();
     private Dictionary<string, List<string>> _modelThinkingOptionsMap = new();
-    
+
     // Component references
     private MudTextField<string>? _messageTextField;
     private MudSelect<string>? _modelSelect;
@@ -56,7 +56,7 @@ public partial class ChatInputArea : ComponentBase
     protected override void OnInitialized()
     {
         _showFileUpload = ShowFileUpload;
-        
+
         _modelThinkingOptionsMap = new Dictionary<string, List<string>>()
         {
             { "Devstral Small (Free Tier)", ThinkingOptionsNoneOnly },
@@ -65,6 +65,7 @@ public partial class ChatInputArea : ComponentBase
             { "Deepseek r1", ThinkingOptionsLowMediumHigh },
             { "Deepseek R1 0528 (Chutes)", ThinkingOptionsNoneOnly },
             { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh },
+            { "tngtech/DeepSeek-TNG-R1T2-Chimera", ThinkingOptionsNoneOnly},
             { "Gemini 2.5 Pro (AI Studio)", ThinkingOptionsLowMediumHigh},
             { "Gemini 2.5 Flash (AI Studio)", ThinkingOptionsNoneLowMediumHigh },
             { "Gemini 2.0 Flash (AI Studio)", ThinkingOptionsNoneOnly },
@@ -98,7 +99,7 @@ public partial class ChatInputArea : ComponentBase
             return true;
         }
 
-        bool shouldRender = 
+        bool shouldRender =
             _prevIsSendingMessage != IsSendingMessage ||
             _prevSelectedModel != SelectedModel ||
             _prevThinkingSelectedOption != ThinkingSelectedOption ||
@@ -202,7 +203,7 @@ public partial class ChatInputArea : ComponentBase
 
     private async Task HandleKeyUp(KeyboardEventArgs args)
     {
-        
+
         // Handle Enter key (without Shift) to send message
         if (args is { Key: "Enter", ShiftKey: false })
         {
@@ -258,7 +259,7 @@ public partial class ChatInputArea : ComponentBase
             await _messageTextField.BlurAsync();
         }
     }
-    
+
     protected override void OnAfterRender(bool firstRender)
     {
         Console.WriteLine($"Input area rendered");

@@ -7,7 +7,7 @@ public class ModelPreferencesService
 {
     private readonly IJSRuntime _jsRuntime;
     private const string StorageKey = "modelPreferences";
-    
+
     public List<string> EnabledModels { get; private set; } = new();
 
     public ModelPreferencesService(IJSRuntime jsRuntime)
@@ -20,11 +20,11 @@ public class ModelPreferencesService
         if (OperatingSystem.IsBrowser())
         {
             var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", StorageKey);
-            EnabledModels = string.IsNullOrEmpty(json) 
-                ? GetAllAvailableModels() 
+            EnabledModels = string.IsNullOrEmpty(json)
+                ? GetAllAvailableModels()
                 : JsonSerializer.Deserialize<List<string>>(json) ?? GetAllAvailableModels();
         }
-        
+
     }
 
     public async Task SetEnabledModels(List<string> models)
@@ -41,6 +41,7 @@ public class ModelPreferencesService
         "Gemini 2.0 Flash (AI Studio)",
         "Gemini 2.5 Pro (AI Studio)",
         "Deepseek v3 (Chutes)",
+        "DeepSeek R1T2 Chimera (Chutes)",
         "Deepseek R1 0528 (Chutes)",
         "Kimi Dev (Chutes)",
         "Devstral Small (Mistral AI)",
@@ -58,6 +59,7 @@ public class ModelPreferencesService
         ["Devstral Small (Free Tier)"] = "Free Tier",
         ["Deepseek v3 (Chutes)"] = "Chutes",
         ["Deepseek R1 0528 (Chutes)"] = "Chutes",
+        ["DeepSeek R1T2 Chimera (Chutes)"] = "Chutes",
         ["Kimi Dev (Chutes)"] = "Chutes",
         ["Gemini 2.5 Pro (AI Studio)"] = "AI Studio",
         ["Gemini 2.5 Flash (AI Studio)"] = "AI Studio",
