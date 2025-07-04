@@ -220,10 +220,10 @@ public partial class ChatInputArea : ComponentBase
 
     private async Task HandleSendMessage()
     {
-        if (OnMessageSubmitted.HasDelegate)
+        if (!IsSendingMessage && OnMessageSubmitted.HasDelegate)
         {
             // Invoke the OnMessageSubmitted callback with the current internal text
-            await OnMessageSubmitted.InvokeAsync(_messageTextInternal);
+            _ = OnMessageSubmitted.InvokeAsync(_messageTextInternal);
 
             // Clear the input area internally AFTER the message has been submitted
             await SetInputText("");
