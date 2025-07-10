@@ -226,10 +226,10 @@ public partial class ChatInputArea : ComponentBase
         {
             // Store the message text before attempting to send
             var messageToSend = _messageTextInternal;
-            
+
             // Invoke the OnMessageSubmitted callback with the current internal text
             await OnMessageSubmitted.InvokeAsync(messageToSend);
-            
+
             // Note: Input clearing is now handled by the parent component
             // after confirming the message was accepted
         }
