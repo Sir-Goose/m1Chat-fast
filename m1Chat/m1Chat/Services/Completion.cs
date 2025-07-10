@@ -297,6 +297,10 @@ namespace m1Chat.Services
                     model = "devstral-small-latest";
                     _provider = Provider.Mistral;
                     break;
+                case "Devstral Medium (Mistral AI)":
+                    model = "devstral-medium-latest";
+                    _provider = Provider.Mistral;
+                    break;
                 case "Magistral Small":
                     model = "magistral-small-latest";
                     _provider = Provider.Mistral;
