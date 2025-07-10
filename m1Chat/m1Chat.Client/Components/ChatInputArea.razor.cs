@@ -74,6 +74,7 @@ public partial class ChatInputArea : ComponentBase
             { "Qwen3 30B", ThinkingOptionsLowMediumHigh },
             { "Gemma 3 27B (OpenRouter)", ThinkingOptionsNoneOnly },
             { "Devstral Small (Mistral AI)", ThinkingOptionsNoneOnly },
+            { "Devstral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
             { "Magistral Small (Mistral AI)", ThinkingOptionsNoneOnly },
             { "Mistral Medium (Mistral AI)", ThinkingOptionsNoneOnly },
             { "Magistral Medium", ThinkingOptionsNoneOnly },
