@@ -47,7 +47,7 @@
         <MudIconButton
           Icon="@SvgIcons.SideBar"
           Size="Size.Small"
-          OnClick="() => _drawerOpen = true"
+          OnClick="() => {_drawerOpen = true; StateHasChanged();}"
           class="mr-2"
         >
         </MudIconButton>
@@ -97,7 +97,7 @@
 </MudLayout>
 
 @code {
-  private bool _drawerOpen = true;
+  private bool _drawerOpen = false;
   private bool _isSendingMessage = false;
   private bool _showFileUpload = false;
 
@@ -117,8 +117,7 @@
 
   private async Task Should_sidebar_be_open()
   {
-    var width = await Js.InvokeAsync<int>("eval", "window.innerWidth");
-    _drawerOpen = width > 768;
+    // Removed auto-opening logic - let drawer stay closed by default
   }
 
   private string ChatSelectedModel
@@ -174,7 +173,7 @@
     }
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
     await LoadSidebarChatsAsync();
-    _ = Should_sidebar_be_open();
+    // Removed forced drawer opening - let it stay closed by default
 
     // Initialize ModelPreferences service and load enabled models
     await ModelPreferences.InitializeAsync();
@@ -223,7 +222,7 @@
     if (!_drawerOpen)
     {
       _drawerOpen = true;
-      await InvokeAsync(StateHasChanged);
+      StateHasChanged();
     }
 
     if (_chatDrawerRef != null)
