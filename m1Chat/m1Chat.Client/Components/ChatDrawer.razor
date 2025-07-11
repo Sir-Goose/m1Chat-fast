@@ -1,5 +1,6 @@
-<MudDrawer @bind-Open="DrawerOpen" Anchor="Anchor.Left" Elevation="1"
-           Variant="DrawerVariant.Temporary" Overlay="false" ClipMode="DrawerClipMode.Never"
+<MudDrawer Open="DrawerOpen" OpenChanged="HandleDrawerOpenChanged" Anchor="Anchor.Left" Elevation="1"
+           Variant="DrawerVariant.Temporary" Overlay="true" OverlayAutoClose="true"
+           ClipMode="DrawerClipMode.Never"
            Class="d-flex flex-column translucent-paper">
   <MudDrawerHeader Class="d-flex flex-column pa-2" Style="flex-shrink: 0;">
     <div class="d-flex align-center justify-center" style="position: relative;">
