@@ -124,8 +124,14 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
     private async Task ToggleDrawer()
     {
-      DrawerOpen = !DrawerOpen;
-      await DrawerOpenChanged.InvokeAsync(DrawerOpen);
+        DrawerOpen = !DrawerOpen;
+        await DrawerOpenChanged.InvokeAsync(DrawerOpen);
+    }
+
+    private async Task HandleDrawerOpenChanged(bool isOpen)
+    {
+        DrawerOpen = isOpen;
+        await DrawerOpenChanged.InvokeAsync(isOpen);
     }
 
     private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
@@ -141,168 +147,168 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
     private async Task HandleExportChat(SidebarChat chat)
     {
-      await Task.Delay(1);
-      Snackbar.Add("Feature not yet implemented", Severity.Warning);
-      Console.WriteLine($"Export chat: {chat.Name}");
+        await Task.Delay(1);
+        Snackbar.Add("Feature not yet implemented", Severity.Warning);
+        Console.WriteLine($"Export chat: {chat.Name}");
     }
 
     private async Task HandleChatHover(SidebarChat chat)
     {
-      try
-      {
-        if (Guid.TryParse(chat.Id, out var chatId))
+        try
         {
-          // Fire-and-forget the prefetch operation without awaiting it
-          _ = Task.Run(() => ChatCacheService.PrefetchChatAsync(chatId))
-            .ConfigureAwait(false);
+            if (Guid.TryParse(chat.Id, out var chatId))
+            {
+                // Fire-and-forget the prefetch operation without awaiting it
+                _ = Task.Run(() => ChatCacheService.PrefetchChatAsync(chatId))
+                  .ConfigureAwait(false);
+            }
         }
-      }
-      catch (Exception ex)
-      {
-        Console.WriteLine($"Error prefetching chat: {ex.Message}");
-      }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error prefetching chat: {ex.Message}");
+        }
     }
 
 
     private async Task HandleRenameChat(SidebarChat chat)
     {
-      var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
-      var options =
-        new DialogOptions
+        var parameters = new DialogParameters { ["CurrentName"] = chat.Name };
+        var options =
+          new DialogOptions
+          {
+              CloseButton = true,
+              MaxWidth = MaxWidth.Small,
+              FullWidth = true,
+              BackgroundClass = "blur-background"
+          };
+
+        var dialog = await DialogService.ShowAsync<RenameChatDialog>("Rename Chat", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
         {
-          CloseButton = true,
-          MaxWidth = MaxWidth.Small,
-          FullWidth = true,
-          BackgroundClass = "blur-background"
-        };
-
-      var dialog = await DialogService.ShowAsync<RenameChatDialog>("Rename Chat", parameters, options);
-      var result = await dialog.Result;
-
-      if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
-      {
-        var updatedChat = chat with { Name = newName };
-        await OnChatRenamed.InvokeAsync(updatedChat);
-      }
+            var updatedChat = chat with { Name = newName };
+            await OnChatRenamed.InvokeAsync(updatedChat);
+        }
     }
 
     private async Task OnSearchValueChanged(string value)
     {
-      _searchQuery = value;
-      await TriggerSearch();
+        _searchQuery = value;
+        await TriggerSearch();
     }
 
     private void ViewProfile()
     {
-      NavigationManager.NavigateTo("/Profile");
+        NavigationManager.NavigateTo("/Profile");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-      if (firstRender && _searchField != null)
-      {
-        await _searchField.FocusAsync();
-      }
+        if (firstRender && _searchField != null)
+        {
+            await _searchField.FocusAsync();
+        }
     }
 
     private async Task OnSearchInput(ChangeEventArgs args)
     {
-      _searchQuery = args.Value?.ToString() ?? "";
-      await TriggerSearch();
+        _searchQuery = args.Value?.ToString() ?? "";
+        await TriggerSearch();
     }
 
     private async Task TriggerSearch()
     {
-      // Cancel any previous search
-      _debounceCts?.Cancel();
-      _debounceCts?.Dispose();
-      _debounceCts = new CancellationTokenSource();
+        // Cancel any previous search
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
 
-      try
-      {
-        // Wait for the debounce time
-        await Task.Delay(DebounceTime, _debounceCts.Token);
-        await SearchChats();
-      }
-      catch (TaskCanceledException)
-      {
-        // Search was canceled by new input - ignore
-      }
+        try
+        {
+            // Wait for the debounce time
+            await Task.Delay(DebounceTime, _debounceCts.Token);
+            await SearchChats();
+        }
+        catch (TaskCanceledException)
+        {
+            // Search was canceled by new input - ignore
+        }
     }
 
     private async Task SearchChats()
     {
-      if (string.IsNullOrWhiteSpace(_searchQuery))
-      {
-        _searchResults.Clear(); // Clear the list if search query is empty
-        // We need to explicitly trigger a re-render here because clearing the list
-        // doesn't change the list *instance* reference, but changes its *content*.
-        // And we just returned false in ShouldRender for parameters changing, so need to force.
-        StateHasChanged();
-        return;
-      }
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            _searchResults.Clear(); // Clear the list if search query is empty
+                                    // We need to explicitly trigger a re-render here because clearing the list
+                                    // doesn't change the list *instance* reference, but changes its *content*.
+                                    // And we just returned false in ShouldRender for parameters changing, so need to force.
+            StateHasChanged();
+            return;
+        }
 
-      try
-      {
-        var searchResults = await ChatService.SearchChatsAsync(_searchQuery);
-        var sidebarResults = searchResults.Select(r => new SidebarChat(
-          r.Id.ToString(),
-          r.Name,
-          r.Model,
-          r.IsPinned,
-          r.LastUpdatedAt
-        )).ToList();
+        try
+        {
+            var searchResults = await ChatService.SearchChatsAsync(_searchQuery);
+            var sidebarResults = searchResults.Select(r => new SidebarChat(
+              r.Id.ToString(),
+              r.Name,
+              r.Model,
+              r.IsPinned,
+              r.LastUpdatedAt
+            )).ToList();
 
-        // IMPORTANT: Assign a NEW list instance to _searchResults
-        // This ensures that `!ReferenceEquals(_searchResults, _lastSearchResults)` in ShouldRender will be true
-        _searchResults = sidebarResults
-          .OrderByDescending(r => r.LastUpdatedAt)
-          .ToList();
+            // IMPORTANT: Assign a NEW list instance to _searchResults
+            // This ensures that `!ReferenceEquals(_searchResults, _lastSearchResults)` in ShouldRender will be true
+            _searchResults = sidebarResults
+              .OrderByDescending(r => r.LastUpdatedAt)
+              .ToList();
 
-        StateHasChanged();
-      }
-      catch (Exception ex)
-      {
-        Console.WriteLine($"Search failed: {ex.Message}");
-        Snackbar.Add("Search failed", Severity.Error);
-        _searchResults.Clear();
-        StateHasChanged();
-      }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search failed: {ex.Message}");
+            Snackbar.Add("Search failed", Severity.Error);
+            _searchResults.Clear();
+            StateHasChanged();
+        }
     }
 
     private async Task ClearSearch()
     {
-      _searchQuery = "";
-      _searchResults.Clear();
-      _debounceCts?.Cancel();
+        _searchQuery = "";
+        _searchResults.Clear();
+        _debounceCts?.Cancel();
 
-      if (_searchField != null)
-      {
-        await _searchField.FocusAsync();
-      }
+        if (_searchField != null)
+        {
+            await _searchField.FocusAsync();
+        }
 
-      // Explicitly call StateHasChanged to update the UI after clearing search state
-      StateHasChanged();
+        // Explicitly call StateHasChanged to update the UI after clearing search state
+        StateHasChanged();
     }
-    
+
     public async Task FocusSearchFieldAsync()
     {
-      if (_searchField != null)
-      {
-        await _searchField.FocusAsync();
-      }
+        if (_searchField != null)
+        {
+            await _searchField.FocusAsync();
+        }
     }
 
 
     public void Dispose()
     {
-      _debounceCts?.Cancel();
-      _debounceCts?.Dispose();
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
     }
-    
+
     protected override void OnAfterRender(bool firstRender)
     {
-      Console.WriteLine($"Chat drawer rendered"); // Keep this if you want to verify `ShouldRender` behavior
+        Console.WriteLine($"Chat drawer rendered"); // Keep this if you want to verify `ShouldRender` behavior
     }
 
     public record SidebarChat(
