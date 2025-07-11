@@ -673,6 +673,11 @@
         observer: null,
         element: null,
         userScrolledUp: false,
+        scrollToBottomOnce: function(element) {
+            if (element) {
+                element.scrollTop = element.scrollHeight;
+            }
+        },
 
         observe: function(element) {
             this.element = element;
