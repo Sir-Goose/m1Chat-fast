@@ -663,6 +663,12 @@
 </script>
 
 <script>
+    window.chatScroll = window.chatScroll || {};
+    window.chatScroll.scrollToBottomOnce = function(element) {
+        if (element) {
+            element.scrollTop = element.scrollHeight;
+        }
+    };
     window.chatScroll = {
         observer: null,
         element: null,
