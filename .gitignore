@@ -3,3 +3,18 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+# Ignore macOS system files
+.DS_Store
+m1Chat/.DS_Store
+m1Chat/m1Chat.Client/.DS_Store
+m1Chat/m1Chat/.DS_Store
+m1Chat/m1Chat/wwwroot/.DS_Store
+# Ignore IDE files
+.idea/
+m1Chat.sln.DotSettings.user
+# Ignore migration files
+m1Chat/m1Chat/Migrations/
+# Ignore uploads directory
+m1Chat/m1Chat/uploads/
+# Ignore npm lock file
+package-lock.json
