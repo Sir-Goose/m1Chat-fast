@@ -382,10 +382,11 @@
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (firstRender)
-    {
-      await Js.InvokeVoidAsync("chatScroll.observe", _chatContainerRef);
-    }
+    // Disable continuous auto-scroll
+    // if (firstRender)
+    // {
+    //   await Js.InvokeVoidAsync("chatScroll.observe", _chatContainerRef);
+    // }
   }
 
   private Task HandleChatGlobalKeyUp(KeyboardEventArgs args) // Catches global hotkeys from ChatInputArea
@@ -747,6 +748,8 @@
         FileIds = m.FileIds
       }).Skip(messagesForAiStartIdx).ToList();
 
+    // Scroll to bottom once after user sends a message
+    await Js.InvokeVoidAsync("chatScroll.scrollToBottomOnce", _chatContainerRef);
     await StreamAiMessage(messagesForAi, aiMessage, SaveChatAfterStreaming);
   }
 
