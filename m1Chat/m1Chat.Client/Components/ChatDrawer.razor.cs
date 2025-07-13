@@ -134,10 +134,18 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         await DrawerOpenChanged.InvokeAsync(isOpen);
     }
 
-    private async Task HandleCreateNewChat() => await OnCreateNewChat.InvokeAsync();
+    private async Task HandleCreateNewChat()
+    {
+        _ = ToggleDrawer();
+        await OnCreateNewChat.InvokeAsync();
+    }
 
-    private async Task HandleSelectChat(SidebarChat chat) =>
-      await OnChatSelected.InvokeAsync(chat);
+
+    private async Task HandleSelectChat(SidebarChat chat)
+    {
+        _ = ToggleDrawer();
+        await OnChatSelected.InvokeAsync(chat);
+    }
 
     private async Task HandlePinChat(SidebarChat chat) =>
       await OnChatPinned.InvokeAsync(chat);
