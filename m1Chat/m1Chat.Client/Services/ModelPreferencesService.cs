@@ -7,8 +7,10 @@ public class ModelPreferencesService
 {
     private readonly IJSRuntime _jsRuntime;
     private const string StorageKey = "modelPreferences";
+    private const string DefaultModelKey = "defaultModel";
 
     public List<string> EnabledModels { get; private set; } = new();
+    public string DefaultModel { get; private set; } = "";
 
     public ModelPreferencesService(IJSRuntime jsRuntime)
     {
@@ -19,12 +21,52 @@ public class ModelPreferencesService
     {
         if (OperatingSystem.IsBrowser())
         {
-            var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", StorageKey);
-            EnabledModels = string.IsNullOrEmpty(json)
-                ? GetAllAvailableModels()
-                : JsonSerializer.Deserialize<List<string>>(json) ?? GetAllAvailableModels();
-        }
+            var json = await _jsRuntime.InvokeAsync<string>(
+                "localStorage.getItem",
+                StorageKey
+            );
 
+            // First ternary converted to if/else
+            if (string.IsNullOrEmpty(json))
+            {
+                EnabledModels = GetAllAvailableModels();
+            }
+            else
+            {
+                var deserializedModels = JsonSerializer.Deserialize<List<string>>(json);
+                if (deserializedModels == null)
+                {
+                    EnabledModels = GetAllAvailableModels();
+                }
+                else
+                {
+                    EnabledModels = deserializedModels;
+                }
+            }
+
+            json = await _jsRuntime.InvokeAsync<string>(
+                "localStorage.getItem",
+                DefaultModelKey
+            );
+
+            // Second ternary converted to if/else
+            if (string.IsNullOrEmpty(json))
+            {
+                DefaultModel = "Devstral Small (Free Tier)";
+            }
+            else
+            {
+                var deserializedModel = JsonSerializer.Deserialize<string>(json);
+                if (deserializedModel == null)
+                {
+                    DefaultModel = "Devstral Small (Free Tier)";
+                }
+                else
+                {
+                    DefaultModel = deserializedModel;
+                }
+            }
+        }
     }
 
     public async Task SetEnabledModels(List<string> models)
@@ -32,6 +74,13 @@ public class ModelPreferencesService
         EnabledModels = models;
         var json = JsonSerializer.Serialize(models);
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
+    }
+
+    public async Task SetDefaultModel(string defaultModel)
+    {
+        DefaultModel = defaultModel;
+        var json = JsonSerializer.Serialize(defaultModel);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", DefaultModelKey, json);
     }
 
     public List<string> GetAllAvailableModels() => new()
