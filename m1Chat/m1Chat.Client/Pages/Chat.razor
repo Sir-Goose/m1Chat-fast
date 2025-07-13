@@ -177,6 +177,7 @@
 
     // Initialize ModelPreferences service and load enabled models
     await ModelPreferences.InitializeAsync();
+    _chatSelectedModel = ModelPreferences.DefaultModel;
     _allAiModelOptions = ModelPreferences.GetAllAvailableModels(); 
     GroupEnabledModelsByProvider();
 
