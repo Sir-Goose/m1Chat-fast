@@ -37,7 +37,7 @@
             </MudItem>
 
             <!-- Usage Stats -->
-            <MudItem xs="12" Class="mb-4">
+            <MudItem xs="12" Class="mb-4 ml-2">
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Usage Statistics</MudText>
@@ -76,8 +76,31 @@
                 </MudButton>
             </MudPaper>
 
+            
+            <!-- Default Model -->
+            <MudItem xs="12" Class="ml-4 mr-4 mt-8">
+                <MudPaper Elevation="0">
+                    <MudText Typo="Typo.h5" Class="mb-2">Set Default Model</MudText>
+                    <MudSelect
+                    @bind-Value = "defaultModel"
+                    Variant = "Variant.Outlined"
+                    >
+                    @foreach (var model in models) 
+                    {
+                        <MudSelectItem Value="@model.Name">@model.Name</MudSelectItem> 
+                    }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-3 rounded-xl"
+                            OnClick="SaveDefaultModel" Disabled="@isSaving">
+                            @(isSaving ? "Saving..." : "Save Default Model")
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+
+
+
             <!-- API Keys -->
-            <MudItem xs="12" Class="mb-4">
+            <MudItem xs="12" Class="mb-4 mt-2">
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">Bring Your Own Key</MudText>
@@ -159,6 +182,7 @@
 
     public List<Model> models = new();
     public HashSet<Model> selectedModels = new HashSet<Model>();
+    private string defaultModel = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,6 +214,7 @@
             // Populate the 'models' list from the ModelPreferencesService
             var allAvailableModels = ModelPreferences.GetAllAvailableModels();
             var modelProviders = ModelPreferences.GetModelProviders();
+            defaultModel = ModelPreferences.DefaultModel;
 
             models = allAvailableModels
             .Select(modelName => new Model(modelName, modelProviders.GetValueOrDefault(modelName, "Unknown")))
@@ -255,6 +280,26 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to save model preferences: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveDefaultModel()
+    {
+        isSaving = true;
+        try
+        {
+            if (defaultModel != null) {
+                await ModelPreferences.SetDefaultModel(defaultModel);
+                Snackbar.Add("Default model saved!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save default model: {ex.Message}", Severity.Error);
         }
         finally
         {
