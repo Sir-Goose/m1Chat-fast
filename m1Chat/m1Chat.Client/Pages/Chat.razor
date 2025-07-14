@@ -89,6 +89,7 @@
                    @bind-CurrentMessageFiles="CurrentMessageFiles"
                    @bind-ShowFileUpload="_showFileUpload"
                    EnabledModelsByProvider="_enabledModelsByProvider"
+                   UserApiKeys="_userApiKeys"
                    IsSendingMessage="_isSendingMessage"
                    OnMessageSubmitted="SendMessage"
                    OnKeyUp="HandleChatGlobalKeyUp"
@@ -136,6 +137,9 @@
 
   // This will hold the models grouped by provider for the MudSelect
   private Dictionary<string, List<string>> _enabledModelsByProvider = new();
+  
+  // User API keys for determining which models should be disabled
+  private Dictionary<string, string> _userApiKeys = new();
 
   // The full list of models, used for internal mapping and initial population
   private List<string> _allAiModelOptions;
@@ -172,6 +176,13 @@
       return;
     }
     UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
+    
+    // Only fetch API keys when running in the browser (not during server-side prerendering)
+    if (OperatingSystem.IsBrowser())
+    {
+      _userApiKeys = await UserService.GetUserApiKeysAsync();
+    }
+    
     await LoadSidebarChatsAsync();
     // Removed forced drawer opening - let it stay closed by default
 
@@ -382,6 +393,16 @@
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
+    if (firstRender && OperatingSystem.IsBrowser())
+    {
+      // Load API keys on first render in browser (after prerendering)
+      if (!_userApiKeys.Any())
+      {
+        _userApiKeys = await UserService.GetUserApiKeysAsync();
+        StateHasChanged(); // Trigger re-render to update model dropdown states
+      }
+    }
+    
     // Disable continuous auto-scroll
     // if (firstRender)
     // {
