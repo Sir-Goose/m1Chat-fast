@@ -50,7 +50,12 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            NavigationManager.NavigateTo("https://chat.mattdev.im", forceLoad: true);
+            // Only redirect if we're not already on the chat domain
+            var currentUri = NavigationManager.Uri;
+            if (!currentUri.Contains("chat.mattdev.im"))
+            {
+                NavigationManager.NavigateTo("https://chat.mattdev.im", forceLoad: true);
+            }
         }
     }
 
