@@ -11,7 +11,7 @@ public class AuthController : ControllerBase
 {
     [HttpGet("google-login")]
     [AllowAnonymous]
-    public IActionResult GoogleLogin(string? returnUrl = "https://chat.mattdev.im")
+    public IActionResult GoogleLogin(string? returnUrl = "https://chat.mattdev.im/chat")
     {
         var props = new AuthenticationProperties { 
             RedirectUri = returnUrl,
