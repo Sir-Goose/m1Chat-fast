@@ -52,6 +52,6 @@ public class AuthController : ControllerBase
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, result.Principal);
         
         // Redirect to chat page
-        return Redirect("/chat");
+        return Redirect("/Chat");
     }
 }
