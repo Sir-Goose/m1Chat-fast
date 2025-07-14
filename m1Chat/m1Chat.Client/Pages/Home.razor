@@ -50,12 +50,12 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            NavigationManager.NavigateTo("/Chat");
+            NavigationManager.NavigateTo("https://chat.mattdev.im", forceLoad: true);
         }
     }
 
     private void SignInWithGoogle()
     {
-        NavigationManager.NavigateTo("/auth/google-login?returnUrl=/Chat", forceLoad: true);
+        NavigationManager.NavigateTo("/auth/google-login?returnUrl=https://chat.mattdev.im", forceLoad: true);
     }
 }
