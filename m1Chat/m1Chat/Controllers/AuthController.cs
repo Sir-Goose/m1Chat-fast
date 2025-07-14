@@ -36,4 +36,22 @@ public class AuthController : ControllerBase
             isAuthenticated = User.Identity?.IsAuthenticated ?? false 
         });
     }
+
+    [HttpGet("/signin-google")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleCallback()
+    {
+        var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+        
+        if (!result.Succeeded)
+        {
+            return Redirect("/?error=auth_failed");
+        }
+
+        // Sign in the user with cookie authentication
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, result.Principal);
+        
+        // Redirect to chat page
+        return Redirect("/chat");
+    }
 }
