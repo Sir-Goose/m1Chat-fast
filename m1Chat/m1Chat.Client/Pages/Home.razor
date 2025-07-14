@@ -50,17 +50,13 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            // Only redirect if we're not already on the chat domain
-            var currentUri = NavigationManager.Uri;
-            if (!currentUri.Contains("chat.mattdev.im"))
-            {
-                NavigationManager.NavigateTo("https://chat.mattdev.im", forceLoad: true);
-            }
+            // Always redirect authenticated users to chat domain
+            NavigationManager.NavigateTo("https://chat.mattdev.im/chat", forceLoad: true);
         }
     }
 
     private void SignInWithGoogle()
     {
-        NavigationManager.NavigateTo("/auth/google-login?returnUrl=https://chat.mattdev.im", forceLoad: true);
+        NavigationManager.NavigateTo("/auth/google-login?returnUrl=https://chat.mattdev.im/chat", forceLoad: true);
     }
 }
