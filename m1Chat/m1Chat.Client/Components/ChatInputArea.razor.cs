@@ -69,6 +69,7 @@ public partial class ChatInputArea : ComponentBase
             { "Deepseek r1", ThinkingOptionsLowMediumHigh },
             { "Deepseek R1 0528 (Chutes)", ThinkingOptionsNoneOnly },
             { "DeepSeek r1 v3 Chimera", ThinkingOptionsLowMediumHigh },
+            { "Moonshot Kimi K2 (OpenRouter)", ThinkingOptionsNoneOnly },
             { "tngtech/DeepSeek-TNG-R1T2-Chimera", ThinkingOptionsNoneOnly},
             { "Gemini 2.5 Pro (AI Studio)", ThinkingOptionsLowMediumHigh},
             { "Gemini 2.5 Flash (AI Studio)", ThinkingOptionsNoneLowMediumHigh },

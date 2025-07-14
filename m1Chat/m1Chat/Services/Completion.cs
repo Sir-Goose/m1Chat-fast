@@ -273,6 +273,10 @@ namespace m1Chat.Services
                     model = "google/gemma-3-27b-it:free";
                     _provider = Provider.OpenRouter;
                     break;
+                case "Moonshot Kimi K2 (OpenRouter)":
+                    model = "moonshotai/kimi-k2:free";
+                    _provider = Provider.OpenRouter;
+                    break;
                 case "Qwen3 30B":
                     model = "qwen/qwen3-30b-a3b:free";
                     _provider = Provider.OpenRouter;
