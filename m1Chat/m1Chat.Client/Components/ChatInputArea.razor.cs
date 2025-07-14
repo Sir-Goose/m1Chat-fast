@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using MudBlazor;
 using m1Chat.Client.Services;
+using System.Linq;
 
 namespace m1Chat.Client.Components;
 
@@ -17,6 +18,7 @@ public partial class ChatInputArea : ComponentBase
     [Parameter] public string ThinkingSelectedOption { get; set; } = "None";
     [Parameter] public EventCallback<string> ThinkingSelectedOptionChanged { get; set; }
     [Parameter] public Dictionary<string, List<string>> EnabledModelsByProvider { get; set; } = new();
+    [Parameter] public Dictionary<string, string> UserApiKeys { get; set; } = new();
     [Parameter] public List<FileUploadService.UploadedFileInfo> CurrentMessageFiles { get; set; } = new();
     [Parameter] public EventCallback<List<FileUploadService.UploadedFileInfo>> CurrentMessageFilesChanged { get; set; }
     [Parameter] public bool IsSendingMessage { get; set; }
@@ -52,6 +54,7 @@ public partial class ChatInputArea : ComponentBase
     private string _prevThinkingSelectedOption = "";
     private bool _prevShowFileUpload;
     private List<FileUploadService.UploadedFileInfo> _prevCurrentMessageFiles = new();
+    private Dictionary<string, string> _prevUserApiKeys = new();
     private bool _forceRender;
 
     protected override void OnInitialized()
@@ -107,7 +110,8 @@ public partial class ChatInputArea : ComponentBase
             _prevSelectedModel != SelectedModel ||
             _prevThinkingSelectedOption != ThinkingSelectedOption ||
             _prevShowFileUpload != ShowFileUpload ||
-            !ReferenceEquals(_prevCurrentMessageFiles, CurrentMessageFiles);
+            !ReferenceEquals(_prevCurrentMessageFiles, CurrentMessageFiles) ||
+            !_prevUserApiKeys.SequenceEqual(UserApiKeys);
 
         // Update previous values
         _prevIsSendingMessage = IsSendingMessage;
@@ -115,8 +119,38 @@ public partial class ChatInputArea : ComponentBase
         _prevThinkingSelectedOption = ThinkingSelectedOption;
         _prevShowFileUpload = ShowFileUpload;
         _prevCurrentMessageFiles = CurrentMessageFiles;
+        _prevUserApiKeys = new Dictionary<string, string>(UserApiKeys);
 
         return shouldRender;
+    }
+
+    private bool IsModelDisabled(string modelName)
+    {
+        // Free tier models are never disabled
+        if (modelName.Contains("Free Tier"))
+        {
+            return false;
+        }
+
+        // Map model names to required API key providers
+        var requiredProvider = modelName switch
+        {
+            var name when name.Contains("AI Studio") => "AIStudio",
+            var name when name.Contains("Chutes") => "Chutes",
+            var name when name.Contains("Mistral AI") => "Mistral",
+            var name when name.Contains("OpenRouter") => "OpenRouter",
+            var name when name.Contains("Groq") => "Groq",
+            _ => null
+        };
+
+        // If we can't determine the provider, don't disable the model
+        if (requiredProvider == null)
+        {
+            return false;
+        }
+
+        // Check if user has a valid API key for this provider
+        return !UserApiKeys.TryGetValue(requiredProvider, out var apiKey) || string.IsNullOrEmpty(apiKey);
     }
 
     private string CurrentThinkingIcon

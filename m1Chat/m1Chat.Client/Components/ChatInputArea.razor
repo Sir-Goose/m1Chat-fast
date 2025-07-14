@@ -57,7 +57,7 @@
                         {
                             @foreach (var model in providerGroup.Value) 
                             {
-                                <MudSelectItem Value="@model">@model</MudSelectItem>
+                                <MudSelectItem Value="@model" Disabled="@IsModelDisabled(model)">@model</MudSelectItem>
                             }
                         }
                     </MudSelect>

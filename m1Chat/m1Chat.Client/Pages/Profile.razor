@@ -60,13 +60,20 @@
             <!-- Model Selection -->
             <MudPaper Elevation="0" Class="ml-4">
                 <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
-                <MudDataGrid Items="@models" Filterable="false" SortMode="@SortMode.None" Groupable="false"
-                    MultiSelection="true" SelectedItems="@selectedModels"
+                <MudDataGrid Items="@models" Filterable="false" SortMode="@SortMode.None" Groupable="true"
+                    GroupExpanded="false" MultiSelection="true" SelectedItems="@selectedModels"
                     SelectedItemsChanged="@(EventCallback.Factory.Create<HashSet<Model>>(this, OnSelectedItemsChanged))">
                     <Columns>
                         <SelectColumn T="Model" />
                         <PropertyColumn Property="x => x.Name" Title="Model" />
-                        <PropertyColumn Property="x => x.Provider" />
+                        <PropertyColumn Property="x => x.Provider" Grouping>
+                            <GroupTemplate>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <MudIcon Icon="@GetProviderIcon(context.Grouping.Key?.ToString())" Size="Size.Small" />
+                                    <span>@context.Grouping.Key (@context.Grouping.Count() models)</span>
+                                </div>
+                            </GroupTemplate>
+                        </PropertyColumn>
                     </Columns>
                 </MudDataGrid>
 
@@ -218,6 +225,8 @@
 
             models = allAvailableModels
             .Select(modelName => new Model(modelName, modelProviders.GetValueOrDefault(modelName, "Unknown")))
+            .OrderBy(m => m.Provider == "Free Tier" ? "0" : m.Provider)
+            .ThenBy(m => m.Name)
             .ToList();
 
             // Select models that are currently enabled based on preferences
@@ -306,5 +315,16 @@
             isSaving = false;
         }
     }
+
+    private string GetProviderIcon(string? provider) => provider switch
+    {
+        "Free Tier" => Icons.Material.Filled.MoneyOff,
+        "AI Studio" => Icons.Material.Filled.AutoAwesome,
+        "Chutes" => Icons.Material.Filled.Rocket,
+        "Mistral AI" => Icons.Material.Filled.Psychology,
+        "Openrouter" => Icons.Material.Filled.Router,
+        "Groq" => Icons.Material.Filled.Speed,
+        _ => Icons.Material.Filled.Category
+    };
 
 }
