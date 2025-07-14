@@ -20,7 +20,7 @@
             </MudItem>
 
             <!-- Account Info -->
-            <MudItem xs="12" Class="mb-4">
+            <MudItem xs="12" Class="mb-4 ml-2">
                 <MudCard Elevation="0">
                     <MudCardContent>
                         <MudText Typo="Typo.h5" Class="mb-2">
@@ -58,7 +58,7 @@
             </MudItem>
 
             <!-- Model Selection -->
-            <MudPaper Elevation="0">
+            <MudPaper Elevation="0" Class="ml-4">
                 <MudText Typo="Typo.h5" Class="mb-2">Enable/Disable Models</MudText>
                 <MudDataGrid Items="@models" Filterable="false" SortMode="@SortMode.None" Groupable="false"
                     MultiSelection="true" SelectedItems="@selectedModels"
