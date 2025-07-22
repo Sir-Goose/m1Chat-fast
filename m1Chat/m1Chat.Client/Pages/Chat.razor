@@ -81,6 +81,14 @@
               OnBranch="HandleBranchMessage" />
           }
         </MudStack>
+        
+        @* Show loading indicator when waiting for first AI response chunk *@
+        @if (_isWaitingForFirstChunk)
+        {
+          <div class="progress-container">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+          </div>
+        }
       </MudPaper>
     </div>
 
@@ -100,6 +108,7 @@
 @code {
   private bool _drawerOpen = false;
   private bool _isSendingMessage = false;
+  private bool _isWaitingForFirstChunk = false;
   private bool _showFileUpload = false;
 
   private ElementReference _chatContainerRef;
@@ -485,6 +494,7 @@
   {
     _streamingStopwatch.Restart();
     _streamIsActive = true;
+    _isWaitingForFirstChunk = true;
     _lastChunkTime = _streamingStopwatch.ElapsedMilliseconds;
     _emaCharsPerSecond = MIN_CHARS_PER_SECOND; // Reset for new stream
     
@@ -503,6 +513,13 @@
         ThinkingSelectedOption,
         chunk =>
         {
+            // Hide loading indicator on first chunk received
+            if (_isWaitingForFirstChunk)
+            {
+                _isWaitingForFirstChunk = false;
+                InvokeAsync(StateHasChanged);
+            }
+            
             var now = _streamingStopwatch.ElapsedMilliseconds;
             var timeSinceLastChunk = now - _lastChunkTime;
             _lastChunkTime = now;
@@ -530,6 +547,7 @@
         async () =>
         {
           _streamIsActive = false;
+          _isWaitingForFirstChunk = false;
           while (_isProcessingBuffer) await Task.Delay(50);
 
           aiMessage.IsStreaming = false;
@@ -541,6 +559,7 @@
         error =>
         {
           _streamIsActive = false;
+          _isWaitingForFirstChunk = false;
           
           string remainingContent;
           lock(_streamBuffer) 
@@ -565,6 +584,7 @@
     catch (Exception ex)
     {
       _streamIsActive = false;
+      _isWaitingForFirstChunk = false;
       aiMessage.Text = $"[Error: {ex.Message}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
@@ -756,6 +776,8 @@
     };
     _chatHistory.Add(aiMessage);
     
+    // Set waiting state - will be cleared when first chunk arrives
+    _isWaitingForFirstChunk = true;
     StateHasChanged();
 
     // Prepare messages for AI
@@ -829,6 +851,7 @@
   {
     if (_isSendingMessage) return;
     _isSendingMessage = true;
+    _isWaitingForFirstChunk = false;
     StateHasChanged();
     await SignalRService.EnsureConnectionAsync();
 
