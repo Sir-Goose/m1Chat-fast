@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.HttpOverrides;
 
 static bool SqliteTableExists(ChatDbContext db, string tableName)
 {
@@ -99,6 +100,13 @@ builder.Services.AddSignalR();
 builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ModelPreferencesService>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+	options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+	// Cloudflare tunnel/proxies may not appear in KnownNetworks by default.
+	options.KnownNetworks.Clear();
+	options.KnownProxies.Clear();
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -167,6 +175,7 @@ else
 	app.UseHsts();
 }
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
