@@ -14,7 +14,7 @@ namespace m1Chat.Services
             _db = db;
         }
 
-        public async Task<string> GetUserApiKey(string email, string provider)
+        public async Task<string?> GetUserApiKey(string email, string provider)
         {
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null) return null;

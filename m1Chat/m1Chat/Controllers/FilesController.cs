@@ -151,19 +151,19 @@ namespace m1Chat.Controllers
         public class UploadFileResponse
         {
             public Guid Id { get; set; }
-            public string OriginalFileName { get; set; }
+            public string OriginalFileName { get; set; } = string.Empty;
             public long FileSize { get; set; }
             public DateTime UploadedAt { get; set; }
-            public string Url { get; set; }
+            public string Url { get; set; } = string.Empty;
         }
 
         public class FileInfoResponse
         {
             public Guid Id { get; set; }
-            public string OriginalFileName { get; set; }
+            public string OriginalFileName { get; set; } = string.Empty;
             public long FileSize { get; set; }
             public DateTime UploadedAt { get; set; }
-            public string Url { get; set; }
+            public string Url { get; set; } = string.Empty;
         }
     }
 }

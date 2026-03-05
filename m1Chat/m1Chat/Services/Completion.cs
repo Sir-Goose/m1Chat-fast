@@ -17,8 +17,8 @@ namespace m1Chat.Services
     // Reuse the same DTO as your controller
     public class ChatMessageDto
     {
-        public string Role { get; set; }
-        public string Content { get; set; }
+        public string Role { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
         public List<Guid>? FileIds { get; set; }
     }
 

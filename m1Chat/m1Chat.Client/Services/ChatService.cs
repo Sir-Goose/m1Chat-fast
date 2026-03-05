@@ -50,7 +50,8 @@ namespace m1Chat.Client.Services
 
         public async Task<ChatHistory> GetChatAsync(Guid id)
         {
-            return await _http.GetFromJsonAsync<ChatHistory>($"api/chats/{id}");
+            return await _http.GetFromJsonAsync<ChatHistory>($"api/chats/{id}")
+                ?? throw new InvalidOperationException($"Chat '{id}' returned no payload.");
         }
 
         public async Task<Guid> CreateChatAsync(CreateChatRequest req)

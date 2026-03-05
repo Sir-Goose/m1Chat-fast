@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Markdig;
 using Ganss.Xss;
+using System.Net;
+using System.Text.RegularExpressions;
 
 namespace m1Chat.Client.Components;
 
@@ -16,6 +18,8 @@ public partial class AiMarkdown : ComponentBase
     private string _lastMarkdown = "";
     private string _lastProcessedHtml = ""; // Cache the final result
     private bool _lastIsStreaming = false; // Cache streaming state
+    private bool _lastShouldRenderMath;
+    private bool _lastShouldHighlightCode;
     
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -23,6 +27,10 @@ public partial class AiMarkdown : ComponentBase
         
     // Configure sanitizer once as static
     private static readonly HtmlSanitizer HtmlSanitizer = new HtmlSanitizer();
+    private static readonly Regex HtmlTagRegex = new(@"<[^>]+>", RegexOptions.Compiled);
+    private static readonly Regex MarkdownSyntaxRegex = new(@"(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>)|(```|`|\*\*|__|\[.+\]\(.+\)|\|.+\|)", RegexOptions.Compiled);
+    private static readonly Regex MathRegex = new(@"(\$\$.*?\$\$|\\\(.*?\\\))", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex CodeRegex = new(@"(```|`[^`\n]+`)", RegexOptions.Compiled);
     
     static AiMarkdown()
     {
@@ -35,27 +43,57 @@ public partial class AiMarkdown : ComponentBase
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Check if content or streaming state changed
         if (Markdown != _lastMarkdown || IsStreaming != _lastIsStreaming)
         {
             _lastMarkdown = Markdown;
             _lastIsStreaming = IsStreaming;
-            
-            var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
-            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
-            
-            // Add streaming animation class if still streaming
+
+            string safeHtml;
+            bool shouldRenderMath;
+            bool shouldHighlightCode;
+
             if (IsStreaming)
             {
-                safeHtml = $"<div class='ai-message-streaming-text'>{safeHtml}</div>";
+                safeHtml = $"<div class='ai-message-streaming-text'>{ConvertPlainTextToHtml(Markdown)}</div>";
+                shouldRenderMath = false;
+                shouldHighlightCode = false;
             }
-            
-            // Only call JS if the final HTML actually changed
-            if (safeHtml != _lastProcessedHtml)
+            else if (LooksLikePlainText(Markdown))
+            {
+                safeHtml = ConvertPlainTextToHtml(Markdown);
+                shouldRenderMath = false;
+                shouldHighlightCode = false;
+            }
+            else
+            {
+                var unsafeHtml = Markdig.Markdown.ToHtml(Markdown, Pipeline);
+                safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+                shouldRenderMath = ContainsMath(Markdown);
+                shouldHighlightCode = ContainsCode(Markdown);
+            }
+
+            if (safeHtml != _lastProcessedHtml
+                || shouldRenderMath != _lastShouldRenderMath
+                || shouldHighlightCode != _lastShouldHighlightCode)
             {
                 _lastProcessedHtml = safeHtml;
-                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml);
+                _lastShouldRenderMath = shouldRenderMath;
+                _lastShouldHighlightCode = shouldHighlightCode;
+                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _aiDiv, safeHtml, shouldRenderMath, shouldHighlightCode);
             }
         }
     }
+
+    private static bool LooksLikePlainText(string content) =>
+        !ContainsHtml(content) && !MarkdownSyntaxRegex.IsMatch(content) && !ContainsMath(content) && !ContainsCode(content);
+
+    private static bool ContainsHtml(string content) =>
+        content.Contains('<') && content.Contains('>') && HtmlTagRegex.IsMatch(content);
+
+    private static bool ContainsMath(string content) => MathRegex.IsMatch(content);
+
+    private static bool ContainsCode(string content) => CodeRegex.IsMatch(content);
+
+    private static string ConvertPlainTextToHtml(string content) =>
+        WebUtility.HtmlEncode(content).Replace("\r\n", "\n").Replace("\n", "<br />");
 }

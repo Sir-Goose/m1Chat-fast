@@ -117,7 +117,7 @@ namespace m1Chat.Client.Services
             string reasoningEffort,
             Action<string> onChunk,
             Func<Task> onComplete,
-            Action<string> onError)
+            Action<string>? onError)
         {
             // Generate a unique request ID for this specific stream initiation
             var requestId = Guid.NewGuid();
@@ -127,7 +127,7 @@ namespace m1Chat.Client.Services
             // associated with this requestId.
             _onChunkCallbacks[requestId] = onChunk;
             _onCompleteCallbacks[requestId] = onComplete;
-            _onErrorCallbacks[requestId] = onError;
+            _onErrorCallbacks[requestId] = onError ?? (_ => { });
             var tcs = new TaskCompletionSource<bool>();
             _completionSources[requestId] = tcs;
 
