@@ -245,14 +245,11 @@ public partial class ChatInputArea : ComponentBase
         // Handle Enter key (without Shift) to send message
         if (args is { Key: "Enter", ShiftKey: false })
         {
-            _ = BlurAsync();
-            _ = FocusAsync();
             await Js.InvokeVoidAsync("event.preventDefault"); // Prevent newline in textarea
             if (!string.IsNullOrWhiteSpace(_messageTextInternal) || CurrentMessageFiles.Any())
             {
                 await HandleSendMessage();
             }
-            await FocusAsync(); // Re-focus the text field after sending
         }
     }
 
@@ -297,18 +294,5 @@ public partial class ChatInputArea : ComponentBase
         {
             await _messageTextField.FocusAsync();
         }
-    }
-
-    private async Task BlurAsync()
-    {
-        if (_messageTextField != null)
-        {
-            await _messageTextField.BlurAsync();
-        }
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        Console.WriteLine($"Input area rendered");
     }
 }

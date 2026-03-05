@@ -81,7 +81,7 @@ namespace m1Chat.Services
             return await File.ReadAllTextAsync(file.FilePath);
         }
 
-        public async Task<UploadedFile> GetFileAsync(Guid fileId)
+        public async Task<UploadedFile?> GetFileAsync(Guid fileId)
         {
             return await _db.UploadedFiles
                 .Include(f => f.UploadedBy)

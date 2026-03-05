@@ -1,8 +1,7 @@
 @typeparam TItem
 
 <MudList T="TItem" Dense="true">
-    @foreach (var chat in Items)
-    {
+    <Virtualize TItem="TItem" Items="_items" Context="chat" ItemSize="44" OverscanCount="6">
         <MudMenu
             Style="width:100%;"
             ActivationEvent="@MouseEvent.RightClick"
@@ -10,11 +9,11 @@
             TransformOrigin="Origin.TopLeft">
             <ActivatorContent>
                 <MudListItem
+                    @key="GetItemId(chat)"
                     Dense="true"
                     Class="sidebar-chat-row"
                     Style="display: flex; align-items: center; justify-content: space-between;"
                     OnClick="() => OnItemSelected.InvokeAsync(chat)"
-                    @onmouseenter="() => OnItemMouseEnter.InvokeAsync(chat)"
                     @oncontextmenu:preventDefault>
                     <MudText
                         Color="@(ActiveItemId == GetItemId(chat) ? Color.Primary : Color.Default)"
@@ -25,24 +24,20 @@
                     </MudText>
                     <span class="chat-actions" style="display: flex; gap: 2px;">
                         <span @onclick:stopPropagation="true">
-                            <MudTooltip Text="Pin Thread">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.PushPin"
                                 Color="Color.Primary"
                                 Size="Size.Small"
                                 OnClick="() => OnItemPinned.InvokeAsync(chat)"
                                 aria-label="Pin chat"/>
-                            </MudTooltip>
                         </span>
                         <span @onclick:stopPropagation="true">
-                            <MudTooltip Text="Delete Thread">
                             <MudIconButton
                                 Icon="@Icons.Material.Outlined.Delete"
                                 Color="Color.Error"
                                 Size="Size.Small"
                                 OnClick="() => OnItemDeleted.InvokeAsync(chat)"
                                 aria-label="Delete chat"/>
-                            </MudTooltip>
                         </span>
                     </span>
                 </MudListItem>
@@ -65,6 +60,5 @@
                 </MudMenuItem>
             </ChildContent>
         </MudMenu>
-    }
+    </Virtualize>
 </MudList>
-

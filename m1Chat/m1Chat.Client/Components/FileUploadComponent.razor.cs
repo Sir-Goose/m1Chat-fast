@@ -28,7 +28,6 @@ public partial class FileUploadComponent : ComponentBase
     {
         ClearDragClass();
         var files = e.GetMultipleFiles(101);
-        Console.WriteLine($"MudFileUpload: User selected {files.Count} files in this operation.");
         
         foreach (var file in files)
         {

@@ -737,7 +737,7 @@
 
 
 <script>
-    window.setInnerHtmlAndRenderMath = (element, html) => {
+    window.setInnerHtmlAndRenderMath = (element, html, shouldRenderMath = true, shouldHighlightCode = true) => {
         if (!element || !element.isConnected) {
             return;
         }
@@ -745,7 +745,7 @@
         try {
             element.innerHTML = html ?? "";
             // Render math (KaTeX)
-            if (window.renderMathInElement) {
+            if (shouldRenderMath && window.renderMathInElement) {
                 window.renderMathInElement(element, {
                     delimiters: [
                         {left: "$$", right: "$$", display: true}, // For display math $$...$$
@@ -755,7 +755,7 @@
                 });
             }
             // Highlight code (Prism)
-            if (window.Prism) {
+            if (shouldHighlightCode && window.Prism) {
                 window.Prism.highlightAllUnder(element);
 
                 // Add custom header to Prism code blocks

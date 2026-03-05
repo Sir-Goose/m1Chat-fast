@@ -63,6 +63,10 @@ namespace m1Chat.Controllers
             var model = request.Model;
             var reasoningEffort = request.ReasoningEffort;
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email == null)
+            {
+                return Unauthorized();
+            }
 
             // Start the long-running operation in a background task.
             // _ = Task.Run allows the current HTTP request to complete immediately.

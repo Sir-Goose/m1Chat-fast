@@ -286,8 +286,8 @@ namespace m1Chat.Controllers
         public record ChatSearchResultDto
         {
             public Guid Id { get; init; }
-            public string Name { get; init; }
-            public string Model { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string Model { get; init; } = string.Empty;
             public DateTime LastUpdatedAt { get; init; }
             public bool IsPinned { get; init; }
             public int Score { get; init; }
@@ -301,8 +301,8 @@ namespace m1Chat.Controllers
         public record ChatSummaryDto
         {
             public Guid Id { get; init; }
-            public string Name { get; init; }
-            public string Model { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string Model { get; init; } = string.Empty;
             public DateTime LastUpdatedAt { get; init; }
             public bool IsPinned { get; init; }
         }
@@ -310,25 +310,25 @@ namespace m1Chat.Controllers
         public record ChatHistoryDto
         {
             public Guid Id { get; init; }
-            public string Name { get; init; }
-            public string Model { get; init; }
-            public List<ChatMessageDto> Messages { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string Model { get; init; } = string.Empty;
+            public List<ChatMessageDto> Messages { get; init; } = new();
             public bool IsPinned { get; init; }
         }
 
         public record CreateChatDto
         {
-            public string Name { get; init; }
-            public string Model { get; init; }
-            public ChatMessageDto[] Messages { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string Model { get; init; } = string.Empty;
+            public ChatMessageDto[] Messages { get; init; } = Array.Empty<ChatMessageDto>();
             public bool IsPinned { get; init; }
         }
 
         public record UpdateChatDto
         {
-            public string Name { get; init; }
-            public string Model { get; init; }
-            public ChatMessageDto[] Messages { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string Model { get; init; } = string.Empty;
+            public ChatMessageDto[] Messages { get; init; } = Array.Empty<ChatMessageDto>();
             public bool IsPinned { get; init; }
         }
     }

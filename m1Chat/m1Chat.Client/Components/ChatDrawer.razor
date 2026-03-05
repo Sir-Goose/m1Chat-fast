@@ -59,8 +59,7 @@
                     OnItemDeleted="HandleDeleteChat"
                     OnItemRenamed="HandleRenameChat"
                     GetItemId="chat => chat.Id"
-                    GetItemName="chat => chat.Name"
-                    OnItemMouseEnter="HandleChatHover"/>
+                    GetItemName="chat => chat.Name"/>
         }
         else
         {
@@ -86,8 +85,7 @@
                   OnItemRenamed="HandleRenameChat"
                   OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
-                  GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="HandleChatHover"/>
+                  GetItemName="chat => chat.Name"/>
       }
 
       @if (todayChats.Any())
@@ -106,8 +104,7 @@
                   OnItemRenamed="HandleRenameChat"
                   OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
-                  GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="HandleChatHover"/>
+                  GetItemName="chat => chat.Name"/>
       }
 
       @if (yesterdayChats.Any())
@@ -126,8 +123,7 @@
                   OnItemRenamed="HandleRenameChat"
                   OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
-                  GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="HandleChatHover"/>
+                  GetItemName="chat => chat.Name"/>
       }
 
       @if (last7DaysChats.Any())
@@ -146,8 +142,7 @@
                   OnItemRenamed="HandleRenameChat"
                   OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
-                  GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="HandleChatHover"/>
+                  GetItemName="chat => chat.Name"/>
       }
 
       @if (olderChats.Any())
@@ -166,8 +161,7 @@
                   OnItemRenamed="HandleRenameChat"
                   OnItemExported="HandleExportChat"
                   GetItemId="chat => chat.Id"
-                  GetItemName="chat => chat.Name"
-                  OnItemMouseEnter="HandleChatHover"/>
+                  GetItemName="chat => chat.Name"/>
       }
     }
   </div>
@@ -186,5 +180,4 @@
     </MudButton>
   </div>
 </MudDrawer>
-
 

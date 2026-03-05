@@ -40,9 +40,9 @@
   >
     @if (!_drawerOpen)
     {
-      <MudIconGroup
+      <div
         class="ma-2 pa-2 translucent-paper rounded-xl"
-        Style="position: fixed; left: 0; top: 0; z-index: 100;"
+        style="position: fixed; left: 0; top: 0; z-index: 100; display: flex;"
       >
         <MudIconButton
           Icon="@SvgIcons.SideBar"
@@ -60,7 +60,7 @@
         </MudIconButton>
         <MudIconButton Icon="@SvgIcons.New" Size="Size.Small" OnClick="CreateNewChat">
         </MudIconButton>
-      </MudIconGroup>
+      </div>
     }
 
     <div
@@ -69,27 +69,14 @@
       style="overflow-y:auto; flex:1 1 auto; padding-bottom: 130px;"
       id="chat-view"
     >
-      <MudPaper Elevation="0">
-        <MudStack Spacing="4">
-          @foreach (var m in _chatHistory)
-          {
-            <ChatMessageItem 
-              Message="m"
-              OnEdit="HandleEditMessage"
-              OnRegenerate="HandleRegenerateMessage"
-              OnCopy="HandleCopyMessage"
-              OnBranch="HandleBranchMessage" />
-          }
-        </MudStack>
-        
-        @* Show loading indicator when waiting for first AI response chunk *@
-        @if (_isWaitingForFirstChunk)
-        {
-          <div class="progress-container">
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-          </div>
-        }
-      </MudPaper>
+      <ChatTranscript
+        Messages="_chatHistory"
+        IsWaitingForFirstChunk="_isWaitingForFirstChunk"
+        Version="_chatTranscriptVersion"
+        OnEdit="HandleEditMessage"
+        OnRegenerate="HandleRegenerateMessage"
+        OnCopy="HandleCopyMessage"
+        OnBranch="HandleBranchMessage" />
     </div>
 
     <ChatInputArea @bind-SelectedModel="ChatSelectedModel"
@@ -115,8 +102,8 @@
 
   private string UserEmail { get; set; } = "";
 
-  private ChatDrawer _chatDrawerRef;
-  private ChatInputArea _chatInputAreaRef;
+  private ChatDrawer? _chatDrawerRef;
+  private ChatInputArea? _chatInputAreaRef;
 
   private ClientChatMessage? _messageBeingEdited;
 
@@ -125,10 +112,7 @@
 
   private string _chatSelectedModel = "";
 
-  private async Task Should_sidebar_be_open()
-  {
-    // Removed auto-opening logic - let drawer stay closed by default
-  }
+  private static Task Should_sidebar_be_open() => Task.CompletedTask;
 
   private string ChatSelectedModel
   {
@@ -151,11 +135,12 @@
   private Dictionary<string, string> _userApiKeys = new();
 
   // The full list of models, used for internal mapping and initial population
-  private List<string> _allAiModelOptions;
+  private List<string> _allAiModelOptions = new();
 
   private string? _chatId;
   private string _chatName = "New Chat";
   private List<ClientChatMessage> _chatHistory = new();
+  private int _chatTranscriptVersion = 1;
   private bool _chatIsPinned;
   private List<ChatDrawer.SidebarChat> SidebarChats = new();
 
@@ -258,6 +243,7 @@
     {
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
+      TouchTranscript();
       await InvokeAsync(StateHasChanged);
       await SaveChatAfterStreaming();
     }
@@ -275,6 +261,7 @@
       aiMessage.Text = $"[Error: {error}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
+      TouchTranscript();
       _ = InvokeAsync(StateHasChanged);
     }
   }
@@ -311,6 +298,7 @@
     _chatId = null;
     _chatName = "New Chat";
     _chatHistory.Clear();
+    TouchTranscript();
     _chatIsPinned = false;
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
@@ -351,6 +339,7 @@
         FileIds = m.FileIds?.ToList() ?? new List<Guid>()
       })
       .ToList();
+    TouchTranscript();
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
@@ -377,6 +366,7 @@
         FileIds = m.FileIds?.ToList() ?? new List<Guid>()
       })
       .ToList();
+    TouchTranscript();
 
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
@@ -447,6 +437,22 @@
   private bool _streamIsActive = false;
   private bool _isProcessingBuffer = false;
 
+  private void TouchTranscript()
+  {
+    _chatTranscriptVersion++;
+  }
+
+  private void SetWaitingForFirstChunk(bool value)
+  {
+    if (_isWaitingForFirstChunk == value)
+    {
+      return;
+    }
+
+    _isWaitingForFirstChunk = value;
+    TouchTranscript();
+  }
+
   private async Task ProcessStreamBuffer(ClientChatMessage aiMessage)
   {
     if (_isProcessingBuffer) return;
@@ -477,7 +483,7 @@
         if (!string.IsNullOrEmpty(contentToRender))
         {
           aiMessage.Text += contentToRender;
-          
+          TouchTranscript();
           await InvokeAsync(StateHasChanged);
         }
 
@@ -490,11 +496,11 @@
     }
   }
 
-  private async Task StreamAiMessage(List<ServiceChatMessage> messagesForAi, ClientChatMessage aiMessage, Func<Task> onComplete = null, Action<string> onError = null)
+  private async Task StreamAiMessage(List<ServiceChatMessage> messagesForAi, ClientChatMessage aiMessage, Func<Task>? onComplete = null, Action<string>? onError = null)
   {
     _streamingStopwatch.Restart();
     _streamIsActive = true;
-    _isWaitingForFirstChunk = true;
+    SetWaitingForFirstChunk(true);
     _lastChunkTime = _streamingStopwatch.ElapsedMilliseconds;
     _emaCharsPerSecond = MIN_CHARS_PER_SECOND; // Reset for new stream
     
@@ -516,7 +522,7 @@
             // Hide loading indicator on first chunk received
             if (_isWaitingForFirstChunk)
             {
-                _isWaitingForFirstChunk = false;
+                SetWaitingForFirstChunk(false);
                 InvokeAsync(StateHasChanged);
             }
             
@@ -547,19 +553,20 @@
         async () =>
         {
           _streamIsActive = false;
-          _isWaitingForFirstChunk = false;
+          SetWaitingForFirstChunk(false);
           while (_isProcessingBuffer) await Task.Delay(50);
 
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           _streamingStopwatch.Stop();
+          TouchTranscript();
           await InvokeAsync(StateHasChanged);
           if (onComplete != null) await onComplete();
         },
         error =>
         {
           _streamIsActive = false;
-          _isWaitingForFirstChunk = false;
+          SetWaitingForFirstChunk(false);
           
           string remainingContent;
           lock(_streamBuffer) 
@@ -576,6 +583,7 @@
           aiMessage.IsStreaming = false;
           _isSendingMessage = false;
           _streamingStopwatch.Stop();
+          TouchTranscript();
           InvokeAsync(StateHasChanged);
           onError?.Invoke(error);
         }
@@ -584,12 +592,13 @@
     catch (Exception ex)
     {
       _streamIsActive = false;
-      _isWaitingForFirstChunk = false;
+      SetWaitingForFirstChunk(false);
       aiMessage.Text = $"[Error: {ex.Message}]";
       aiMessage.IsStreaming = false;
       _isSendingMessage = false;
       _streamingStopwatch.Stop();
       Console.WriteLine($"Error streaming completion: {ex}");
+      TouchTranscript();
       await InvokeAsync(StateHasChanged);
       onError?.Invoke(ex.Message);
     }
@@ -654,7 +663,7 @@
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, BackgroundClass = "blur-background" };
             var dialog = await DialogService.ShowAsync<ApiKeyRequiredDialog>("API Key Required", parameters, options);
             var result = await dialog.Result;
-            if (!result.Canceled && result.Data is bool goToProfile && goToProfile) { NavigationManager.NavigateTo("/Profile"); }
+            if (!(result?.Canceled ?? true) && result!.Data is bool goToProfile && goToProfile) { NavigationManager.NavigateTo("/Profile"); }
             _isSendingMessage = false;
             StateHasChanged();
             return;
@@ -665,18 +674,21 @@
     var userMessageTextForName = textToSend;
 
     // Clear the input now that we know the message is accepted
-    await _chatInputAreaRef.ClearInput();
+    if (_chatInputAreaRef != null)
+    {
+      await _chatInputAreaRef.ClearInput();
+    }
 
     if (_messageBeingEdited != null)
     {
       var originalMessageIndex = _chatHistory.IndexOf(_messageBeingEdited);
       if (originalMessageIndex != -1)
       {
-        _chatHistory[originalMessageIndex] = _messageBeingEdited with
-        {
-          Text = textToSend,
-          FileIds = fileIds
-        };
+      _chatHistory[originalMessageIndex] = _messageBeingEdited with
+      {
+        Text = textToSend,
+        FileIds = fileIds
+      };
         // If a user message was edited, remove any AI replies that came after it
         if (_messageBeingEdited.IsUser)
         {
@@ -695,6 +707,7 @@
         FileIds = fileIds
       });
     }
+    TouchTranscript();
 
     CurrentMessageFiles.Clear(); // Clear files from Chat.razor's state (this will propagate to ChatInputArea)
     _showFileUpload = false;     // Hide file upload (this will propagate to ChatInputArea)
@@ -777,7 +790,8 @@
     _chatHistory.Add(aiMessage);
     
     // Set waiting state - will be cleared when first chunk arrives
-    _isWaitingForFirstChunk = true;
+    TouchTranscript();
+    SetWaitingForFirstChunk(true);
     StateHasChanged();
 
     // Prepare messages for AI
@@ -850,8 +864,9 @@
   private async Task HandleRegenerateMessage(ClientChatMessage? messageToRegen)
   {
     if (_isSendingMessage) return;
+    if (messageToRegen == null) return;
     _isSendingMessage = true;
-    _isWaitingForFirstChunk = false;
+    SetWaitingForFirstChunk(false);
     StateHasChanged();
     await SignalRService.EnsureConnectionAsync();
 
@@ -902,7 +917,7 @@
         .ToList();
     }
 
-    
+    TouchTranscript();
     StateHasChanged();
 
     await StreamAiMessage(messagesToSendForAi, targetAiMessage, SaveChatAfterStreaming, err => targetAiMessage.Text = $"[Error regenerating: {err}]");
@@ -934,6 +949,7 @@
 
   private async Task HandleCopyMessage(ClientChatMessage? m)
   {
+    if (m == null) return;
     try
     {
       await Js.InvokeVoidAsync("navigator.clipboard.writeText", m.Text);
@@ -947,6 +963,7 @@
 
   private async Task HandleBranchMessage(ClientChatMessage? messageToBranchFrom)
   {
+    if (messageToBranchFrom == null) return;
     var idx = _chatHistory.IndexOf(messageToBranchFrom);
     if (idx == -1) return;
 
@@ -978,6 +995,7 @@
       _chatId = newId.ToString();
       _chatName = branchName;
       _chatHistory = branchChatHistory;
+      TouchTranscript();
       _chatIsPinned = false;
       CurrentMessageFiles.Clear();
       _showFileUpload = false;

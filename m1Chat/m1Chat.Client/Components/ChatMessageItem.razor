@@ -24,31 +24,25 @@
         </MudChat>
         <div class="message-actions">
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Retry message">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.Refresh"
-                        Size="Size.Small"
-                        OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
-                        aria-label="Regenerate"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.Refresh"
+                    Size="Size.Small"
+                    OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
+                    aria-label="Regenerate"/>
             </span>
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Edit message">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.Edit"
-                        Size="Size.Small"
-                        OnClick="@(() => OnEdit.InvokeAsync(Message))"
-                        aria-label="Edit"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.Edit"
+                    Size="Size.Small"
+                    OnClick="@(() => OnEdit.InvokeAsync(Message))"
+                    aria-label="Edit"/>
             </span>
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Copy message">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.ContentCopy"
-                        Size="Size.Small"
-                        OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
-                        aria-label="Copy"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.ContentCopy"
+                    Size="Size.Small"
+                    OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
+                    aria-label="Copy"/>
             </span>
         </div>
         <div class="user-message-hoverzone"></div>
@@ -60,36 +54,29 @@ else
         <AiMarkdown Markdown="@Message.Text" IsStreaming="@Message.IsStreaming"/>
         <div class="message-actions">
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Copy message">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.ContentCopy"
-                        Size="Size.Small"
-                        OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
-                        aria-label="Copy"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.ContentCopy"
+                    Size="Size.Small"
+                    OnClick="@(async () => await OnCopy.InvokeAsync(Message))"
+                    aria-label="Copy"/>
             </span>
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Branch off">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.MergeType"
-                        Size="Size.Small"
-                        OnClick="@(() => OnBranch.InvokeAsync(Message))"
-                        aria-label="Branch"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.MergeType"
+                    Size="Size.Small"
+                    OnClick="@(() => OnBranch.InvokeAsync(Message))"
+                    aria-label="Branch"/>
             </span>
             <span @onclick:stopPropagation="true">
-                <MudTooltip Text="Retry message">
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.Refresh"
-                        Size="Size.Small"
-                        OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
-                        aria-label="Regenerate"/>
-                </MudTooltip>
+                <MudIconButton
+                    Icon="@Icons.Material.Filled.Refresh"
+                    Size="Size.Small"
+                    OnClick="@(() => OnRegenerate.InvokeAsync(Message))"
+                    aria-label="Regenerate"/>
             </span>
         </div>
         <div class="ai-message-hoverzone"></div>
     </div>
 }
 </MudStack>
-
 

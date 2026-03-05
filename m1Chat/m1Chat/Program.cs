@@ -22,7 +22,7 @@ static bool UsersTableIsQueryable(ChatDbContext db)
 {
 	try
 	{
-		_ = db.Users.AsNoTracking().Select(user => user.Id).Take(1).Any();
+		_ = db.Users.AsNoTracking().Select(user => user.Id).Any();
 		return true;
 	}
 	catch (SqliteException ex) when (
@@ -181,8 +181,8 @@ if (hasGoogleAuth)
 	    .AddAuthentication()
 	    .AddGoogle(googleOptions =>
 	    {
-		    googleOptions.ClientId = googleClientId;
-		    googleOptions.ClientSecret = googleClientSecret;
+		    googleOptions.ClientId = googleClientId!;
+		    googleOptions.ClientSecret = googleClientSecret!;
 		    googleOptions.CallbackPath = "/signin-google";
 		    googleOptions.SaveTokens = true;
 	    });

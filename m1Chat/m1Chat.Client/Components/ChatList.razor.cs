@@ -5,6 +5,8 @@ namespace m1Chat.Client.Components;
 
 public partial class ChatList<TItem> : ComponentBase
 {
+    private List<TItem> _items = new();
+
     [Parameter]
     public IEnumerable<TItem> Items { get; set; } = new List<TItem>();
 
@@ -32,6 +34,8 @@ public partial class ChatList<TItem> : ComponentBase
     [Parameter]
     public Func<TItem, string> GetItemName { get; set; } = item => item?.ToString() ?? string.Empty;
     
-    [Parameter]
-    public EventCallback<TItem> OnItemMouseEnter { get; set; }
+    protected override void OnParametersSet()
+    {
+        _items = Items as List<TItem> ?? Items.ToList();
+    }
 }

@@ -12,9 +12,9 @@ namespace m1Chat.Data
 
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
-        public ICollection<Chat> Chats { get; set; }
+        public ICollection<Chat> Chats { get; set; } = new List<Chat>();
     }
 
     public class Chat
@@ -23,13 +23,13 @@ namespace m1Chat.Data
         public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [Required]
-        public string Model { get; set; }
+        public string Model { get; set; } = string.Empty;
 
         [Required]
-        public string HistoryJson { get; set; } // Store chat history as JSON
+        public string HistoryJson { get; set; } = string.Empty; // Store chat history as JSON
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -41,9 +41,9 @@ namespace m1Chat.Data
         // Foreign key
         [Required]
         public Guid UserId { get; set; }
-        public User User { get; set; }
+        public User User { get; set; } = default!;
 
-        public ICollection<ChatMessageFile> MessageFiles { get; set; }
+        public ICollection<ChatMessageFile> MessageFiles { get; set; } = new List<ChatMessageFile>();
     }
 
     public class UploadedFile
@@ -52,25 +52,25 @@ namespace m1Chat.Data
         public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public string OriginalFileName { get; set; }
+        public string OriginalFileName { get; set; } = string.Empty;
 
         [Required]
-        public string ContentType { get; set; }
+        public string ContentType { get; set; } = string.Empty;
 
         [Required]
         public long FileSize { get; set; }
 
         [Required]
-        public string FilePath { get; set; } // Physical path on server
+        public string FilePath { get; set; } = string.Empty; // Physical path on server
 
         [Required]
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
         [Required]
         public Guid UploadedByUserId { get; set; }
-        public User UploadedBy { get; set; }
+        public User UploadedBy { get; set; } = default!;
 
-        public ICollection<ChatMessageFile> ChatMessageFiles { get; set; }
+        public ICollection<ChatMessageFile> ChatMessageFiles { get; set; } = new List<ChatMessageFile>();
     }
 
     public class ChatMessageFile
@@ -80,14 +80,14 @@ namespace m1Chat.Data
 
         [Required]
         public Guid ChatId { get; set; }
-        public Chat Chat { get; set; }
+        public Chat Chat { get; set; } = default!;
 
         [Required]
         public int MessageIndex { get; set; } // Which message in the chat
 
         [Required]
         public Guid FileId { get; set; }
-        public UploadedFile File { get; set; }
+        public UploadedFile File { get; set; } = default!;
 
         [Required]
         public DateTime AttachedAt { get; set; } = DateTime.UtcNow;
@@ -100,15 +100,15 @@ namespace m1Chat.Data
 
         [Required]
         public Guid UserId { get; set; }
-        public User User { get; set; }
+        public User User { get; set; } = default!;
 
         [Required]
         [MaxLength(50)]
-        public string Provider { get; set; } // "OpenRouter", "AIStudio", "Chutes", "Mistral"
+        public string Provider { get; set; } = string.Empty; // "OpenRouter", "AIStudio", "Chutes", "Mistral"
 
         [Required]
         [MaxLength(256)]
-        public string ApiKey { get; set; }
+        public string ApiKey { get; set; } = string.Empty;
     }
 
 }

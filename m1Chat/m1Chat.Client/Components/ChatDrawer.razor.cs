@@ -8,8 +8,6 @@ namespace m1Chat.Client.Components;
 public partial class ChatDrawer : ComponentBase, IDisposable
 {
     [Inject] private ChatService ChatService { get; set; } = default!;
-    [Inject] private ChatCacheService ChatCacheService { get; set; } = default!;
-    [Inject] private UserService UserService { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
@@ -35,38 +33,11 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     private const int DebounceTime = 300; // milliseconds
 
     // Filtered chat lists
-    private List<SidebarChat> pinnedChats =>
-      SidebarChats.Where(c => c.IsPinned).OrderByDescending(c => c.LastUpdatedAt).ToList();
-
-    private List<SidebarChat> nonPinnedChats =>
-      SidebarChats.Where(c => !c.IsPinned).ToList();
-
-    private List<SidebarChat> todayChats =>
-      nonPinnedChats
-        .Where(c => c.LastUpdatedAt.Date == DateTime.Today)
-        .OrderByDescending(c => c.LastUpdatedAt)
-        .ToList();
-
-    private List<SidebarChat> yesterdayChats =>
-      nonPinnedChats
-        .Where(c => c.LastUpdatedAt.Date == DateTime.Today.AddDays(-1))
-        .OrderByDescending(c => c.LastUpdatedAt)
-        .ToList();
-
-    private List<SidebarChat> last7DaysChats =>
-      nonPinnedChats
-        .Where(c =>
-          c.LastUpdatedAt.Date >= DateTime.Today.AddDays(-8)
-          && c.LastUpdatedAt.Date <= DateTime.Today.AddDays(-2)
-        )
-        .OrderByDescending(c => c.LastUpdatedAt)
-        .ToList();
-
-    private List<SidebarChat> olderChats =>
-      nonPinnedChats
-        .Where(c => c.LastUpdatedAt.Date < DateTime.Today.AddDays(-8))
-        .OrderByDescending(c => c.LastUpdatedAt)
-        .ToList();
+    private List<SidebarChat> pinnedChats = new();
+    private List<SidebarChat> todayChats = new();
+    private List<SidebarChat> yesterdayChats = new();
+    private List<SidebarChat> last7DaysChats = new();
+    private List<SidebarChat> olderChats = new();
 
     // --- Rendering Optimization State ---
     private bool _lastDrawerOpen;
@@ -82,6 +53,8 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
+        RebuildChatGroups();
+
         // Initialize previous values on first load
         _lastDrawerOpen = DrawerOpen;
         _lastSidebarChats = SidebarChats;
@@ -92,6 +65,14 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         _lastSearchQuery = _searchQuery;
         _lastSearchResults = _searchResults;
         _lastIsSearching = _isSearching;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastSidebarChats, SidebarChats))
+        {
+            RebuildChatGroups();
+        }
     }
 
     protected override bool ShouldRender()
@@ -153,28 +134,10 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     private async Task HandleDeleteChat(SidebarChat chat) =>
       await OnChatDeleted.InvokeAsync(chat);
 
-    private async Task HandleExportChat(SidebarChat chat)
+    private Task HandleExportChat(SidebarChat chat)
     {
-        await Task.Delay(1);
         Snackbar.Add("Feature not yet implemented", Severity.Warning);
-        Console.WriteLine($"Export chat: {chat.Name}");
-    }
-
-    private async Task HandleChatHover(SidebarChat chat)
-    {
-        try
-        {
-            if (Guid.TryParse(chat.Id, out var chatId))
-            {
-                // Fire-and-forget the prefetch operation without awaiting it
-                _ = Task.Run(() => ChatCacheService.PrefetchChatAsync(chatId))
-                  .ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error prefetching chat: {ex.Message}");
-        }
+        return Task.CompletedTask;
     }
 
 
@@ -193,7 +156,7 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         var dialog = await DialogService.ShowAsync<RenameChatDialog>("Rename Chat", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is string newName && !string.IsNullOrWhiteSpace(newName))
+        if (!(result?.Canceled ?? true) && result!.Data is string newName && !string.IsNullOrWhiteSpace(newName))
         {
             var updatedChat = chat with { Name = newName };
             await OnChatRenamed.InvokeAsync(updatedChat);
@@ -209,14 +172,6 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     private void ViewProfile()
     {
         NavigationManager.NavigateTo("/Profile");
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _searchField != null)
-        {
-            await _searchField.FocusAsync();
-        }
     }
 
     private async Task OnSearchInput(ChangeEventArgs args)
@@ -248,10 +203,7 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     {
         if (string.IsNullOrWhiteSpace(_searchQuery))
         {
-            _searchResults.Clear(); // Clear the list if search query is empty
-                                    // We need to explicitly trigger a re-render here because clearing the list
-                                    // doesn't change the list *instance* reference, but changes its *content*.
-                                    // And we just returned false in ShouldRender for parameters changing, so need to force.
+            _searchResults = new();
             StateHasChanged();
             return;
         }
@@ -275,11 +227,10 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
             StateHasChanged();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Search failed: {ex.Message}");
             Snackbar.Add("Search failed", Severity.Error);
-            _searchResults.Clear();
+            _searchResults = new();
             StateHasChanged();
         }
     }
@@ -287,7 +238,7 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     private async Task ClearSearch()
     {
         _searchQuery = "";
-        _searchResults.Clear();
+        _searchResults = new();
         _debounceCts?.Cancel();
 
         if (_searchField != null)
@@ -295,7 +246,6 @@ public partial class ChatDrawer : ComponentBase, IDisposable
             await _searchField.FocusAsync();
         }
 
-        // Explicitly call StateHasChanged to update the UI after clearing search state
         StateHasChanged();
     }
 
@@ -314,9 +264,29 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         _debounceCts?.Dispose();
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    private void RebuildChatGroups()
     {
-        Console.WriteLine($"Chat drawer rendered"); // Keep this if you want to verify `ShouldRender` behavior
+        var sortedPinned = SidebarChats
+            .Where(c => c.IsPinned)
+            .OrderByDescending(c => c.LastUpdatedAt)
+            .ToList();
+
+        var sortedNonPinned = SidebarChats
+            .Where(c => !c.IsPinned)
+            .OrderByDescending(c => c.LastUpdatedAt)
+            .ToList();
+
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        var lastWeekStart = today.AddDays(-8);
+
+        pinnedChats = sortedPinned;
+        todayChats = sortedNonPinned.Where(c => c.LastUpdatedAt.Date == today).ToList();
+        yesterdayChats = sortedNonPinned.Where(c => c.LastUpdatedAt.Date == yesterday).ToList();
+        last7DaysChats = sortedNonPinned
+            .Where(c => c.LastUpdatedAt.Date >= lastWeekStart && c.LastUpdatedAt.Date <= today.AddDays(-2))
+            .ToList();
+        olderChats = sortedNonPinned.Where(c => c.LastUpdatedAt.Date < lastWeekStart).ToList();
     }
 
     public record SidebarChat(

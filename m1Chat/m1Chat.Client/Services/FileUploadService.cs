@@ -33,7 +33,8 @@ namespace m1Chat.Client.Services
                 throw new Exception($"Upload failed: {error}");
             }
 
-            return await response.Content.ReadFromJsonAsync<UploadedFileInfo>();
+            return await response.Content.ReadFromJsonAsync<UploadedFileInfo>()
+                ?? throw new InvalidOperationException("Upload succeeded but the server returned no file metadata.");
         }
 
         public async Task<List<UploadedFileInfo>> GetUserFilesAsync()

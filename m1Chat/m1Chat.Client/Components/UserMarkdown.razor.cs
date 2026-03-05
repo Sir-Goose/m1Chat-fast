@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using Markdig;
 using Ganss.Xss;
 using System.Text.RegularExpressions;
+using System.Net;
 
 namespace m1Chat.Client.Components;
 
@@ -27,6 +28,9 @@ public partial class UserMarkdown : ComponentBase
     
     // Compile regex once for better performance
     private static readonly Regex HtmlTagRegex = new Regex(@"<[^>]+>", RegexOptions.Compiled);
+    private static readonly Regex MarkdownSyntaxRegex = new(@"(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>)|(```|`|\*\*|__|\[.+\]\(.+\)|\|.+\|)", RegexOptions.Compiled);
+    private static readonly Regex MathRegex = new(@"(\$\$.*?\$\$|\\\(.*?\\\))", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex CodeRegex = new(@"(```|`[^`\n]+`)", RegexOptions.Compiled);
     
     static UserMarkdown()
     {
@@ -43,29 +47,50 @@ public partial class UserMarkdown : ComponentBase
         if (Markdown != _lastMarkdown)
         {
             _lastMarkdown = Markdown;
-            
-            // If content contains HTML tags, encode them so they display as text
-            var processedMarkdown = ContainsHtml(Markdown) 
-                ? System.Net.WebUtility.HtmlEncode(Markdown)
-                : Markdown;
-            
-            // 1. Convert Markdown to HTML
-            var unsafeHtml = Markdig.Markdown.ToHtml(processedMarkdown, Pipeline);
-            // 2. SANITIZE THE HTML OUTPUT
-            var safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
-            
-            // Only call JS if the final HTML actually changed
+
+            string safeHtml;
+            bool shouldRenderMath;
+            bool shouldHighlightCode;
+
+            if (LooksLikePlainText(Markdown))
+            {
+                safeHtml = ConvertPlainTextToHtml(Markdown);
+                shouldRenderMath = false;
+                shouldHighlightCode = false;
+            }
+            else
+            {
+                var processedMarkdown = ContainsHtml(Markdown)
+                    ? WebUtility.HtmlEncode(Markdown)
+                    : Markdown;
+
+                var unsafeHtml = Markdig.Markdown.ToHtml(processedMarkdown, Pipeline);
+                safeHtml = HtmlSanitizer.Sanitize(unsafeHtml);
+                shouldRenderMath = ContainsMath(Markdown);
+                shouldHighlightCode = ContainsCode(Markdown);
+            }
+
             if (safeHtml != _lastProcessedHtml)
             {
                 _lastProcessedHtml = safeHtml;
-                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _userDiv, safeHtml);
+                await Js.InvokeVoidAsync("setInnerHtmlAndRenderMath", _userDiv, safeHtml, shouldRenderMath, shouldHighlightCode);
             }
         }
     }
     
+    private static bool LooksLikePlainText(string content) =>
+        !ContainsHtml(content) && !MarkdownSyntaxRegex.IsMatch(content) && !ContainsMath(content) && !ContainsCode(content);
+
     private static bool ContainsHtml(string content)
     {
         // Optimized: check for angle brackets first (cheapest check)
         return content.Contains('<') && content.Contains('>') && HtmlTagRegex.IsMatch(content);
     }
+
+    private static bool ContainsMath(string content) => MathRegex.IsMatch(content);
+
+    private static bool ContainsCode(string content) => CodeRegex.IsMatch(content);
+
+    private static string ConvertPlainTextToHtml(string content) =>
+        WebUtility.HtmlEncode(content).Replace("\r\n", "\n").Replace("\n", "<br />");
 }

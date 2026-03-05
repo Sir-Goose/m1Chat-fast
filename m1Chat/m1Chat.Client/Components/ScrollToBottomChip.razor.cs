@@ -11,8 +11,6 @@ public partial class ScrollToBottomChip : ComponentBase
     
     private async Task ScrollToBottom()
     {
-        _scrollToBottomChip.Visible = false;
         await ScrollManager.ScrollToBottomAsync(".chat-container", ScrollBehavior.Auto);
-        _scrollToBottomChip.Visible = false;
     }
 }

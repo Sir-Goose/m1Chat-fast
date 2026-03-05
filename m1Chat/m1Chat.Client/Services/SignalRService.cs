@@ -7,7 +7,7 @@ namespace m1Chat.Client.Services
 {
     public class SignalRService
     {
-        private HubConnection _hubConnection;
+        private HubConnection? _hubConnection;
         private readonly NavigationManager _navigationManager;
         private bool _isInitialized;
         private readonly object _lock = new object();

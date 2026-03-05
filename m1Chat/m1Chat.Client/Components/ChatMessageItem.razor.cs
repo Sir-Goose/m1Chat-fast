@@ -1,13 +1,10 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using m1Chat.Client.Models;
 
 namespace m1Chat.Client.Components;
 
 public partial class ChatMessageItem : ComponentBase
 {
-    [Inject] private IJSRuntime Js { get; set; } = default!;
-
     [Parameter] public ClientChatMessage Message { get; set; } = default!;
     [Parameter] public EventCallback<ClientChatMessage> OnEdit { get; set; }
     [Parameter] public EventCallback<ClientChatMessage> OnRegenerate { get; set; }
@@ -53,11 +50,5 @@ public partial class ChatMessageItem : ComponentBase
             if (a[i] != b[i]) return false;
         }
         return true;
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        Console.WriteLine("Chatmessage Rendered");
-        // Removed debug output for performance
     }
 }

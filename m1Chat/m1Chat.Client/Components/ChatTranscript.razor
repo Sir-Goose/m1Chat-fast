@@ -1,0 +1,22 @@
+@using m1Chat.Client.Models
+
+<MudPaper Elevation="0">
+  <MudStack Spacing="4">
+    @foreach (var message in Messages)
+    {
+      <ChatMessageItem
+        Message="message"
+        OnEdit="OnEdit"
+        OnRegenerate="OnRegenerate"
+        OnCopy="OnCopy"
+        OnBranch="OnBranch" />
+    }
+  </MudStack>
+
+  @if (IsWaitingForFirstChunk)
+  {
+    <div class="progress-container">
+      <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    </div>
+  }
+</MudPaper>

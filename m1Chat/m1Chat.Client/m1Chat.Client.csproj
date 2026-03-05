@@ -4,6 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <UseAppHost>false</UseAppHost>
         <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
         <WasmStripILAfterAOT Condition="'$(Configuration)' == 'Release'">true</WasmStripILAfterAOT>
         <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
