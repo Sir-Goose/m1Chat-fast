@@ -55,28 +55,47 @@ namespace m1Chat.Client.Services
         // Global event handler for stream completion received from SignalR
         private async Task HandleStreamCompleted(Guid requestId)
         {
-            // Only invoke the callback associated with the matching requestId
-            if (_onCompleteCallbacks.TryGetValue(requestId, out var callback))
+            try
             {
-                if (callback != null)
+                // Only invoke the callback associated with the matching requestId
+                if (_onCompleteCallbacks.TryGetValue(requestId, out var callback))
                 {
-                    await callback(); // Await the completion callback
+                    if (callback != null)
+                    {
+                        await callback(); // Await the completion callback
+                    }
                 }
             }
-            // Clean up resources and signal completion for this specific stream
-            CleanupStreamResources(requestId, true);
+            catch (Exception ex)
+            {
+                if (_onErrorCallbacks.TryGetValue(requestId, out var errorCallback))
+                {
+                    errorCallback?.Invoke($"Stream completion handler failed: {ex.Message}");
+                }
+            }
+            finally
+            {
+                // Always clean up resources and complete this stream lifecycle.
+                CleanupStreamResources(requestId, true);
+            }
         }
 
         // Global event handler for stream errors received from SignalR
         private void HandleStreamError(Guid requestId, string error)
         {
-            // Only invoke the callback associated with the matching requestId
-            if (_onErrorCallbacks.TryGetValue(requestId, out var callback))
+            try
             {
-                callback?.Invoke(error);
+                // Only invoke the callback associated with the matching requestId
+                if (_onErrorCallbacks.TryGetValue(requestId, out var callback))
+                {
+                    callback?.Invoke(error);
+                }
             }
-            // Clean up resources and signal error for this specific stream
-            CleanupStreamResources(requestId, false);
+            finally
+            {
+                // Always clean up resources and signal error for this specific stream
+                CleanupStreamResources(requestId, false);
+            }
         }
 
         // Helper method to remove all resources associated with a stream once it's done
@@ -102,6 +121,7 @@ namespace m1Chat.Client.Services
         {
             // Generate a unique request ID for this specific stream initiation
             var requestId = Guid.NewGuid();
+            var streamTimeout = TimeSpan.FromMinutes(2);
 
             // Store the provided callbacks and TaskCompletionSource in our dictionaries
             // associated with this requestId.
@@ -113,7 +133,8 @@ namespace m1Chat.Client.Services
 
             try
             {
-                await _signalRService.InitializeAsync();
+                // Ensure we always have an active connection and current connectionId.
+                await _signalRService.EnsureConnectionAsync();
                 var connectionId = _signalRService.GetConnectionId();
 
                 if (string.IsNullOrEmpty(connectionId))
@@ -148,9 +169,16 @@ namespace m1Chat.Client.Services
 
                 response.EnsureSuccessStatusCode();
 
-                // Await the SignalR stream completion via the TaskCompletionSource
-                // This task will complete only when CleanupStreamResources is called for this requestId.
-                //await tcs.Task;
+                // Await stream completion/error to prevent indefinite loading if callbacks are lost.
+                var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(streamTimeout));
+                if (completedTask != tcs.Task)
+                {
+                    onError?.Invoke("Streaming timed out. Please try again.");
+                    CleanupStreamResources(requestId, false);
+                    return;
+                }
+
+                await tcs.Task;
             }
             catch (Exception ex)
             {
