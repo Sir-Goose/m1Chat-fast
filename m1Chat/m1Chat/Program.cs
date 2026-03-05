@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using System.IO;
 using System.Net.Http;
 using m1Chat.Client;
@@ -11,63 +10,39 @@ using m1Chat.Data;
 using m1Chat.Hubs;
 using m1Chat.Middleware;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.FileProviders;
 
-static bool SqliteTableExists(ChatDbContext db, string tableName)
+static bool UsersTableIsQueryable(ChatDbContext db)
 {
-	var connection = db.Database.GetDbConnection();
-	var openedHere = connection.State != ConnectionState.Open;
-
-	if (openedHere)
-	{
-		connection.Open();
-	}
-
 	try
 	{
-		using var command = connection.CreateCommand();
-		command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name LIMIT 1;";
-		var nameParam = command.CreateParameter();
-		nameParam.ParameterName = "$name";
-		nameParam.Value = tableName;
-		command.Parameters.Add(nameParam);
-
-		return command.ExecuteScalar() != null;
+		_ = db.Users.AsNoTracking().Select(user => user.Id).Take(1).Any();
+		return true;
 	}
-	finally
+	catch (SqliteException ex) when (
+		ex.SqliteErrorCode == 1
+		&& ex.Message.Contains("no such table: Users", StringComparison.OrdinalIgnoreCase)
+	)
 	{
-		if (openedHere && connection.State == ConnectionState.Open)
-		{
-			connection.Close();
-		}
+		return false;
 	}
 }
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile(".secrets", optional: true, reloadOnChange: true);
+var localSecretsPath = Path.Combine(builder.Environment.ContentRootPath, ".secrets");
+builder.Configuration.AddJsonFile(localSecretsPath, optional: true, reloadOnChange: true);
 
 var externalSecretsPath = Environment.GetEnvironmentVariable("M1CHAT_SECRETS_FILE");
 if (!string.IsNullOrWhiteSpace(externalSecretsPath))
 {
 	var fullSecretsPath = Path.GetFullPath(externalSecretsPath);
-	var secretsDirectory = Path.GetDirectoryName(fullSecretsPath);
-	var secretsFileName = Path.GetFileName(fullSecretsPath);
-
-	if (!string.IsNullOrWhiteSpace(secretsDirectory) && !string.IsNullOrWhiteSpace(secretsFileName))
-	{
-		builder.Configuration.AddJsonFile(
-			new PhysicalFileProvider(secretsDirectory),
-			secretsFileName,
-			optional: true,
-			reloadOnChange: true
-		);
-	}
+	builder.Configuration.AddJsonFile(fullSecretsPath, optional: true, reloadOnChange: false);
 }
 
 var googleClientId = builder.Configuration["Google:ClientId"];
@@ -177,6 +152,11 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
 	var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
+	var sqliteConnectionString = db.Database.GetConnectionString() ?? db.Database.GetDbConnection().ConnectionString;
+	var sqliteConnectionBuilder = new SqliteConnectionStringBuilder(sqliteConnectionString);
+	var databasePath = sqliteConnectionBuilder.DataSource;
+	var databaseFileExisted = !string.IsNullOrWhiteSpace(databasePath)
+		&& File.Exists(Path.GetFullPath(databasePath));
 	var hasMigrations = db.Database.GetMigrations().Any();
 
 	if (hasMigrations)
@@ -190,7 +170,7 @@ using (var scope = app.Services.CreateScope())
 	}
 
 	// Repair local dev databases created by older startup logic where only EF metadata tables existed.
-	if (!SqliteTableExists(db, "Users"))
+	if (databaseFileExisted && !UsersTableIsQueryable(db))
 	{
 		if (app.Environment.IsDevelopment())
 		{
