@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Text.Json;
 using m1Chat.Client;
 using m1Chat.Client.Services;
 using MudBlazor.Services;
@@ -33,16 +34,65 @@ static bool UsersTableIsQueryable(ChatDbContext db)
 	}
 }
 
+static void AddFlattenedJsonConfig(ConfigurationManager configuration, string path)
+{
+	if (!File.Exists(path))
+	{
+		return;
+	}
+
+	using var document = JsonDocument.Parse(File.ReadAllText(path));
+	var flattenedSettings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+	static void FlattenElement(JsonElement element, string prefix, IDictionary<string, string?> target)
+	{
+		switch (element.ValueKind)
+		{
+			case JsonValueKind.Object:
+				foreach (var property in element.EnumerateObject())
+				{
+					var key = string.IsNullOrEmpty(prefix)
+						? property.Name
+						: $"{prefix}:{property.Name}";
+					FlattenElement(property.Value, key, target);
+				}
+				break;
+			case JsonValueKind.Array:
+				var index = 0;
+				foreach (var item in element.EnumerateArray())
+				{
+					FlattenElement(item, $"{prefix}:{index}", target);
+					index++;
+				}
+				break;
+			case JsonValueKind.String:
+				target[prefix] = element.GetString();
+				break;
+			case JsonValueKind.Number:
+			case JsonValueKind.True:
+			case JsonValueKind.False:
+				target[prefix] = element.ToString();
+				break;
+			case JsonValueKind.Null:
+				target[prefix] = null;
+				break;
+		}
+	}
+
+	FlattenElement(document.RootElement, string.Empty, flattenedSettings);
+	configuration.AddInMemoryCollection(flattenedSettings);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 var localSecretsPath = Path.Combine(builder.Environment.ContentRootPath, ".secrets");
-builder.Configuration.AddJsonFile(localSecretsPath, optional: true, reloadOnChange: true);
+AddFlattenedJsonConfig(builder.Configuration, localSecretsPath);
 
 var externalSecretsPath = Environment.GetEnvironmentVariable("M1CHAT_SECRETS_FILE");
 if (!string.IsNullOrWhiteSpace(externalSecretsPath))
 {
 	var fullSecretsPath = Path.GetFullPath(externalSecretsPath);
-	builder.Configuration.AddJsonFile(fullSecretsPath, optional: true, reloadOnChange: false);
+	AddFlattenedJsonConfig(builder.Configuration, fullSecretsPath);
 }
 
 var googleClientId = builder.Configuration["Google:ClientId"];
