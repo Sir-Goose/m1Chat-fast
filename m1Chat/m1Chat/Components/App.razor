@@ -429,9 +429,10 @@
                     document.body.classList.remove('loading');
 
                     setTimeout(() => {
-                        if (loadingScreen && loadingScreen.parentNode) {
-                            loadingScreen.parentNode.removeChild(loadingScreen);
-                            console.log('[Loading] Loading screen removed');
+                        if (loadingScreen) {
+                            // Keep the node but fully hide it to avoid DOM ownership races.
+                            loadingScreen.style.display = 'none';
+                            console.log('[Loading] Loading screen hidden');
                         }
                     }, 500); // Wait for fade-out to complete before removing
                 }

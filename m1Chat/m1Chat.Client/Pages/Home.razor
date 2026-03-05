@@ -42,15 +42,18 @@
     protected override async Task OnInitializedAsync()
     {
         isInitialized = true;
-        if (OperatingSystem.IsBrowser())
-        {
-            await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
-        }
-
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             NavigationManager.NavigateTo("/chat", forceLoad: true);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && OperatingSystem.IsBrowser())
+        {
+            await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
         }
     }
 }

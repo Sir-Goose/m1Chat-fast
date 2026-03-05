@@ -223,7 +223,6 @@
 
     if (OperatingSystem.IsBrowser())
     {
-      await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
       await SignalRService.EnsureConnectionAsync();
     }
   }
@@ -404,6 +403,7 @@
   {
     if (firstRender && OperatingSystem.IsBrowser())
     {
+      await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
       // Load API keys on first render in browser (after prerendering)
       if (!_userApiKeys.Any())
       {

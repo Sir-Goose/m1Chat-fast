@@ -738,8 +738,12 @@
 
 <script>
     window.setInnerHtmlAndRenderMath = (element, html) => {
-        if (element) {
-            element.innerHTML = html;
+        if (!element || !element.isConnected) {
+            return;
+        }
+
+        try {
+            element.innerHTML = html ?? "";
             // Render math (KaTeX)
             if (window.renderMathInElement) {
                 window.renderMathInElement(element, {
@@ -759,6 +763,10 @@
                     'pre[class*="language-"]',
                 );
                 preElements.forEach((preElement) => {
+                    if (!preElement || !preElement.isConnected) {
+                        return;
+                    }
+
                     // Check if a header already exists to prevent duplicates
                     if (
                         preElement.previousElementSibling &&
@@ -766,6 +774,11 @@
                             "code-block-header",
                         )
                     ) {
+                        return;
+                    }
+
+                    const parent = preElement.parentNode;
+                    if (!parent || typeof parent.insertBefore !== "function") {
                         return;
                     }
 
@@ -813,7 +826,9 @@
             <span></span>`;
 
                     copyButton.onclick = () => {
-                        const codeToCopy = preElement.querySelector("code").innerText;
+                        const codeNode = preElement.querySelector("code");
+                        const codeToCopy = codeNode ? codeNode.innerText : "";
+                        if (!codeToCopy) return;
                         navigator.clipboard
                             .writeText(codeToCopy)
                             .then(() => {
@@ -836,9 +851,11 @@
                     header.appendChild(langSpan);
                     header.appendChild(copyButton);
                     // Insert header before the pre element
-                    preElement.parentNode.insertBefore(header, preElement);
+                    parent.insertBefore(header, preElement);
                 });
             }
+        } catch (err) {
+            console.error("[Markdown] Failed to render markdown block", err);
         }
     };
 </script>

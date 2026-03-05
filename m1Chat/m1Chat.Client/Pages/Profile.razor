@@ -195,10 +195,6 @@
     {
         try
         {
-            if (OperatingSystem.IsBrowser())
-            {
-                await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
-            }
             UserEmail = await UserService.GetUserEmailAsync() ?? "Unknown";
 
             var stats = await UserService.GetUserStatsAsync();
@@ -237,6 +233,14 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && OperatingSystem.IsBrowser())
+        {
+            await Js.InvokeVoidAsync("window.hideBlazorLoadingScreen");
         }
     }
 
