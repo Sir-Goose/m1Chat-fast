@@ -107,6 +107,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 	options.KnownNetworks.Clear();
 	options.KnownProxies.Clear();
 });
+builder.Services.AddHttpsRedirection(options =>
+{
+	options.HttpsPort = 443;
+});
 
 builder.Services.AddAuthentication(options =>
 {
