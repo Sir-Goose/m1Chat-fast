@@ -18,5 +18,6 @@ m1Chat/m1Chat/Migrations/
 m1Chat/m1Chat/uploads/
 # Ignore npm lock file
 package-lock.json
+chat.db
 chat.db-shm
 chat.db-wal
