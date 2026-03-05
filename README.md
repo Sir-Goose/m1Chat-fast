@@ -1,35 +1,25 @@
 # M1 Chat
 
-Blazor-based multi-provider chat application with Google sign-in, persistent chat history, file attachments, and streamed model responses.
+My submission to the T3 Chat Cloneathon
 
-## Requirements
+**Visit at** https://chat.mattdev.im
 
-- .NET SDK 9
-- Google OAuth credentials
-- At least one provider API key
+## Hosting
 
-## Local setup
+The site is dutifully hosted by a 8th gen i3 mini PC running Arch btw. It is exposed to the outside world through a Cloudflare tunnel. 
 
-1. Copy `m1Chat/m1Chat/.secrets.example` to `m1Chat/m1Chat/.secrets`.
-2. Fill in the Google credentials and whichever model provider keys you want to use.
-3. Restore and run:
+![IMG_7706](https://github.com/user-attachments/assets/a50053e6-a3f8-4460-aa5c-55ebab3fe1cd)
 
-```bash
-dotnet restore m1Chat.sln
-dotnet run --project m1Chat/m1Chat
-```
+## Screenshots
 
-The app defaults to a local SQLite database at `m1Chat/m1Chat/chat.db` and local uploads in `m1Chat/m1Chat/uploads`.
+<img width="959" alt="Screenshot 2025-06-17 at 22 17 53" src="https://github.com/user-attachments/assets/540e24b0-1dcc-476c-b427-85270b738198" />
 
-## Secrets
+<img width="959" alt="Screenshot 2025-06-17 at 22 18 26" src="https://github.com/user-attachments/assets/99ac9a0a-21e9-4b5a-a2bf-cbebaa25939f" />
 
-Secrets are not stored in tracked config files. The server reads a JSON `.secrets` file either:
+<img width="959" alt="Screenshot 2025-06-17 at 22 18 40" src="https://github.com/user-attachments/assets/37e98286-5e5d-4933-9a94-742df6196b43" />
 
-- from `m1Chat/m1Chat/.secrets`, or
-- from the path in `M1CHAT_SECRETS_FILE`
+<img width="959" alt="Screenshot 2025-06-17 at 22 18 47" src="https://github.com/user-attachments/assets/0596b8c4-9740-4886-bcc1-7d5c29c5110f" />
 
-## Notes
+<img width="959" alt="Screenshot 2025-06-17 at 22 18 56" src="https://github.com/user-attachments/assets/d7d5b891-e84e-4768-9d4d-a3e4330bb21f" />
 
-- Production deployment details in this repo are intentionally parameterized; host-specific secrets and paths belong in the server-side `.secrets` file and deployment environment.
-- Uploaded files are private to the authenticated user who uploaded them.
-- Google sign-in is optional in development; if `Google:ClientId` and `Google:ClientSecret` are absent, the Google login endpoint returns `503` instead of silently failing.
+<img width="959" alt="Screenshot 2025-06-17 at 22 19 14" src="https://github.com/user-attachments/assets/bfe90234-7444-49eb-8b73-65c0819111ab" />
