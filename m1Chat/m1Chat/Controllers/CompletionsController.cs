@@ -71,12 +71,12 @@ namespace m1Chat.Controllers
                 // and any services that depend on it (like 'Completion').
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    // Resolve services from the new scope
-                    var scopedCompletion = scope.ServiceProvider.GetRequiredService<Completion>();
-                    var scopedDb = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
-
                     try
                     {
+                        // Resolve scoped services inside try so DI/env failures are reported to client.
+                        var scopedCompletion = scope.ServiceProvider.GetRequiredService<Completion>();
+                        var scopedDb = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
+
                         // The actual long-running AI generation and SignalR pushing
                         await foreach (var chunk in scopedCompletion.CompleteAsync(
                                            dtoList,

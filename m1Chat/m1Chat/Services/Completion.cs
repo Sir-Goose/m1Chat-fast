@@ -66,35 +66,15 @@ namespace m1Chat.Services
         {
             _httpClient = new HttpClient();
 
-            // --- Retrieve API Keys from Environment Variables ---
-            _openRouterApiKey = GetEnvironmentVariableOrThrow(
-                "OPENROUTER_API_KEY",
-                "OpenRouter API key"
-            );
-            try
-            {
-
-                _groqApiKey = GetEnvironmentVariableOrThrow("GROQ_API_KEY", "Groq API key");
-            }
-            catch
-            {
-
-                _groqApiKey = "[REDACTED_GROQ_API_KEY]";
-            }
-
-            _aiStudioApiKey = GetEnvironmentVariableOrThrow(
-                "AISTUDIO_API_KEY",
-                "AI Studio API key"
-            );
-            _chutesApiKey = GetEnvironmentVariableOrThrow(
-                "CHUTES_API_KEY",
-                "Chutes API key"
-            );
-            _mistralApiKey = GetEnvironmentVariableOrThrow(
-                "MISTRAL_API_KEY",
-                "Mistral API key"
-            );
-            _freeTierApiKey = "[REDACTED_FREE_TIER_API_KEY]";
+            // API keys are optional at startup; enforce per-provider when used.
+            _openRouterApiKey = GetEnvironmentVariableOrEmpty("OPENROUTER_API_KEY");
+            _groqApiKey = GetEnvironmentVariableOrEmpty("GROQ_API_KEY");
+            _aiStudioApiKey = GetEnvironmentVariableOrEmpty("AISTUDIO_API_KEY");
+            _chutesApiKey = GetEnvironmentVariableOrEmpty("CHUTES_API_KEY");
+            _mistralApiKey = GetEnvironmentVariableOrEmpty("MISTRAL_API_KEY");
+            _freeTierApiKey =
+                Environment.GetEnvironmentVariable("FREE_TIER_API_KEY")
+                ?? "[REDACTED_FREE_TIER_API_KEY]";
 
             // --- Retrieve URIs from Environment Variables or use defaults ---
             _openRouterUri =
@@ -124,26 +104,29 @@ namespace m1Chat.Services
             _apiKeyService = apiKeyService;
         }
 
-        /// <summary>
-        /// Retrieves an environment variable and throws an InvalidOperationException if it's null or empty.
-        /// </summary>
-        /// <param name="variableName">The name of the environment variable.</param>
-        /// <param name="friendlyName">A friendly name for the variable, used in error messages.</param>
-        /// <returns>The value of the environment variable.</returns>
-        /// <exception cref="InvalidOperationException">Thrown if the environment variable is not found or is empty.</exception>
-        private string GetEnvironmentVariableOrThrow(
-            string variableName,
-            string friendlyName
+        private static string GetEnvironmentVariableOrEmpty(string variableName) =>
+            Environment.GetEnvironmentVariable(variableName) ?? string.Empty;
+
+        private static string ResolveApiKeyOrThrow(
+            string? userApiKey,
+            string? fallbackApiKey,
+            string providerLabel,
+            string envVarName
         )
         {
-            var value = Environment.GetEnvironmentVariable(variableName);
-            if (string.IsNullOrEmpty(value))
+            if (!string.IsNullOrWhiteSpace(userApiKey))
             {
-                throw new InvalidOperationException(
-                    $"{friendlyName} not found. Please set the '{variableName}' environment variable."
-                );
+                return userApiKey;
             }
-            return value;
+
+            if (!string.IsNullOrWhiteSpace(fallbackApiKey))
+            {
+                return fallbackApiKey;
+            }
+
+            throw new InvalidOperationException(
+                $"{providerLabel} API key is missing. Add one in Profile or set '{envVarName}' on the server."
+            );
         }
 
         public async IAsyncEnumerable<string> CompleteAsync(
@@ -428,11 +411,13 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _openRouterApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderOpenRouter);
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                _openRouterApiKey,
+                "OpenRouter",
+                "OPENROUTER_API_KEY"
+            );
 
 
             _httpClient.DefaultRequestHeaders.Authorization =
@@ -529,11 +514,13 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _chutesApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                _chutesApiKey,
+                "Chutes",
+                "CHUTES_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -627,11 +614,13 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _chutesApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderChutes);
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                _chutesApiKey,
+                "Chutes",
+                "CHUTES_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -721,11 +710,13 @@ namespace m1Chat.Services
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _groqApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderGroq);
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                _groqApiKey,
+                "Groq",
+                "GROQ_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -794,11 +785,13 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAiStudio);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _aiStudioApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderAiStudio);
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                _aiStudioApiKey,
+                "AI Studio",
+                "AISTUDIO_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -867,11 +860,16 @@ namespace m1Chat.Services
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             // Get user's API key or use default
-            var apiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral);
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                apiKey = _mistralApiKey;
-            }
+            var userApiKey = await _apiKeyService.GetUserApiKey(userEmail, ProviderMistral);
+            var fallbackMistralKey = string.IsNullOrWhiteSpace(_mistralApiKey)
+                ? _freeTierApiKey
+                : _mistralApiKey;
+            var apiKey = ResolveApiKeyOrThrow(
+                userApiKey,
+                fallbackMistralKey,
+                "Mistral",
+                "MISTRAL_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
@@ -990,7 +988,12 @@ namespace m1Chat.Services
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var apiKey = _freeTierApiKey;
+            var apiKey = ResolveApiKeyOrThrow(
+                null,
+                _freeTierApiKey,
+                "Free Tier",
+                "FREE_TIER_API_KEY"
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
