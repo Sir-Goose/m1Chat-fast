@@ -11,8 +11,13 @@ public class AuthController : ControllerBase
 {
     [HttpGet("google-login")]
     [AllowAnonymous]
-    public IActionResult GoogleLogin(string? returnUrl = "https://chat.mattdev.im/chat")
+    public IActionResult GoogleLogin(string? returnUrl = "/chat")
     {
+        if (string.IsNullOrWhiteSpace(returnUrl) || !Url.IsLocalUrl(returnUrl))
+        {
+            returnUrl = "/chat";
+        }
+
         var props = new AuthenticationProperties { 
             RedirectUri = returnUrl,
             IsPersistent = true  // Ensure persistent cookie
@@ -52,6 +57,6 @@ public class AuthController : ControllerBase
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, result.Principal);
         
         // Redirect to chat page
-        return Redirect("/Chat");
+        return Redirect("/chat");
     }
 }

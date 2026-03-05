@@ -21,7 +21,7 @@
                         <img src="m1chat-small.png" alt="M1 Chat" style="width: 150px; height: auto; display: block; margin: 0 auto 24px;" />
                         <MudText Typo="Typo.h5" Class="mb-4 text-center">Welcome to M1 Chat</MudText>
                         <MudText Typo="Typo.body2" Class="mb-6 text-center">Please sign in to continue.</MudText>
-                        <MudButton OnClick="SignInWithGoogle"
+                        <MudButton Href="/auth/google-login?returnUrl=%2Fchat"
                                    Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Size="Size.Large"
@@ -50,13 +50,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            // Always redirect authenticated users to chat domain
-            NavigationManager.NavigateTo("https://chat.mattdev.im/chat", forceLoad: true);
+            NavigationManager.NavigateTo("/chat", forceLoad: true);
         }
-    }
-
-    private void SignInWithGoogle()
-    {
-        NavigationManager.NavigateTo("/auth/google-login?returnUrl=https://chat.mattdev.im/chat", forceLoad: true);
     }
 }
