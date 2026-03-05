@@ -16,7 +16,6 @@ namespace m1Chat.Services
         private readonly ChatDbContext _db;
         private readonly IConfiguration _config;
         private readonly string _uploadPath;
-        private readonly string _baseUrl;
 
         public FileService(ChatDbContext db, IConfiguration config)
         {
@@ -24,8 +23,6 @@ namespace m1Chat.Services
             _config = config;
             _uploadPath = _config.GetValue<string>("FileUpload:Path") ?? 
                 Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-            _baseUrl = _config.GetValue<string>("FileUpload:BaseUrl") ?? 
-                "https://localhost:5001";
             
             // Ensure upload directory exists
             Directory.CreateDirectory(_uploadPath);
@@ -138,7 +135,7 @@ namespace m1Chat.Services
 
         public string GetFileUrl(Guid fileId)
         {
-            return $"{_baseUrl}/api/files/{fileId}";
+            return $"/api/files/{fileId}";
         }
 
         private bool IsTextFile(IFormFile file)

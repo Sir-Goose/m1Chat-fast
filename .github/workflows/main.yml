@@ -26,9 +26,14 @@ jobs:
 
       - name: Deploy via SSH over Tailscale
         env:
-          TAILSCALE_IP: "100.94.253.110"
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_COMMAND: ${{ vars.DEPLOY_COMMAND }}
         run: |
-          ssh -o StrictHostKeyChecking=no matt@$TAILSCALE_IP 'bash /home/matt/deploy.sh'
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_COMMAND"
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "$DEPLOY_COMMAND"
 
       - name: Logout from Tailscale
         if: always()

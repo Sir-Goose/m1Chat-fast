@@ -9,10 +9,28 @@ namespace m1Chat.Controllers;
 [Route("auth")]
 public class AuthController : ControllerBase
 {
+    private readonly IConfiguration _config;
+
+    public AuthController(IConfiguration config)
+    {
+        _config = config;
+    }
+
     [HttpGet("google-login")]
     [AllowAnonymous]
     public IActionResult GoogleLogin(string? returnUrl = "/chat")
     {
+        if (
+            string.IsNullOrWhiteSpace(_config["Google:ClientId"])
+            || string.IsNullOrWhiteSpace(_config["Google:ClientSecret"])
+        )
+        {
+            return Problem(
+                detail: "Google authentication is not configured. Add credentials to the .secrets file.",
+                statusCode: StatusCodes.Status503ServiceUnavailable
+            );
+        }
+
         if (string.IsNullOrWhiteSpace(returnUrl) || !Url.IsLocalUrl(returnUrl))
         {
             returnUrl = "/chat";

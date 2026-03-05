@@ -21,3 +21,6 @@ package-lock.json
 chat.db
 chat.db-shm
 chat.db-wal
+.secrets
+**/.secrets
+**/.secrets.local

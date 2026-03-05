@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.IO;
 using System.Net.Http;
 using m1Chat.Client;
 using m1Chat.Client.Services;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.FileProviders;
 
 static bool SqliteTableExists(ChatDbContext db, string tableName)
 {
@@ -47,6 +49,32 @@ static bool SqliteTableExists(ChatDbContext db, string tableName)
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddJsonFile(".secrets", optional: true, reloadOnChange: true);
+
+var externalSecretsPath = Environment.GetEnvironmentVariable("M1CHAT_SECRETS_FILE");
+if (!string.IsNullOrWhiteSpace(externalSecretsPath))
+{
+	var fullSecretsPath = Path.GetFullPath(externalSecretsPath);
+	var secretsDirectory = Path.GetDirectoryName(fullSecretsPath);
+	var secretsFileName = Path.GetFileName(fullSecretsPath);
+
+	if (!string.IsNullOrWhiteSpace(secretsDirectory) && !string.IsNullOrWhiteSpace(secretsFileName))
+	{
+		builder.Configuration.AddJsonFile(
+			new PhysicalFileProvider(secretsDirectory),
+			secretsFileName,
+			optional: true,
+			reloadOnChange: true
+		);
+	}
+}
+
+var googleClientId = builder.Configuration["Google:ClientId"];
+var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+var hasGoogleAuth =
+	!string.IsNullOrWhiteSpace(googleClientId)
+	&& !string.IsNullOrWhiteSpace(googleClientSecret);
 
 // --- Services Registration --- //
 // 1) Make HttpContext available in DI
@@ -115,16 +143,25 @@ builder.Services.AddHttpsRedirection(options =>
 builder.Services.AddAuthentication(options =>
 {
 	options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-	options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+	if (hasGoogleAuth)
+	{
+		options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+	}
 })
-    .AddCookie()
-    .AddGoogle(googleOptions =>
-    {
-	    googleOptions.ClientId = builder.Configuration["Google:ClientId"];
-	    googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
-	    googleOptions.CallbackPath = "/signin-google";
-	    googleOptions.SaveTokens = true;
-    });
+    .AddCookie();
+
+if (hasGoogleAuth)
+{
+	builder.Services
+	    .AddAuthentication()
+	    .AddGoogle(googleOptions =>
+	    {
+		    googleOptions.ClientId = googleClientId;
+		    googleOptions.ClientSecret = googleClientSecret;
+		    googleOptions.CallbackPath = "/signin-google";
+		    googleOptions.SaveTokens = true;
+	    });
+}
 
 
 

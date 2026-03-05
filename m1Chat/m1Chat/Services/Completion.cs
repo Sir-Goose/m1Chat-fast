@@ -37,6 +37,8 @@ namespace m1Chat.Services
         private readonly string _chutesUri;
         private readonly string _mistralUri;
         private readonly string _freeTierUri;
+        private readonly string _publicUrl;
+        private readonly string _appTitle;
         private Provider _provider;
         private readonly string _systemPrompt;
         private readonly string _magistralSystemPrompt;
@@ -62,39 +64,81 @@ namespace m1Chat.Services
             FreeTier
         }
 
-        public Completion(ApiKeyService apiKeyService)
+        public Completion(ApiKeyService apiKeyService, IConfiguration config)
         {
             _httpClient = new HttpClient();
 
             // API keys are optional at startup; enforce per-provider when used.
-            _openRouterApiKey = GetEnvironmentVariableOrEmpty("OPENROUTER_API_KEY");
-            _groqApiKey = GetEnvironmentVariableOrEmpty("GROQ_API_KEY");
-            _aiStudioApiKey = GetEnvironmentVariableOrEmpty("AISTUDIO_API_KEY");
-            _chutesApiKey = GetEnvironmentVariableOrEmpty("CHUTES_API_KEY");
-            _mistralApiKey = GetEnvironmentVariableOrEmpty("MISTRAL_API_KEY");
-            _freeTierApiKey =
-                Environment.GetEnvironmentVariable("FREE_TIER_API_KEY")
-                ?? "[REDACTED_FREE_TIER_API_KEY]";
+            _openRouterApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:OpenRouter:ApiKey",
+                "OPENROUTER_API_KEY"
+            );
+            _groqApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:Groq:ApiKey",
+                "GROQ_API_KEY"
+            );
+            _aiStudioApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:AiStudio:ApiKey",
+                "AISTUDIO_API_KEY"
+            );
+            _chutesApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:Chutes:ApiKey",
+                "CHUTES_API_KEY"
+            );
+            _mistralApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:Mistral:ApiKey",
+                "MISTRAL_API_KEY"
+            );
+            _freeTierApiKey = GetConfiguredValueOrEmpty(
+                config,
+                "Providers:FreeTier:ApiKey",
+                "FREE_TIER_API_KEY"
+            );
 
             // --- Retrieve URIs from Environment Variables or use defaults ---
-            _openRouterUri =
-                Environment.GetEnvironmentVariable("OPENROUTER_URI")
-                ?? "https://openrouter.ai/api/v1/chat/completions";
-            _groqUri =
-                Environment.GetEnvironmentVariable("GROQ_URI")
-                ?? "https://api.groq.com/openai/v1/chat/completions";
-            _aiStudioUri =
-                Environment.GetEnvironmentVariable("AISTUDIO_URI")
-                ?? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-            _chutesUri =
-                Environment.GetEnvironmentVariable("CHUTES_URI")
-                ?? "https://llm.chutes.ai/v1/chat/completions";
-            _mistralUri =
-                Environment.GetEnvironmentVariable("MISTRAL_URI")
-                ?? "https://api.mistral.ai/v1/chat/completions";
-            _freeTierUri =
-                Environment.GetEnvironmentVariable("MISTRAL_URI")
-                ?? "https://api.mistral.ai/v1/chat/completions";
+            _openRouterUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:OpenRouter:Uri",
+                "OPENROUTER_URI",
+                "https://openrouter.ai/api/v1/chat/completions"
+            );
+            _groqUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:Groq:Uri",
+                "GROQ_URI",
+                "https://api.groq.com/openai/v1/chat/completions"
+            );
+            _aiStudioUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:AiStudio:Uri",
+                "AISTUDIO_URI",
+                "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            );
+            _chutesUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:Chutes:Uri",
+                "CHUTES_URI",
+                "https://llm.chutes.ai/v1/chat/completions"
+            );
+            _mistralUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:Mistral:Uri",
+                "MISTRAL_URI",
+                "https://api.mistral.ai/v1/chat/completions"
+            );
+            _freeTierUri = GetConfiguredValueOrDefault(
+                config,
+                "Providers:FreeTier:Uri",
+                "FREE_TIER_URI",
+                _mistralUri
+            );
+            _publicUrl = config["App:PublicUrl"] ?? "https://localhost:5001";
+            _appTitle = config["App:Title"] ?? "m1Chat";
 
             _provider = Provider.FreeTier; // Default provider
             _dateTime = DateTime.Now;
@@ -104,8 +148,18 @@ namespace m1Chat.Services
             _apiKeyService = apiKeyService;
         }
 
-        private static string GetEnvironmentVariableOrEmpty(string variableName) =>
-            Environment.GetEnvironmentVariable(variableName) ?? string.Empty;
+        private static string GetConfiguredValueOrEmpty(
+            IConfiguration config,
+            string configKey,
+            string envVarName
+        ) => config[configKey] ?? Environment.GetEnvironmentVariable(envVarName) ?? string.Empty;
+
+        private static string GetConfiguredValueOrDefault(
+            IConfiguration config,
+            string configKey,
+            string envVarName,
+            string defaultValue
+        ) => config[configKey] ?? Environment.GetEnvironmentVariable(envVarName) ?? defaultValue;
 
         private static string ResolveApiKeyOrThrow(
             string? userApiKey,
@@ -423,9 +477,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _openRouterUri)
@@ -525,9 +579,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _chutesUri)
@@ -625,9 +679,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _chutesUri)
@@ -721,9 +775,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _groqUri)
@@ -796,9 +850,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _aiStudioUri)
@@ -874,9 +928,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _mistralUri)
@@ -998,9 +1052,9 @@ namespace m1Chat.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Remove("HTTP-Referer");
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://chat.mattdev.im");
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", _publicUrl);
             _httpClient.DefaultRequestHeaders.Remove("X-Title");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "m1Chat");
+            _httpClient.DefaultRequestHeaders.Add("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(
                 new HttpRequestMessage(HttpMethod.Post, _freeTierUri)
@@ -1117,8 +1171,8 @@ namespace m1Chat.Services
             };
 
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            request.Headers.TryAddWithoutValidation("HTTP-Referer", "https://chat.mattdev.im");
-            request.Headers.TryAddWithoutValidation("X-Title", "m1Chat");
+            request.Headers.TryAddWithoutValidation("HTTP-Referer", _publicUrl);
+            request.Headers.TryAddWithoutValidation("X-Title", _appTitle);
 
             using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)

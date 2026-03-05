@@ -72,14 +72,22 @@ namespace m1Chat.Controllers
         }
 
         [HttpGet("{id:guid}")]
-        [AllowAnonymous] // Public access for file content
         public async Task<IActionResult> GetFile(Guid id)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (email == null)
+                    return Unauthorized();
+
                 var file = await _fileService.GetFileAsync(id);
-                if (file == null)
+                if (
+                    file == null
+                    || !string.Equals(file.UploadedBy?.Email, email, StringComparison.OrdinalIgnoreCase)
+                )
+                {
                     return NotFound();
+                }
 
                 var content = await _fileService.GetFileContentAsync(id);
                 return File(System.Text.Encoding.UTF8.GetBytes(content), 
@@ -92,11 +100,23 @@ namespace m1Chat.Controllers
         }
 
         [HttpGet("{id:guid}/content")]
-        [AllowAnonymous] // Public access for raw content
         public async Task<IActionResult> GetFileContent(Guid id)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (email == null)
+                    return Unauthorized();
+
+                var file = await _fileService.GetFileAsync(id);
+                if (
+                    file == null
+                    || !string.Equals(file.UploadedBy?.Email, email, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    return NotFound();
+                }
+
                 var content = await _fileService.GetFileContentAsync(id);
                 return Ok(new { content });
             }
