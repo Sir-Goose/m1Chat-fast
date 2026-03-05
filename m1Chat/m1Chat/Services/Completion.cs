@@ -298,7 +298,7 @@ namespace m1Chat.Services
                     _provider = Provider.Groq;
                     break;
                 case "Devstral Small (Mistral AI)":
-                    model = "devstral-small-latest";
+                    model = "devstral-latest";
                     _provider = Provider.Mistral;
                     break;
                 case "Devstral Medium (Mistral AI)":
@@ -318,11 +318,11 @@ namespace m1Chat.Services
                     _provider = Provider.Mistral;
                     break;
                 case "Devstral Small (Free Tier)":
-                    model = "devstral-small-latest";
+                    model = "devstral-latest";
                     _provider = Provider.FreeTier;
                     break;
                 default:
-                    model = "devstral-small-latest";
+                    model = "devstral-latest";
                     _provider = Provider.FreeTier;
                     break;
             }
