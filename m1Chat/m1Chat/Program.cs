@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Net.Http;
 using m1Chat.Client;
 using m1Chat.Client.Services;
@@ -13,6 +14,37 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Google;
+
+static bool SqliteTableExists(ChatDbContext db, string tableName)
+{
+	var connection = db.Database.GetDbConnection();
+	var openedHere = connection.State != ConnectionState.Open;
+
+	if (openedHere)
+	{
+		connection.Open();
+	}
+
+	try
+	{
+		using var command = connection.CreateCommand();
+		command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name LIMIT 1;";
+		var nameParam = command.CreateParameter();
+		nameParam.ParameterName = "$name";
+		nameParam.Value = tableName;
+		command.Parameters.Add(nameParam);
+
+		return command.ExecuteScalar() != null;
+	}
+	finally
+	{
+		if (openedHere && connection.State == ConnectionState.Open)
+		{
+			connection.Close();
+		}
+	}
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Services Registration --- //
@@ -96,13 +128,30 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
 	var db = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
-	try
+	var hasMigrations = db.Database.GetMigrations().Any();
+
+	if (hasMigrations)
 	{
 		db.Database.Migrate();
 	}
-	catch
+	else
 	{
+		// No migrations in this project; create schema directly from the model.
 		db.Database.EnsureCreated();
+	}
+
+	// Repair local dev databases created by older startup logic where only EF metadata tables existed.
+	if (!SqliteTableExists(db, "Users"))
+	{
+		if (app.Environment.IsDevelopment())
+		{
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+		}
+		else
+		{
+			throw new InvalidOperationException("Database schema is missing required table: Users.");
+		}
 	}
 }
 
