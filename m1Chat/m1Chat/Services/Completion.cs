@@ -903,6 +903,7 @@ namespace m1Chat.Services
             using var reader = new StreamReader(stream);
 
             var inReasoningBlock = false;
+            var emittedAnyChunk = false;
 
             while (!reader.EndOfStream)
             {
@@ -933,15 +934,40 @@ namespace m1Chat.Services
                             if (!inReasoningBlock)
                             {
                                 yield return contentChunk;
+                                emittedAnyChunk = true;
                             }
                             else
                             {
                                 yield return contentChunk.Replace("```", "'''");
+                                emittedAnyChunk = true;
                             }
 
                             break;
                         }
                 }
+            }
+
+            if (!emittedAnyChunk)
+            {
+                var fallback = await GetMistralNonStreamingFallbackAsync(
+                    messages,
+                    model,
+                    apiKey,
+                    _mistralUri
+                );
+
+                if (!string.IsNullOrWhiteSpace(fallback))
+                {
+                    yield return fallback;
+                    emittedAnyChunk = true;
+                }
+            }
+
+            if (!emittedAnyChunk)
+            {
+                throw new Exception(
+                    "Mistral stream completed without any text chunks, and fallback completion was empty."
+                );
             }
         }
 
@@ -996,6 +1022,7 @@ namespace m1Chat.Services
             using var reader = new StreamReader(stream);
 
             var inReasoningBlock = false;
+            var emittedAnyChunk = false;
 
             while (!reader.EndOfStream)
             {
@@ -1026,16 +1053,110 @@ namespace m1Chat.Services
                             if (!inReasoningBlock)
                             {
                                 yield return contentChunk;
+                                emittedAnyChunk = true;
                             }
                             else
                             {
                                 yield return contentChunk.Replace("```", "'''");
+                                emittedAnyChunk = true;
                             }
 
                             break;
                         }
                 }
             }
+
+            if (!emittedAnyChunk)
+            {
+                var fallback = await GetMistralNonStreamingFallbackAsync(
+                    messages,
+                    model,
+                    apiKey,
+                    _freeTierUri
+                );
+
+                if (!string.IsNullOrWhiteSpace(fallback))
+                {
+                    yield return fallback;
+                    emittedAnyChunk = true;
+                }
+            }
+
+            if (!emittedAnyChunk)
+            {
+                throw new Exception(
+                    "Free-tier stream completed without any text chunks, and fallback completion was empty."
+                );
+            }
+        }
+
+        private async Task<string?> GetMistralNonStreamingFallbackAsync(
+            List<ChatMessageDto> messages,
+            string model,
+            string apiKey,
+            string endpointUri
+        )
+        {
+            var requestBody = new
+            {
+                model,
+                messages = messages.Select(m =>
+                {
+                    return new { role = m.Role, content = m.Content };
+                }),
+                stream = false
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpointUri)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Headers.TryAddWithoutValidation("HTTP-Referer", "https://chat.mattdev.im");
+            request.Headers.TryAddWithoutValidation("X-Title", "m1Chat");
+
+            using var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(
+                    $"Fallback non-stream request failed: {response.StatusCode} - {error}"
+                );
+                return null;
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var doc = JsonDocument.Parse(responseJson);
+                var root = doc.RootElement;
+
+                if (
+                    root.TryGetProperty("choices", out var choices)
+                    && choices.ValueKind == JsonValueKind.Array
+                    && choices.GetArrayLength() > 0
+                )
+                {
+                    var choice = choices[0];
+                    if (choice.TryGetProperty("message", out var message))
+                    {
+                        if (message.TryGetProperty("content", out var content))
+                        {
+                            return ExtractTextFromContentElement(content);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Failed to parse fallback non-stream completion response: {ex.Message}"
+                );
+            }
+
+            return null;
         }
 
         private string? TryParseContentChunk(string jsonData)
@@ -1047,13 +1168,66 @@ namespace m1Chat.Services
                 var choices = root.GetProperty("choices");
                 if (choices.GetArrayLength() > 0)
                 {
-                    var delta = choices[0].GetProperty("delta");
-                    if (
-                        delta.TryGetProperty("content", out var c) &&
-                        c.ValueKind == JsonValueKind.String
-                    )
+                    var choice = choices[0];
+
+                    if (choice.TryGetProperty("delta", out var delta))
                     {
-                        return c.GetString();
+                        if (delta.TryGetProperty("content", out var c))
+                        {
+                            var parsed = ExtractTextFromContentElement(c);
+                            if (!string.IsNullOrWhiteSpace(parsed))
+                            {
+                                return parsed;
+                            }
+                        }
+
+                        if (delta.TryGetProperty("text", out var t))
+                        {
+                            var parsed = ExtractTextFromContentElement(t);
+                            if (!string.IsNullOrWhiteSpace(parsed))
+                            {
+                                return parsed;
+                            }
+                        }
+
+                        if (delta.TryGetProperty("reasoning_content", out var r))
+                        {
+                            var parsed = ExtractTextFromContentElement(r);
+                            if (!string.IsNullOrWhiteSpace(parsed))
+                            {
+                                return parsed;
+                            }
+                        }
+                    }
+
+                    if (choice.TryGetProperty("message", out var message))
+                    {
+                        if (message.TryGetProperty("content", out var messageContent))
+                        {
+                            var parsed = ExtractTextFromContentElement(messageContent);
+                            if (!string.IsNullOrWhiteSpace(parsed))
+                            {
+                                return parsed;
+                            }
+                        }
+                    }
+                }
+
+                if (root.TryGetProperty("content", out var rootContent))
+                {
+                    var parsed = ExtractTextFromContentElement(rootContent);
+                    if (!string.IsNullOrWhiteSpace(parsed))
+                    {
+                        return parsed;
+                    }
+                }
+
+                if (root.TryGetProperty("delta", out var rootDelta))
+                {
+                    var parsed = ExtractTextFromContentElement(rootDelta);
+                    if (!string.IsNullOrWhiteSpace(parsed))
+                    {
+                        return parsed;
                     }
                 }
             }
@@ -1071,6 +1245,74 @@ namespace m1Chat.Services
             }
 
             return null;
+        }
+
+        private static string? ExtractTextFromContentElement(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString();
+                case JsonValueKind.Array:
+                {
+                    var sb = new StringBuilder();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        var piece = ExtractTextFromContentElement(item);
+                        if (!string.IsNullOrEmpty(piece))
+                        {
+                            sb.Append(piece);
+                        }
+                    }
+
+                    return sb.Length == 0 ? null : sb.ToString();
+                }
+                case JsonValueKind.Object:
+                {
+                    if (
+                        element.TryGetProperty("type", out var type)
+                        && type.ValueKind == JsonValueKind.String
+                    )
+                    {
+                        var typeValue = type.GetString();
+                        if (typeValue == "text" && element.TryGetProperty("text", out var text))
+                        {
+                            return ExtractTextFromContentElement(text);
+                        }
+                    }
+
+                    if (element.TryGetProperty("text", out var textProp))
+                    {
+                        var text = ExtractTextFromContentElement(textProp);
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+
+                    if (element.TryGetProperty("content", out var contentProp))
+                    {
+                        var text = ExtractTextFromContentElement(contentProp);
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+
+                    if (element.TryGetProperty("value", out var valueProp))
+                    {
+                        var text = ExtractTextFromContentElement(valueProp);
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+
+                    return null;
+                }
+                default:
+                    return null;
+            }
         }
 
         private (string? content, string? reasoning) TryParseContentChunkOpenrouter(
