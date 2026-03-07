@@ -381,12 +381,20 @@
     (function() {
         console.log('[Loading] Script started');
         let isHidden = false; // Track if the screen is already hidden
+        let isHiding = false;
         let currentStep = 0;
         let progressInterval;
+        const fadeOutDurationMs = 500;
+        const completionDelayMs = 300;
+        const safetyTimeoutMs = 15000;
 
-        const loadingScreen = document.getElementById('blazor-loading-screen');
-        const loadingText = document.getElementById('loading-status');
-        const progressFill = document.getElementById('loading-progress');
+        function getLoadingElements() {
+            return {
+                loadingScreen: document.getElementById('blazor-loading-screen'),
+                loadingText: document.getElementById('loading-status'),
+                progressFill: document.getElementById('loading-progress')
+            };
+        }
 
         const progressSteps = [
             { text: 'Initializing application...', progress: 15 },
@@ -397,6 +405,7 @@
             { text: 'Ready!', progress: 100 }];
 
         function updateProgress(step, immediate = false) {
+            const { loadingText, progressFill } = getLoadingElements();
             if (step < progressSteps.length && loadingText && progressFill) {
                 const stepData = progressSteps[step];
                 loadingText.textContent = stepData.text;
@@ -413,34 +422,72 @@
             }
         }
 
+        function forceHideLoadingScreenNode(node, removeNode = false) {
+            if (!node) {
+                return;
+            }
+
+            node.setAttribute('hidden', '');
+            node.classList.add('fade-out');
+            node.style.setProperty('display', 'none', 'important');
+            node.style.setProperty('visibility', 'hidden', 'important');
+            node.style.setProperty('opacity', '0', 'important');
+            node.style.setProperty('pointer-events', 'none', 'important');
+            node.style.setProperty('transform', 'scale(0.95)', 'important');
+
+            if (removeNode && node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+        }
+
+        function stopProgressSimulation() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
         // Internal function to hide the screen
-        function _internalHideLoadingScreen() {
-            if (isHidden) return;
-            isHidden = true;
+        function _internalHideLoadingScreen(forceImmediate = false) {
+            if (isHidden || isHiding) {
+                return;
+            }
+            isHiding = true;
 
             console.log('[Loading] Hiding loading screen initiated');
+            document.body.classList.remove('loading');
+
+            const { loadingScreen } = getLoadingElements();
+
+            if (forceImmediate) {
+                forceHideLoadingScreenNode(loadingScreen, true);
+                stopProgressSimulation();
+                isHidden = true;
+                isHiding = false;
+                console.log('[Loading] Loading screen force hidden');
+                return;
+            }
 
             // Complete progress first
             updateProgress(progressSteps.length - 1);
 
             setTimeout(() => {
-                if (loadingScreen) {
-                    loadingScreen.classList.add('fade-out');
-                    document.body.classList.remove('loading');
+                const { loadingScreen: activeLoadingScreen } = getLoadingElements();
+                forceHideLoadingScreenNode(activeLoadingScreen);
 
-                    setTimeout(() => {
-                        if (loadingScreen) {
-                            // Keep the node but fully hide it to avoid DOM ownership races.
-                            loadingScreen.style.display = 'none';
-                            console.log('[Loading] Loading screen hidden');
-                        }
-                    }, 500); // Wait for fade-out to complete before removing
-                }
+                // Final fallback: remove node if something (e.g., extension CSS) keeps it visible.
+                setTimeout(() => {
+                    const { loadingScreen: lingeringLoadingScreen } = getLoadingElements();
+                    if (lingeringLoadingScreen) {
+                        forceHideLoadingScreenNode(lingeringLoadingScreen, true);
+                    }
+                    console.log('[Loading] Loading screen hidden');
+                }, fadeOutDurationMs + 100);
 
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                }
-            }, 300); // Small delay to ensure 100% progress visible
+                stopProgressSimulation();
+                isHidden = true;
+                isHiding = false;
+            }, completionDelayMs); // Small delay to ensure 100% progress visible
         }
 
         // Expose a global function for Blazor to call
@@ -457,11 +504,13 @@
             }
         }, 800);
 
-        // Safety net - force hide after a very long time, just in case
+        // Safety net - force hide if Blazor interop call never arrives.
         setTimeout(() => {
-            console.log('[Loading] Safety timeout triggered');
-            _internalHideLoadingScreen();
-        }, 60000); 
+            if (!isHidden) {
+                console.log('[Loading] Safety timeout triggered - forcing hide');
+                _internalHideLoadingScreen(true);
+            }
+        }, safetyTimeoutMs);
 
         console.log('[Loading] All event listeners set up');
     })();
