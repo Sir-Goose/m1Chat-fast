@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "m1Chat", "m1Chat\m1Chat\m1C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "m1Chat.Client", "m1Chat\m1Chat.Client\m1Chat.Client.csproj", "{1299B65E-83F3-47F5-8DEE-511824D4D310}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "m1Chat.Client.Tests", "m1Chat\m1Chat.Client.Tests\m1Chat.Client.Tests.csproj", "{86F43756-82F0-453B-8059-1D1BDC240BF1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{1299B65E-83F3-47F5-8DEE-511824D4D310}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1299B65E-83F3-47F5-8DEE-511824D4D310}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1299B65E-83F3-47F5-8DEE-511824D4D310}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86F43756-82F0-453B-8059-1D1BDC240BF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86F43756-82F0-453B-8059-1D1BDC240BF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86F43756-82F0-453B-8059-1D1BDC240BF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86F43756-82F0-453B-8059-1D1BDC240BF1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
