@@ -41,7 +41,13 @@
   <!-- Scrollable chat list with fixed height -->
   <div class="flex-grow-1 no-scrollbar"
        style="height: calc(100% - 180px); overflow-y: auto;">
-    @if (_isSearching)
+    @if (!_renderDrawerLists)
+    {
+      <div class="pa-4">
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+      </div>
+    }
+    else if (_isSearching)
     {
       <div class="pa-2">
         @if (_searchResults != null && _searchResults.Any())
@@ -180,4 +186,3 @@
     </MudButton>
   </div>
 </MudDrawer>
-

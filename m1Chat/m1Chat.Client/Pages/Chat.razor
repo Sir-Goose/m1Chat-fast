@@ -47,18 +47,18 @@
         <MudIconButton
           Icon="@SvgIcons.SideBar"
           Size="Size.Small"
-          OnClick="() => {_drawerOpen = true; StateHasChanged();}"
+          OnClick="HandleTopLeftOpenDrawer"
           class="mr-2"
         >
         </MudIconButton>
         <MudIconButton
           Icon="@SvgIcons.Search"
           Size="Size.Small"
-          OnClick="FocusSearchFieldInDrawer"
+          OnClick="HandleTopLeftSearch"
           class="mr-2"
         >
         </MudIconButton>
-        <MudIconButton Icon="@SvgIcons.New" Size="Size.Small" OnClick="CreateNewChat">
+        <MudIconButton Icon="@SvgIcons.New" Size="Size.Small" OnClick="HandleTopLeftNewChat">
         </MudIconButton>
       </div>
     }
@@ -158,8 +158,10 @@
 
   private double _emaCharsPerSecond = MIN_CHARS_PER_SECOND;
   private long _lastChunkTime = 0;
-  
-  
+  private long _uiPerfSequence;
+  private bool _pendingDrawerSearchFocus;
+  private (long Id, System.Diagnostics.Stopwatch Timer, string Source)? _pendingDrawerFocusPerf;
+  private (long Id, System.Diagnostics.Stopwatch Timer, string Source)? _pendingInputResetPerf;
 
   protected override async Task OnInitializedAsync()
   {
@@ -221,19 +223,73 @@
           .ToDictionary(group => group.Key, group => group.ToList());
   }
 
-  private async Task FocusSearchFieldInDrawer()
+  private (long Id, System.Diagnostics.Stopwatch Timer) StartUiPerf(string action, string source)
   {
-    // Open drawer if closed
+    var id = System.Threading.Interlocked.Increment(ref _uiPerfSequence);
+    var timer = System.Diagnostics.Stopwatch.StartNew();
+    Console.WriteLine($"[UIPERF][Chat][{action}][{source}]#{id} start");
+    return (id, timer);
+  }
+
+  private static void LogUiPerf(string action, string source, (long Id, System.Diagnostics.Stopwatch Timer) perf, string checkpoint)
+  {
+    Console.WriteLine($"[UIPERF][Chat][{action}][{source}]#{perf.Id} {checkpoint} +{perf.Timer.ElapsedMilliseconds}ms");
+  }
+
+  private Task HandleTopLeftOpenDrawer() => OpenDrawer("TopBarButton");
+
+  private Task HandleTopLeftSearch() => FocusSearchFieldInDrawer("TopBarSearch");
+
+  private Task HandleTopLeftNewChat() => CreateNewChat("TopBarNewChat");
+
+  private Task CreateNewChat() => CreateNewChat("Callback");
+
+  private Task ToggleDrawer(string source)
+  {
+    var perf = StartUiPerf("ToggleDrawer", source);
+    _drawerOpen = !_drawerOpen;
+    LogUiPerf("ToggleDrawer", source, perf, $"state-updated:{(_drawerOpen ? "open" : "closed")}");
+    StateHasChanged();
+    LogUiPerf("ToggleDrawer", source, perf, "first-statehaschanged");
+    LogUiPerf("ToggleDrawer", source, perf, "handler-complete");
+    return Task.CompletedTask;
+  }
+
+  private Task OpenDrawer(string source)
+  {
+    var perf = StartUiPerf("OpenDrawer", source);
     if (!_drawerOpen)
     {
       _drawerOpen = true;
+      LogUiPerf("OpenDrawer", source, perf, "state-updated");
       StateHasChanged();
+      LogUiPerf("OpenDrawer", source, perf, "first-statehaschanged");
+    }
+    else
+    {
+      LogUiPerf("OpenDrawer", source, perf, "already-open");
     }
 
-    if (_chatDrawerRef != null)
+    LogUiPerf("OpenDrawer", source, perf, "handler-complete");
+    return Task.CompletedTask;
+  }
+
+  private Task FocusSearchFieldInDrawer(string source = "Unknown")
+  {
+    var perf = StartUiPerf("FocusSearch", source);
+
+    if (!_drawerOpen)
     {
-      await _chatDrawerRef.FocusSearchFieldAsync();
+      _drawerOpen = true;
+      LogUiPerf("FocusSearch", source, perf, "drawer-open-state-updated");
     }
+
+    _pendingDrawerSearchFocus = true;
+    _pendingDrawerFocusPerf = (perf.Id, perf.Timer, source);
+    StateHasChanged();
+    LogUiPerf("FocusSearch", source, perf, "first-statehaschanged");
+    LogUiPerf("FocusSearch", source, perf, "handler-complete");
+    return Task.CompletedTask;
   }
 
   private async Task HandleStreamCompleted()
@@ -293,8 +349,9 @@
       .ToList();
   }
 
-  private async Task CreateNewChat()
+  private Task CreateNewChat(string source)
   {
+    var perf = StartUiPerf("CreateNewChat", source);
     _chatId = null;
     _chatName = "New Chat";
     _chatHistory.Clear();
@@ -303,12 +360,18 @@
     CurrentMessageFiles.Clear();
     _showFileUpload = false;
     _messageBeingEdited = null;
-    // Call SetInputText to clear the ChatInputArea's internal text
+
+    LogUiPerf("CreateNewChat", source, perf, "state-reset");
+
     if (_chatInputAreaRef != null)
     {
-        await _chatInputAreaRef.SetInputText("");
+      _pendingInputResetPerf = (perf.Id, perf.Timer, source);
     }
+
     StateHasChanged();
+    LogUiPerf("CreateNewChat", source, perf, "first-statehaschanged");
+    LogUiPerf("CreateNewChat", source, perf, "handler-complete");
+    return Task.CompletedTask;
   }
 
   private async Task LoadChat(ChatDrawer.SidebarChat chat)
@@ -347,7 +410,7 @@
     // Call SetInputText to clear the ChatInputArea's internal text
     if (_chatInputAreaRef != null)
     {
-        await _chatInputAreaRef.SetInputText("");
+        await _chatInputAreaRef.SetInputText("", "LoadChat");
     }
     StateHasChanged();
   }
@@ -375,7 +438,7 @@
     // Call SetInputText to clear the ChatInputArea's internal text
     if (_chatInputAreaRef != null)
     {
-        _ = _chatInputAreaRef.SetInputText(""); // Don't await in a void method
+        _ = _chatInputAreaRef.SetInputText("", "ApplyCachedChat"); // Don't await in a void method
     }
     StateHasChanged();
   }
@@ -401,6 +464,25 @@
         StateHasChanged(); // Trigger re-render to update model dropdown states
       }
     }
+
+    if (_pendingDrawerSearchFocus && _drawerOpen && _chatDrawerRef != null && _pendingDrawerFocusPerf != null)
+    {
+      var perf = _pendingDrawerFocusPerf.Value;
+      _pendingDrawerSearchFocus = false;
+      _pendingDrawerFocusPerf = null;
+      LogUiPerf("FocusSearch", perf.Source, (perf.Id, perf.Timer), "post-render-before-focus");
+      await _chatDrawerRef.FocusSearchFieldAsync();
+      LogUiPerf("FocusSearch", perf.Source, (perf.Id, perf.Timer), "focus-complete");
+    }
+
+    if (_pendingInputResetPerf != null && _chatInputAreaRef != null)
+    {
+      var perf = _pendingInputResetPerf.Value;
+      _pendingInputResetPerf = null;
+      LogUiPerf("CreateNewChat", perf.Source, (perf.Id, perf.Timer), "post-render-before-input-clear");
+      await _chatInputAreaRef.SetInputText("", "CreateNewChat/deferred");
+      LogUiPerf("CreateNewChat", perf.Source, (perf.Id, perf.Timer), "input-clear-complete");
+    }
     
     // Disable continuous auto-scroll
     // if (firstRender)
@@ -413,21 +495,19 @@
   {
     bool isModifierPressed = args.CtrlKey || args.MetaKey; // Ctrl or Command key
 
-    if (isModifierPressed && args.Key == "k")
+    if (isModifierPressed && string.Equals(args.Key, "k", StringComparison.OrdinalIgnoreCase))
     {
-      return FocusSearchFieldInDrawer();
+      return FocusSearchFieldInDrawer("Hotkey/CtrlOrCmd+K");
     }
     
-    if (isModifierPressed && args.Key == "b")
+    if (isModifierPressed && string.Equals(args.Key, "b", StringComparison.OrdinalIgnoreCase))
     {
-      _drawerOpen = !_drawerOpen;
-      StateHasChanged();
-      return Task.CompletedTask;
+      return ToggleDrawer("Hotkey/CtrlOrCmd+B");
     }
     
-    if (isModifierPressed && args.Key == "O")
+    if (isModifierPressed && string.Equals(args.Key, "o", StringComparison.OrdinalIgnoreCase))
     {
-      return CreateNewChat();
+      return CreateNewChat("Hotkey/CtrlOrCmd+O");
     }
 
     return Task.CompletedTask;
@@ -938,7 +1018,7 @@
     _showFileUpload = CurrentMessageFiles.Any();
 
     // Directly call the public method on ChatInputArea to set its internal text field content
-    await _chatInputAreaRef.SetInputText(m.Text);
+    await _chatInputAreaRef.SetInputText(m.Text, "HandleEditMessage");
 
     Snackbar.Add("Message content and associated files (if any) restored for editing.", Severity.Info);
     // StateHasChanged() is implicitly called by setting CurrentMessageFiles and _showFileUpload
@@ -1002,7 +1082,7 @@
       // Call SetInputText to clear the ChatInputArea's internal text
       if (_chatInputAreaRef != null)
       {
-          await _chatInputAreaRef.SetInputText("");
+          await _chatInputAreaRef.SetInputText("", "HandleBranchMessage");
       }
       NavigationManager.NavigateTo($"/Chat?chatId={_chatId}", forceLoad: false);
       Snackbar.Add("Chat branched, but could not auto-load. Please select from sidebar.", Severity.Warning);

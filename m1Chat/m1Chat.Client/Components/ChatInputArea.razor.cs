@@ -56,6 +56,8 @@ public partial class ChatInputArea : ComponentBase
     private List<FileUploadService.UploadedFileInfo> _prevCurrentMessageFiles = new();
     private Dictionary<string, string> _prevUserApiKeys = new();
     private bool _forceRender;
+    private (long Id, System.Diagnostics.Stopwatch Timer, string Source)? _pendingSetInputPerf;
+    private long _uiPerfSequence;
 
     protected override void OnInitialized()
     {
@@ -273,26 +275,57 @@ public partial class ChatInputArea : ComponentBase
     /// </summary>
     public async Task ClearInput()
     {
-        await SetInputText("");
+        await SetInputText("", "ClearInput");
     }
 
     /// <summary>
     /// Public method to programmatically set the message text in the input field.
     /// Used by the parent component for "Edit Message" functionality.
     /// </summary>
-    public async Task SetInputText(string text)
+    public async Task SetInputText(string text, string source = "Unknown")
     {
+        var perf = StartUiPerf("SetInputText", source);
         _messageTextInternal = text;
         _forceRender = true;
+        _pendingSetInputPerf = (perf.Id, perf.Timer, source);
         StateHasChanged(); // Re-render this component to reflect the new text
-        await FocusAsync(); // Focus the input field after setting its content
+        LogUiPerf("SetInputText", source, perf, "first-statehaschanged");
+        await FocusAsync(source); // Focus the input field after setting its content
+        LogUiPerf("SetInputText", source, perf, "focus-complete");
     }
 
-    private async Task FocusAsync()
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_pendingSetInputPerf != null)
+        {
+            var perf = _pendingSetInputPerf.Value;
+            LogUiPerf("SetInputText", perf.Source, (perf.Id, perf.Timer), "post-render");
+            _pendingSetInputPerf = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task FocusAsync(string source)
+    {
+        var perf = StartUiPerf("FocusInput", source);
         if (_messageTextField != null)
         {
             await _messageTextField.FocusAsync();
         }
+        LogUiPerf("FocusInput", source, perf, "complete");
+    }
+
+    private (long Id, System.Diagnostics.Stopwatch Timer) StartUiPerf(string action, string source)
+    {
+        var id = System.Threading.Interlocked.Increment(ref _uiPerfSequence);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        Console.WriteLine($"[UIPERF][ChatInputArea][{action}][{source}]#{id} start");
+        return (id, timer);
+    }
+
+    private static void LogUiPerf(string action, string source, (long Id, System.Diagnostics.Stopwatch Timer) perf, string checkpoint)
+    {
+        Console.WriteLine($"[UIPERF][ChatInputArea][{action}][{source}]#{perf.Id} {checkpoint} +{perf.Timer.ElapsedMilliseconds}ms");
     }
 }

@@ -49,6 +49,12 @@ public partial class ChatDrawer : ComponentBase, IDisposable
     private string _lastSearchQuery = "";
     private List<SidebarChat> _lastSearchResults = new(); // Use reference equality for list instance
     private bool _lastIsSearching;
+    private bool _lastRenderDrawerLists;
+    private bool _wasDrawerOpen;
+    private bool _renderDrawerLists;
+    private bool _queueDrawerListRender;
+    private (long Id, System.Diagnostics.Stopwatch Timer, string Source)? _pendingDrawerOpenPerf;
+    private long _uiPerfSequence;
     // ----------------------------------
 
     protected override void OnInitialized()
@@ -65,6 +71,9 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         _lastSearchQuery = _searchQuery;
         _lastSearchResults = _searchResults;
         _lastIsSearching = _isSearching;
+        _wasDrawerOpen = DrawerOpen;
+        _renderDrawerLists = DrawerOpen;
+        _lastRenderDrawerLists = _renderDrawerLists;
     }
 
     protected override void OnParametersSet()
@@ -73,6 +82,22 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         {
             RebuildChatGroups();
         }
+
+        if (!_wasDrawerOpen && DrawerOpen)
+        {
+            if (!_renderDrawerLists)
+            {
+                _queueDrawerListRender = true;
+            }
+
+            if (_pendingDrawerOpenPerf == null)
+            {
+                var perf = StartUiPerf("DrawerOpen", "ParameterChange");
+                _pendingDrawerOpenPerf = (perf.Id, perf.Timer, "ParameterChange");
+            }
+        }
+
+        _wasDrawerOpen = DrawerOpen;
     }
 
     protected override bool ShouldRender()
@@ -85,7 +110,8 @@ public partial class ChatDrawer : ComponentBase, IDisposable
             !ReferenceEquals(SidebarChats, _lastSidebarChats) || // Check if the list instance itself has changed (e.g., chat added/deleted)
             _searchQuery != _lastSearchQuery || // Check if search query changed
             !ReferenceEquals(_searchResults, _lastSearchResults) || // Check if search results list instance changed
-            _isSearching != _lastIsSearching; // Check if search mode changed
+            _isSearching != _lastIsSearching || // Check if search mode changed
+            _renderDrawerLists != _lastRenderDrawerLists; // check deferred list render transition
 
         // Update the 'last' values for the next render cycle.
         _lastDrawerOpen = DrawerOpen;
@@ -97,6 +123,7 @@ public partial class ChatDrawer : ComponentBase, IDisposable
         _lastSearchQuery = _searchQuery;
         _lastSearchResults = _searchResults;
         _lastIsSearching = _isSearching;
+        _lastRenderDrawerLists = _renderDrawerLists;
 
         // Console.WriteLine($"ChatDrawer ShouldRender: {shouldRender}"); // Optional debug log
 
@@ -105,20 +132,41 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
     private async Task ToggleDrawer()
     {
+        var targetState = !DrawerOpen;
+        var perf = StartUiPerf("ToggleDrawer", targetState ? "Open" : "Close");
         DrawerOpen = !DrawerOpen;
+        LogUiPerf("ToggleDrawer", targetState ? "Open" : "Close", perf, "state-updated");
+
+        if (DrawerOpen)
+        {
+            _pendingDrawerOpenPerf = (perf.Id, perf.Timer, "ToggleDrawer");
+        }
+
         await DrawerOpenChanged.InvokeAsync(DrawerOpen);
+        LogUiPerf("ToggleDrawer", targetState ? "Open" : "Close", perf, "callback-complete");
     }
 
     private async Task HandleDrawerOpenChanged(bool isOpen)
     {
+        var perf = StartUiPerf("DrawerOpenChanged", isOpen ? "Open" : "Close");
         DrawerOpen = isOpen;
+
+        if (DrawerOpen)
+        {
+            _pendingDrawerOpenPerf = (perf.Id, perf.Timer, "OpenChanged");
+        }
+
         await DrawerOpenChanged.InvokeAsync(isOpen);
+        LogUiPerf("DrawerOpenChanged", isOpen ? "Open" : "Close", perf, "callback-complete");
     }
 
     private async Task HandleCreateNewChat()
     {
+        var perf = StartUiPerf("HandleCreateNewChat", "DrawerButton");
         _ = ToggleDrawer();
+        LogUiPerf("HandleCreateNewChat", "DrawerButton", perf, "toggle-dispatched");
         await OnCreateNewChat.InvokeAsync();
+        LogUiPerf("HandleCreateNewChat", "DrawerButton", perf, "create-complete");
     }
 
 
@@ -251,10 +299,33 @@ public partial class ChatDrawer : ComponentBase, IDisposable
 
     public async Task FocusSearchFieldAsync()
     {
+        var perf = StartUiPerf("FocusSearchField", "ChatDrawer");
+        LogUiPerf("FocusSearchField", "ChatDrawer", perf, "focus-start");
         if (_searchField != null)
         {
             await _searchField.FocusAsync();
         }
+        LogUiPerf("FocusSearchField", "ChatDrawer", perf, "focus-complete");
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_queueDrawerListRender && DrawerOpen)
+        {
+            _queueDrawerListRender = false;
+            _renderDrawerLists = true;
+            Console.WriteLine("[UIPERF][ChatDrawer][DrawerLists] first-open list render queued");
+            StateHasChanged();
+        }
+
+        if (_pendingDrawerOpenPerf != null && DrawerOpen)
+        {
+            var perf = _pendingDrawerOpenPerf.Value;
+            LogUiPerf("DrawerOpen", perf.Source, (perf.Id, perf.Timer), "post-render");
+            _pendingDrawerOpenPerf = null;
+        }
+
+        return Task.CompletedTask;
     }
 
 
@@ -287,6 +358,19 @@ public partial class ChatDrawer : ComponentBase, IDisposable
             .Where(c => c.LastUpdatedAt.Date >= lastWeekStart && c.LastUpdatedAt.Date <= today.AddDays(-2))
             .ToList();
         olderChats = sortedNonPinned.Where(c => c.LastUpdatedAt.Date < lastWeekStart).ToList();
+    }
+
+    private (long Id, System.Diagnostics.Stopwatch Timer) StartUiPerf(string action, string source)
+    {
+        var id = System.Threading.Interlocked.Increment(ref _uiPerfSequence);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        Console.WriteLine($"[UIPERF][ChatDrawer][{action}][{source}]#{id} start");
+        return (id, timer);
+    }
+
+    private static void LogUiPerf(string action, string source, (long Id, System.Diagnostics.Stopwatch Timer) perf, string checkpoint)
+    {
+        Console.WriteLine($"[UIPERF][ChatDrawer][{action}][{source}]#{perf.Id} {checkpoint} +{perf.Timer.ElapsedMilliseconds}ms");
     }
 
     public record SidebarChat(
